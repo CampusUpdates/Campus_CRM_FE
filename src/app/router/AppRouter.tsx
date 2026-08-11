@@ -13,6 +13,9 @@ import FollowupPage from "../../features/followups/pages/FollowupPage";
 import AdmissionPage from "../../features/admissions/pages/AdmissionPage";
 import ReportsPage from "../../features/reports/pages/ReportsPage";
 import ProfilePage from "../../features/profile/pages/ProfilePage";
+import Tpc from "../../features/tpc/pages/Tpc";
+import Todo from "../../features/todo/pages/Todo";
+import Notifications from "../../features/notifications/pages/Notifications";
 
 const AppRouter = () => {
   return (
@@ -45,6 +48,10 @@ const AppRouter = () => {
             path={ROUTES.FOLLOWUPS}
             element={<FollowupPage />}
           />
+          <Route
+            path={ROUTES.TPC}
+            element={<Tpc />}
+          />
 
           <Route
             path={ROUTES.ADMISSIONS}
@@ -57,9 +64,20 @@ const AppRouter = () => {
           />
 
           <Route
+            path={ROUTES.TODO}
+            element={<Todo />}
+          />
+
+          <Route
+            path={ROUTES.NOTIFICATIONS}
+            element={<Notifications />}
+          />
+
+          <Route
             path={ROUTES.PROFILE}
             element={<ProfilePage />}
           />
+          
         </Route>
       </Route>
 
