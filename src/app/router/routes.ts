@@ -6,4 +6,7 @@ export const ROUTES = {
   ADMISSIONS: "/admissions",
   REPORTS: "/reports",
   PROFILE: "/profile",
+  NOTIFICATIONS: "/notifications",
+  TPC: "/tpc",
+  TODO: "/todo"
 }

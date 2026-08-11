@@ -1,22 +1,26 @@
-import {Outlet} from "react-router-dom"
+import { Outlet } from "react-router-dom";
+
+import Navbar from "../../components/Navbar/Navbar";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const DashboardLayout = () => {
-    return <>
-    <div className="dashboard-layout">
-        <header>Navbar</header>
+  return (
+    <div className="flex h-screen bg-background">
 
-        <main>
-            <aside>Icon Sidebar</aside>
+      <Sidebar />
 
-            <aside>Navigation Panel</aside>
+      <div className="flex flex-1 flex-col">
 
-            <section>
-                <Outlet />
-            </section>
+        <Navbar />
+
+        <main className="flex-1 overflow-y-auto bg-background p-14">
+          <Outlet />
         </main>
-    </div>
-</>
-}
 
+      </div>
+
+    </div>
+  );
+};
 
 export default DashboardLayout;

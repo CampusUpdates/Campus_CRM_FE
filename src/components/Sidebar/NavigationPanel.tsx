@@ -1,0 +1,13 @@
+import SidebarHeader from "./SidebarHeader";
+import SidebarMenu from "./SidebarMenu";
+
+const Sidebar = () => {
+  return (
+    <aside className="flex h-screen w-60 flex-col border-r border-border bg-sidebar">
+      <SidebarHeader />
+      <SidebarMenu />
+    </aside>
+  );
+};
+
+export default Sidebar;
