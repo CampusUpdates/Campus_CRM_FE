@@ -1,24 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import createLead, { getColleges, type CreateLeadDto, type CollegeItem } from "../../../services/leadService";
+import { useToast } from "../../../context/ToastContext";
+import { INDIAN_STATES, INDIAN_STATES_AND_CITIES } from "../../../data/indianStatesAndCities";
+import { X } from "lucide-react";
 
-const CreateLeadForm = () => {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    alternatePhone: "",
-    email: "",
-    gender: "",
-    dateOfBirth: "",
-    tenthPercentage: "",
-    twelfthPercentage: "",
-    graduationPercentage: "",
-    graduationCourse: "",
-    graduationSpecialization: "",
-    courseInterested: "",
-    specializationInterested: "",
-    passingYear: "",
-    source: "",
-  });
+type CreateLeadFormProps = {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+};
+
+const initialFormState = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  alternatePhone: "",
+  email: "",
+  gender: "",
+  dateOfBirth: "",
+  state: "",
+  city: "",
+  tenthPercentage: "",
+  twelfthPercentage: "",
+  graduationPercentage: "",
+  graduationCourse: "",
+  graduationSpecialization: "",
+  courseInterested: "",
+  specializationInterested: "",
+  passingYear: "",
+  source: "",
+};
+
+const CreateLeadForm = ({ onSuccess, onCancel }: CreateLeadFormProps) => {
+  const [formData, setFormData] = useState(initialFormState);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const { showToast } = useToast();
+
+  const [colleges, setColleges] = useState<CollegeItem[]>([]);
+  const [loadingColleges, setLoadingColleges] = useState(false);
+  const [selectedCollegeIds, setSelectedCollegeIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchColleges = async () => {
+      setLoadingColleges(true);
+      try {
+        const data = await getColleges(true);
+        if (isMounted) {
+          setColleges(data);
+        }
+      } catch (err) {
+        console.error("Failed to load active colleges:", err);
+      } finally {
+        if (isMounted) {
+          setLoadingColleges(false);
+        }
+      }
+    };
+
+    fetchColleges();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -28,17 +73,85 @@ const CreateLeadForm = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === "state" ? { city: "" } : {}),
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
 
-    console.log(formData);
+    try {
+      const payload: CreateLeadDto = {
+        firstName: formData.firstName.trim(),
+        phone: formData.phone.trim(),
+        source: formData.source as any,
+      };
+
+      if (formData.lastName.trim()) payload.lastName = formData.lastName.trim();
+      if (formData.alternatePhone.trim()) payload.alternatePhone = formData.alternatePhone.trim();
+      if (formData.email.trim()) payload.email = formData.email.trim();
+      if (formData.gender) payload.gender = formData.gender as any;
+      if (formData.dateOfBirth) payload.dateOfBirth = new Date(formData.dateOfBirth).toISOString();
+      if (formData.state) payload.state = formData.state;
+      if (formData.city) payload.city = formData.city;
+
+      if (formData.tenthPercentage) payload.tenthPercentage = parseFloat(formData.tenthPercentage);
+      if (formData.twelfthPercentage) payload.twelfthPercentage = parseFloat(formData.twelfthPercentage);
+      if (formData.graduationPercentage) payload.graduationPercentage = parseFloat(formData.graduationPercentage);
+
+      if (formData.graduationCourse.trim()) payload.graduationCourse = formData.graduationCourse.trim();
+      if (formData.graduationSpecialization.trim()) payload.graduationSpecialization = formData.graduationSpecialization.trim();
+      if (formData.courseInterested) payload.courseInterested = formData.courseInterested as any;
+      if (formData.specializationInterested.trim()) payload.specializationInterested = formData.specializationInterested.trim();
+      if (formData.passingYear) payload.passingYear = parseInt(formData.passingYear, 10);
+
+      if (selectedCollegeIds.length > 0) {
+        payload.collegeIds = selectedCollegeIds;
+      }
+
+      await createLead(payload);
+
+      const msg = `Lead "${formData.firstName}" created successfully!`;
+      setSuccess(msg);
+      showToast(msg, "success");
+      setFormData(initialFormState);
+      setSelectedCollegeIds([]);
+
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 800);
+      }
+    } catch (err: any) {
+      const errMsg = err.message || "Failed to create lead.";
+      setError(errMsg);
+      showToast(errMsg, "error");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const availableCities = formData.state && INDIAN_STATES_AND_CITIES[formData.state]
+    ? INDIAN_STATES_AND_CITIES[formData.state]
+    : [];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Notifications */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          {success}
+        </div>
+      )}
 
       {/* Personal Information */}
       <section>
@@ -48,7 +161,7 @@ const CreateLeadForm = () => {
           </h3>
 
           <p className="mt-1 text-sm text-text-secondary">
-            Basic contact information of the lead.
+            Basic contact details and location of the lead.
           </p>
         </div>
 
@@ -115,6 +228,31 @@ const CreateLeadForm = () => {
             name="dateOfBirth"
             value={formData.dateOfBirth}
             onChange={handleChange}
+          />
+
+          <Select
+            label="State"
+            name="state"
+            value={formData.state}
+            onChange={handleChange}
+            placeholder="Select State"
+            options={INDIAN_STATES.map((state) => ({
+              value: state,
+              label: state,
+            }))}
+          />
+
+          <Select
+            label="City"
+            name="city"
+            value={formData.city}
+            onChange={handleChange}
+            disabled={!formData.state}
+            placeholder={formData.state ? "Select City" : "Select state first"}
+            options={availableCities.map((city) => ({
+              value: city,
+              label: city,
+            }))}
           />
 
         </div>
@@ -199,11 +337,11 @@ const CreateLeadForm = () => {
       <section>
         <div className="mb-5">
           <h3 className="text-base font-semibold text-text-primary">
-            Course Interest
+            Course & College Interest
           </h3>
 
           <p className="mt-1 text-sm text-text-secondary">
-            What does the lead want to study?
+            What does the lead want to study and which colleges are they interested in?
           </p>
         </div>
 
@@ -228,6 +366,13 @@ const CreateLeadForm = () => {
             value={formData.specializationInterested}
             onChange={handleChange}
             placeholder="e.g. Finance"
+          />
+
+          <CollegeMultiSelect
+            colleges={colleges}
+            selectedIds={selectedCollegeIds}
+            onChange={setSelectedCollegeIds}
+            loadingColleges={loadingColleges}
           />
 
         </div>
@@ -265,10 +410,35 @@ const CreateLeadForm = () => {
       </section>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 border-t border-border pt-6">
+      <div className="flex items-center justify-end gap-3 border-t border-border pt-6">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="
+              rounded-lg
+              border border-border
+              bg-surface
+              px-4
+              py-2.5
+              text-sm
+              font-medium
+              text-text-secondary
+              transition
+              hover:bg-neutral-100
+              disabled:opacity-50
+            "
+          >
+            Cancel
+          </button>
+        )}
+
         <button
           type="submit"
+          disabled={loading}
           className="
+            flex items-center gap-2
             rounded-lg
             bg-primary-500
             px-5
@@ -278,9 +448,10 @@ const CreateLeadForm = () => {
             text-white
             transition
             hover:bg-primary-600
+            disabled:opacity-50
           "
         >
-          Create Lead
+          {loading ? "Creating..." : "Create Lead"}
         </button>
       </div>
 
@@ -370,6 +541,8 @@ type SelectProps = {
   ) => void;
   options: SelectOption[];
   required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
 };
 
 const Select = ({
@@ -379,6 +552,8 @@ const Select = ({
   onChange,
   options,
   required,
+  disabled,
+  placeholder,
 }: SelectProps) => {
   return (
     <div>
@@ -392,6 +567,7 @@ const Select = ({
         value={value}
         onChange={onChange}
         required={required}
+        disabled={disabled}
         className="
           h-11
           w-full
@@ -404,12 +580,15 @@ const Select = ({
           text-text-primary
           outline-none
           transition
+          disabled:bg-neutral-100
+          disabled:text-text-muted
+          disabled:cursor-not-allowed
           focus:border-primary-500
           focus:ring-2
           focus:ring-primary-100
         "
       >
-        <option value="">Select {label.toLowerCase()}</option>
+        <option value="">{placeholder || `Select ${label.toLowerCase()}`}</option>
 
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -417,6 +596,86 @@ const Select = ({
           </option>
         ))}
       </select>
+    </div>
+  );
+};
+
+
+/* ---------------- College Multi-Select ---------------- */
+
+type CollegeMultiSelectProps = {
+  colleges: CollegeItem[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  loadingColleges?: boolean;
+};
+
+const CollegeMultiSelect = ({
+  colleges,
+  selectedIds,
+  onChange,
+  loadingColleges,
+}: CollegeMultiSelectProps) => {
+  const selectedColleges = colleges.filter((c) => selectedIds.includes(c.id));
+  const availableColleges = colleges.filter((c) => !selectedIds.includes(c.id));
+
+  const handleAdd = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    if (id && !selectedIds.includes(id)) {
+      onChange([...selectedIds, id]);
+    }
+  };
+
+  const handleRemove = (id: string) => {
+    onChange(selectedIds.filter((item) => item !== id));
+  };
+
+  return (
+    <div className="col-span-1 md:col-span-2">
+      <label className="mb-2 block text-sm font-medium text-text-primary">
+        Colleges Interested
+      </label>
+
+      <div className="min-h-[52px] w-full rounded-lg border border-border bg-surface p-2 transition focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 flex flex-wrap items-center gap-2">
+        {selectedColleges.map((college) => (
+          <span
+            key={college.id}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 border border-primary-200 shadow-xs transition hover:bg-primary-100"
+          >
+            {college.name}
+            <button
+              type="button"
+              onClick={() => handleRemove(college.id)}
+              className="rounded-full p-0.5 text-primary-500 hover:bg-primary-200 hover:text-primary-800 transition-colors"
+              title={`Remove ${college.name}`}
+            >
+              <X size={14} />
+            </button>
+          </span>
+        ))}
+
+        <select
+          value=""
+          onChange={handleAdd}
+          disabled={loadingColleges || availableColleges.length === 0}
+          className="h-9 flex-1 min-w-[180px] bg-transparent text-sm text-text-primary outline-none cursor-pointer disabled:cursor-not-allowed disabled:text-text-muted"
+        >
+          <option value="" disabled>
+            {loadingColleges
+              ? "Loading colleges..."
+              : availableColleges.length === 0
+              ? selectedIds.length > 0
+                ? "All colleges selected"
+                : "No active colleges available"
+              : "Select college ▾"}
+          </option>
+          {availableColleges.map((college) => (
+            <option key={college.id} value={college.id}>
+              {college.name} {college.city ? `(${college.city})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 };

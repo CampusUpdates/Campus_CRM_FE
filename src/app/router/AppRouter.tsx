@@ -77,7 +77,7 @@ const AppRouter = () => {
             path={ROUTES.PROFILE}
             element={<ProfilePage />}
           />
-          
+
         </Route>
       </Route>
 
