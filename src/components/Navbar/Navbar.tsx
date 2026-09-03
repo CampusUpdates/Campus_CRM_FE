@@ -3,15 +3,18 @@ import {
   Search,
   Bell,
   Moon,
+  Sun,
   ChevronDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -20,7 +23,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="flex h-20 items-center justify-between bg-white border-b border-border px-6">
+    <header className="flex h-20 items-center justify-between bg-navbar border-b border-border px-6">
 
       {/* Breadcrumb */}
       <div>
@@ -68,8 +71,12 @@ const Navbar = () => {
           />
         </div>
 
-        {/* Theme */}
+        {/* Theme Toggle */}
         <button
+          type="button"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           className="
             rounded-lg
             p-2.5
@@ -79,7 +86,11 @@ const Navbar = () => {
             hover:text-primary-600
           "
         >
-          <Moon size={18} />
+          {theme === "dark" ? (
+            <Sun size={18} className="text-amber-400" />
+          ) : (
+            <Moon size={18} />
+          )}
         </button>
 
         {/* Notification */}
@@ -118,25 +129,24 @@ const Navbar = () => {
               hover:bg-neutral-100
             "
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-500 font-semibold text-white">
-              {user?.username?.slice(0, 2).toUpperCase()}
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-600 font-semibold text-white shadow-xs">
+              {(user?.firstName ? user.firstName.slice(0, 2) : user?.username?.slice(0, 2) || "US").toUpperCase()}
             </div>
 
             <div className="text-left">
               <p className="text-sm font-semibold text-text-primary">
-                {user?.username}
+                {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username}
               </p>
 
-              <p className="text-xs text-text-secondary">
-                {user?.roleId}
+              <p className="text-xs text-primary-600 font-medium">
+                {user?.roleLabel || "User"}
               </p>
             </div>
 
             <ChevronDown
               size={16}
-              className={`text-text-secondary transition-transform ${
-                isOpen ? "rotate-180" : ""
-              }`}
+              className={`text-text-secondary transition-transform ${isOpen ? "rotate-180" : ""
+                }`}
             />
           </button>
 

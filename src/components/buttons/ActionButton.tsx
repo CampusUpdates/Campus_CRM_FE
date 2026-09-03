@@ -24,9 +24,9 @@ const ActionButton = ({
         p-4
         rounded-xl
         border
-        border-slate-200
-        hover:border-indigo-500
-        hover:bg-indigo-50
+        border-border
+        hover:border-primary-500
+        hover:bg-neutral-100
         transition-all
         duration-200
         text-left
@@ -38,12 +38,12 @@ const ActionButton = ({
           w-11
           h-11
           rounded-lg
-          bg-indigo-100
-          text-indigo-600
+          bg-primary-50
+          text-primary-600
           flex
           items-center
           justify-center
-          group-hover:bg-indigo-600
+          group-hover:bg-primary-600
           group-hover:text-white
           transition-colors
         "
@@ -52,12 +52,12 @@ const ActionButton = ({
       </div>
 
       <div className="flex-1">
-        <h4 className="text-sm font-semibold text-slate-800">
+        <h4 className="text-sm font-semibold text-text-primary">
           {title}
         </h4>
 
         {description && (
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             {description}
           </p>
         )}

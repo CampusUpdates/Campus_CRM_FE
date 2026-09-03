@@ -27,8 +27,8 @@ const TaskItem = ({
   completed = false,
 }: TaskItemProps) => {
   return (
-    <div className="flex items-start gap-4 py-4 border-b border-slate-100 last:border-none">
-      <button className="mt-1 text-slate-400 hover:text-indigo-600 transition-colors">
+    <div className="flex items-start gap-4 py-4 border-b border-border last:border-none">
+      <button className="mt-1 text-text-muted hover:text-primary-600 transition-colors">
         {completed ? (
           <CircleCheckBig size={20} className="text-emerald-500" />
         ) : (
@@ -40,15 +40,15 @@ const TaskItem = ({
         <h4
           className={`text-sm font-medium ${
             completed
-              ? "line-through text-slate-400"
-              : "text-slate-800"
+              ? "line-through text-text-muted"
+              : "text-text-primary"
           }`}
         >
           {title}
         </h4>
 
         <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center gap-1 text-xs text-slate-500">
+          <div className="flex items-center gap-1 text-xs text-text-secondary">
             <CalendarClock size={14} />
             {dueTime}
           </div>

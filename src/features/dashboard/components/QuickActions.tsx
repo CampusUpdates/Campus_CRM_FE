@@ -1,4 +1,6 @@
+import { useNavigate } from "react-router-dom";
 import ActionButton from "../../../components/buttons/ActionButton";
+import { ROUTES } from "../../../app/router/routes";
 import {
   UserPlus,
   CalendarPlus,
@@ -11,28 +13,31 @@ import {
 } from "lucide-react";
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+
   const actions = [
     {
       id: 1,
-      title: "Create Lead",
-      description: "Add a new prospective student",
-      icon: UserPlus,
-      onClick: () => console.log("Create Lead"),
+      title: "Call Workspace",
+      description: "Open assigned student dialing console",
+      icon: Phone,
+      onClick: () => navigate(ROUTES.CALLS),
     },
     {
       id: 2,
-      title: "Schedule Interview",
-      description: "Book an interview with a candidate",
-      icon: CalendarPlus,
-      onClick: () => console.log("Schedule Interview"),
+      title: "Create Lead",
+      description: "Add a new prospective student",
+      icon: UserPlus,
+      onClick: () => navigate(ROUTES.LEADS),
     },
     {
       id: 3,
-      title: "Log Call",
-      description: "Record a counselling call",
-      icon: Phone,
-      onClick: () => console.log("Log Call"),
+      title: "Schedule Interview",
+      description: "Book an interview with a candidate",
+      icon: CalendarPlus,
+      onClick: () => navigate(ROUTES.RECRUITMENT),
     },
+
     {
       id: 4,
       title: "Create Follow-up",
@@ -71,14 +76,14 @@ const QuickActions = () => {
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[20rem] flex flex-col">
+    <div className="bg-surface rounded-2xl border border-border shadow-sm h-[20rem] flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-800">
+      <div className="p-6 border-b border-border">
+        <h2 className="text-lg font-semibold text-text-primary">
           Quick Actions
         </h2>
 
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-text-secondary mt-1">
           Frequently used actions
         </p>
       </div>

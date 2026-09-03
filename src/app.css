@@ -155,6 +155,44 @@
 --color-primary-25: #f8fcfa;
 }
 
+.dark {
+  /* Layout & Surfaces */
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-sidebar: #0f172a;
+  --color-navbar: #1e293b;
+
+  /* Accent & Active states */
+  --color-sidebar-active: #132a24;
+  --color-primary-muted: #4e8771;
+  --color-primary-25: #162e27;
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+
+  /* Typography */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Inverted Neutral Scale for dark surfaces */
+  --color-neutral-50: #1e293b;
+  --color-neutral-100: #334155;
+  --color-neutral-200: #475569;
+  --color-neutral-300: #64748b;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #cbd5e1;
+  --color-neutral-600: #e2e8f0;
+  --color-neutral-700: #f1f5f9;
+  --color-neutral-800: #f8fafc;
+  --color-neutral-900: #ffffff;
+
+  --color-primary-800: #74b697;
+  --color-primary-700: #579f80;
+  --color-success-900: #58c68b;
+
+  color-scheme: dark;
+}
+
 html,
 body,
 #root {
