@@ -17,6 +17,7 @@ import {
   Trash2,
   Edit3,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { fetchActiveColleges, deleteCollege, type College } from "../../../services/collegeService";
@@ -27,12 +28,28 @@ import EditCollegeModal from "../components/EditCollegeModal";
 const CollegesPage = () => {
   const { accessToken, hasRole, user } = useAuth();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSearchQuery = searchParams.get("search") || "";
+
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(urlSearchQuery);
   const [isCreateCollegeOpen, setIsCreateCollegeOpen] = useState(false);
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
   const [editingCollege, setEditingCollege] = useState<College | null>(null);
+
+  useEffect(() => {
+    setSearchTerm(urlSearchQuery);
+  }, [urlSearchQuery]);
+
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    if (term.trim()) {
+      setSearchParams({ search: term.trim() });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const isAdvisor = user?.roleCode === "PROGRAM_ADVISOR";
   const canManageCollege = hasRole(["SUPER_ADMIN", "HR"]);
@@ -168,7 +185,7 @@ const CollegesPage = () => {
             type="text"
             placeholder="Search colleges by name, city, contact person, or guidelines..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="
               h-11
               w-full

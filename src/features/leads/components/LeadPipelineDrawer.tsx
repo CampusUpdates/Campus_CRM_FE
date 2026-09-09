@@ -4,7 +4,6 @@ import { X, GitCommit, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { fetchActiveColleges, type College } from "../../../services/collegeService";
-import { fetchUsers, type UserItem } from "../../../services/userService";
 import {
   updateLeadPipeline,
   type LeadItem,
@@ -49,7 +48,7 @@ const getStageExplanation = (statusName: string) => {
     case "APPLICATION":
       return "Create an official college application record with an Application ID.";
     case "INTERVIEW_SCHEDULED":
-      return "Schedule a student interview date and assign an interviewer.";
+      return "Schedule a student interview date.";
     case "INTERVIEW_DONE":
       return "Record the interview result, conducted date, and evaluator feedback.";
     case "LETTER_OUT":
@@ -78,7 +77,6 @@ const LeadPipelineDrawer = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [activeColleges, setActiveColleges] = useState<College[]>([]);
-  const [users, setUsers] = useState<UserItem[]>([]);
 
   // Pipeline form fields state (isolated)
   const statusName = (targetStatus.name || "").toUpperCase();
@@ -98,7 +96,6 @@ const LeadPipelineDrawer = ({
   // INTERVIEW_SCHEDULED fields
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("10:00");
-  const [interviewerId, setInterviewerId] = useState("");
 
   // INTERVIEW_DONE fields
   const [interviewResult, setInterviewResult] = useState<string>("PASSED");
@@ -123,13 +120,10 @@ const LeadPipelineDrawer = ({
   useEffect(() => {
     if (accessToken) {
       setFetchingData(true);
-      Promise.all([
-        fetchActiveColleges(accessToken).catch(() => []),
-        fetchUsers(accessToken).catch(() => []),
-      ])
-        .then(([collegesList, usersList]) => {
+      fetchActiveColleges(accessToken)
+        .catch(() => [])
+        .then((collegesList) => {
           setActiveColleges(collegesList);
-          setUsers(usersList);
 
           if (statusName === "APPLICATION") {
             const pitchedUnapplied = existingApps.find(
@@ -214,7 +208,6 @@ const LeadPipelineDrawer = ({
         ).toISOString();
         payload.interview = {
           scheduledAt,
-          interviewerId: interviewerId || undefined,
         };
       } else if (statusName === "INTERVIEW_DONE") {
         const conductedAt = conductedDate
@@ -429,6 +422,29 @@ const LeadPipelineDrawer = ({
                     ? "Select the target college to register a new application."
                     : "Select which college application stage is being progressed."}
                 </p>
+
+                {(() => {
+                  const selectedApp = existingApps.find(
+                    (app) => (app.college?.id || app.collegeId) === selectedCollegeId
+                  );
+                  if (selectedApp?.approvalStatus === "PENDING") {
+                    return (
+                      <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-start gap-2">
+                        <AlertCircle size={15} className="shrink-0 text-amber-600 mt-0.5" />
+                        <span>This college pitch is awaiting manager approval. The pipeline cannot be changed until it is approved.</span>
+                      </div>
+                    );
+                  }
+                  if (selectedApp?.approvalStatus === "REJECTED") {
+                    return (
+                      <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2">
+                        <AlertCircle size={15} className="shrink-0 text-rose-600 mt-0.5" />
+                        <span>This college pitch was rejected by the manager. Pipeline changes are not allowed.</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* DYNAMIC PIPELINE FIELDS */}
@@ -480,24 +496,6 @@ const LeadPipelineDrawer = ({
                         className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Interviewer / Counselor (Optional)
-                    </label>
-                    <select
-                      value={interviewerId}
-                      onChange={(e) => setInterviewerId(e.target.value)}
-                      className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-                    >
-                      <option value="">-- Select Interviewer --</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.firstName} {u.lastName || ""} ({u.role?.name || "Staff"})
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
               )}

@@ -17,6 +17,7 @@ import {
   Check,
   RotateCcw,
   AlertTriangle,
+  Shuffle,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -45,11 +46,11 @@ const DataAssignmentPage = () => {
 
   // Data & Server State
   const [assignments, setAssignments] = useState<DataAssignmentRecord[]>([]);
-  const [students, setStudents] = useState<StudentDataRecord[]>([]);
+  const [allStudents, setAllStudents] = useState<StudentDataRecord[]>([]);
+  const [isMixing, setIsMixing] = useState<boolean>(false);
   const [eligibleAdvisors, setEligibleAdvisors] = useState<EligibleProgramAdvisor[]>([]);
   const [availableMatchingCount, setAvailableMatchingCount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
   const [serverDistribution, setServerDistribution] = useState<Record<string, number>>({});
   const [filterOptions, setFilterOptions] = useState<{
     states: string[];
@@ -157,6 +158,16 @@ const DataAssignmentPage = () => {
     }
   };
 
+  // Fisher-Yates Shuffle Algorithm (Unbiased Randomization)
+  const fisherYatesShuffle = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // Fetch Filtered Data
   const loadFilteredData = useCallback(async () => {
     if (!accessToken) return;
@@ -168,8 +179,8 @@ const DataAssignmentPage = () => {
         uploadIds: selectedUploadIds,
         assignmentStatus,
         search: searchTerm,
-        page,
-        limit: 10,
+        page: 1,
+        limit: 5000,
       };
 
       const [filteredRes, assignmentsRes, advisorsData] = await Promise.all([
@@ -178,10 +189,9 @@ const DataAssignmentPage = () => {
         fetchEligibleProgramAdvisors(accessToken).catch(() => []),
       ]);
 
-      setStudents(filteredRes.data);
+      setAllStudents(filteredRes.data);
       setAvailableMatchingCount(filteredRes.meta.availableCount);
       setTotalCount(filteredRes.meta.total);
-      setTotalPages(filteredRes.meta.totalPages);
       setServerDistribution(filteredRes.distribution || {});
       setFilterOptions(filteredRes.filterOptions || { states: [], cities: [], uploads: [] });
       setAssignments(assignmentsRes.data);
@@ -200,9 +210,34 @@ const DataAssignmentPage = () => {
     selectedUploadIds,
     assignmentStatus,
     searchTerm,
-    page,
     historyPage,
   ]);
+
+  // Mix Data / Shuffle Action
+  const handleMixData = () => {
+    if (allStudents.length === 0) return;
+    setIsMixing(true);
+
+    setTimeout(() => {
+      try {
+        const shuffled = fisherYatesShuffle(allStudents);
+        setAllStudents(shuffled);
+        setPage(1);
+
+        setSuccessToast("Data mixed successfully");
+        setTimeout(() => setSuccessToast(null), 3000);
+      } finally {
+        setIsMixing(false);
+      }
+    }, 150);
+  };
+
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(allStudents.length / pageSize));
+  const students = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return allStudents.slice(start, start + pageSize);
+  }, [allStudents, page, pageSize]);
 
   useEffect(() => {
     loadFilteredData();
@@ -322,19 +357,31 @@ const DataAssignmentPage = () => {
   }, [selectionMode, selectedQuantity, availableMatchingCount, explicitSelectedIds.length]);
 
   const effectiveDistribution = useMemo(() => {
+    const dist: Record<string, number> = {};
+
+    if (selectionMode === "ALL_MATCHING" && selectedQuantity !== null) {
+      const availableInOrder = allStudents.filter((s) => s.isAvailable !== false);
+      const targetSlice = availableInOrder.slice(0, selectedQuantity);
+      for (const s of targetSlice) {
+        const st = s.state || "Unspecified";
+        dist[st] = (dist[st] || 0) + 1;
+      }
+      return dist;
+    }
+
     if (selectionMode === "ALL_MATCHING") {
       return serverDistribution;
     }
-    const dist: Record<string, number> = {};
+
     const selectedSet = new Set(explicitSelectedIds);
-    for (const s of students) {
+    for (const s of allStudents) {
       if (selectedSet.has(s.id)) {
         const st = s.state || "Unspecified";
         dist[st] = (dist[st] || 0) + 1;
       }
     }
     return dist;
-  }, [selectionMode, serverDistribution, explicitSelectedIds, students]);
+  }, [selectionMode, selectedQuantity, allStudents, serverDistribution, explicitSelectedIds]);
 
   // Execute Assignment Submission
   const handleConfirmAssignment = async ({
@@ -355,10 +402,20 @@ const DataAssignmentPage = () => {
         search: searchTerm,
       };
 
+      let finalMode = selectionMode;
+      let finalStudentDataIds = selectionMode === "EXPLICIT" ? explicitSelectedIds : undefined;
+
+      if (selectionMode === "ALL_MATCHING" && selectedQuantity !== null) {
+        const availableInCurrentOrder = allStudents.filter((s) => s.isAvailable !== false);
+        const selectedSlice = availableInCurrentOrder.slice(0, selectedQuantity);
+        finalStudentDataIds = selectedSlice.map((s) => s.id);
+        finalMode = "EXPLICIT";
+      }
+
       const res = await createDataAssignment(accessToken, {
         assignedToId,
-        selectionMode,
-        studentDataIds: selectionMode === "EXPLICIT" ? explicitSelectedIds : undefined,
+        selectionMode: finalMode,
+        studentDataIds: finalStudentDataIds,
         quantity: selectedQuantity || undefined,
         filters: activeFiltersPayload,
       });
@@ -695,6 +752,17 @@ const DataAssignmentPage = () => {
             </div>
           </div>
 
+          <button
+            type="button"
+            onClick={handleMixData}
+            disabled={isMixing || availableMatchingCount === 0}
+            title="Randomize ordering of current matching records"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface text-text-primary hover:bg-neutral-100 font-semibold text-xs transition shadow-2xs disabled:opacity-50"
+          >
+            <Shuffle size={14} className={isMixing ? "animate-spin text-primary-600" : "text-primary-600"} />
+            <span>{isMixing ? "Mixing..." : "Mix Data"}</span>
+          </button>
+        </div>
           {/* Quick Selection Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-text-secondary uppercase">Select Quantity:</span>
@@ -737,7 +805,6 @@ const DataAssignmentPage = () => {
               Select All Matching ({availableMatchingCount})
             </button>
           </div>
-        </div>
 
         {/* Custom Quantity Input Bar */}
         {showCustomInput && (

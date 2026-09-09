@@ -16,6 +16,8 @@ export interface ManagerOverviewKPIs {
   monthlyConversions: number;
   todaysApplications: number;
   ongoingProcesses: number;
+  letterOutToday?: number;
+  interviewScheduledToday?: number;
 }
 
 export interface TeamPerformanceItem {
@@ -46,11 +48,15 @@ export interface MemberPerformanceItem {
   email: string;
   teamName: string;
   assignedLeadsCount: number;
-  contactedLeadsCount: number;
+  contactedLeadsCount?: number;
   convertedLeadsCount: number;
+  tpcAssignedCount?: number;
+  tpcAttemptedCount?: number;
   tpcsCount: number;
+  totalCallsCount?: number;
   interactionsCount: number;
   lastActivityAt: string | null;
+  isDone?: boolean;
 }
 
 export interface TpcStatusCounts {
@@ -170,6 +176,9 @@ export interface FetchManagerFilters {
   teamId?: string;
   startDate?: string;
   endDate?: string;
+  pipelinePeriod?: string;
+  tpcPeriod?: string;
+  memberPeriod?: string;
 }
 
 export async function fetchManagerDashboardStats(
@@ -185,6 +194,15 @@ export async function fetchManagerDashboardStats(
   }
   if (filters?.endDate) {
     queryParams.append("endDate", filters.endDate);
+  }
+  if (filters?.pipelinePeriod) {
+    queryParams.append("pipelinePeriod", filters.pipelinePeriod);
+  }
+  if (filters?.tpcPeriod) {
+    queryParams.append("tpcPeriod", filters.tpcPeriod);
+  }
+  if (filters?.memberPeriod) {
+    queryParams.append("memberPeriod", filters.memberPeriod);
   }
 
   const queryString = queryParams.toString();

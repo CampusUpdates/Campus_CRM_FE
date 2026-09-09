@@ -49,8 +49,9 @@ export interface UpdateCollegePayload {
   requiresApproval?: boolean;
 }
 
-export async function fetchActiveColleges(token: string): Promise<College[]> {
-  const response = await fetch(`${API_URL}/colleges`, {
+export async function fetchActiveColleges(token: string, search?: string): Promise<College[]> {
+  const url = search ? `${API_URL}/colleges?search=${encodeURIComponent(search)}` : `${API_URL}/colleges`;
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

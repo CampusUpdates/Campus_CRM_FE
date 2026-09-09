@@ -20,5 +20,7 @@ export const ROUTES = {
   DATA_UPLOAD: "/data-upload",
   DATA_ASSIGNMENT: "/data-assignment",
   CALLS: "/calls",
+  LEAD_PROFILE: "/leads/:leadId",
+  CLAIM_REQUESTS: "/claim-requests",
   ACCESS_DENIED: "/access-denied",
 };

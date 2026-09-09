@@ -34,6 +34,7 @@ export interface LeadCollegeApplication {
   };
   applicationId?: string;
   statusId?: number;
+  approvalStatus?: string;
   status?: {
     id: number;
     name: string;
@@ -47,7 +48,6 @@ export interface UpdateLeadPipelinePayload {
   applicationId?: string;
   interview?: {
     scheduledAt?: string;
-    interviewerId?: string;
   };
   interviewResult?: {
     result?: string;
@@ -399,4 +399,125 @@ export async function updateLeadPipeline(
 
   return data;
 }
+
+export async function fetchLead360Profile(token: string, leadId: string) {
+  const response = await fetch(`${API_URL}/leads/${leadId}/profile`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch Lead 360 Profile";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export interface ClaimRequestItem {
+  requestId: string;
+  leadId: string;
+  leadName: string;
+  phone: string;
+  email?: string;
+  currentOwner?: {
+    id?: string;
+    name?: string;
+    email?: string;
+  };
+  requester: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  requestedAt: string;
+  processedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  processedAt?: string | null;
+  remarks?: string | null;
+}
+
+export async function createLeadClaimRequest(token: string, leadId: string) {
+  const response = await fetch(`${API_URL}/leads/${leadId}/claim-request`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to submit lead claim request";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export async function fetchClaimRequests(
+  token: string,
+  status?: string
+): Promise<ClaimRequestItem[]> {
+  const query = status && status !== "ALL" ? `?status=${encodeURIComponent(status)}` : "";
+  const response = await fetch(`${API_URL}/leads/claim-requests${query}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch claim requests";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export async function processClaimRequest(
+  token: string,
+  requestId: string,
+  payload: { status: "APPROVED" | "REJECTED"; remarks?: string }
+) {
+  const response = await fetch(`${API_URL}/leads/claim-requests/${requestId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to process claim request";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
 

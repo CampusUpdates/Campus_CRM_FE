@@ -953,11 +953,10 @@ const SuperAdminDashboardView = () => {
                   key={pageNum}
                   type="button"
                   onClick={() => setActivityPage(pageNum)}
-                  className={`flex h-8 min-w-[2rem] items-center justify-center px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    pageNum === currentActivityPage
+                  className={`flex h-8 min-w-[2rem] items-center justify-center px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${pageNum === currentActivityPage
                       ? "bg-primary-600 text-white shadow-xs"
                       : "border border-border text-text-secondary hover:bg-surface-hover"
-                  }`}
+                    }`}
                 >
                   {pageNum}
                 </button>

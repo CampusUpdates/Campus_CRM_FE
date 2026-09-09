@@ -1,26 +1,14 @@
 import { useEffect, useState } from "react";
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
   Award,
   BarChart3,
   Briefcase,
-  Calendar,
-  CheckCircle2,
   Download,
   Filter,
   UserCheck,
   Users,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
@@ -29,8 +17,9 @@ import {
   type HRReportData,
   type HRReportFilterParams,
 } from "../../../services/hrReportService";
+import { ManagerReportsView } from "../components/ManagerReportsView";
 
-const ReportsPage = () => {
+const HRReportsView = () => {
   const { accessToken } = useAuth();
   const toast = useToast();
 
@@ -104,8 +93,8 @@ const ReportsPage = () => {
     csvContent += "\n";
 
     // Section 3: Interviewer Performance
-    csvContent += "INTERVIEWER EVALUATION PERFORMANCE LEADERBOARD\n";
-    csvContent += "Interviewer Name,Total Conducted,Passed,Failed,On Hold,Pass Rate (%)\n";
+    csvContent += "INTERVIEWER EVALUATION PERFORMANCE\n";
+    csvContent += "Interviewer Name,Conducted Sessions,Passed Candidates,Failed Candidates,On Hold,Pass Rate (%)\n";
     reportData.interviewerPerformance.forEach((row) => {
       csvContent += `"${row.interviewerName}",${row.totalConducted},${row.passedCount},${row.failedCount},${row.holdCount},${row.passRate}%\n`;
     });
@@ -113,63 +102,51 @@ const ReportsPage = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `HR_Analytics_Report_${new Date().toISOString().slice(0, 10)}.csv`
-    );
+    link.setAttribute("download", `HR_Recruitment_Analytics_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    toast.showToast("HR Report exported to CSV successfully!", "success");
   };
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">
-            HR Analytics & Recruitment Reports
+            HR Recruitment & Hiring Analytics
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Comprehensive real-time reports on recruitment velocity, interview performance, and workforce demographics.
+          <p className="mt-1 text-xs text-text-secondary">
+            Executive oversight of candidate pipelines, department velocities, and interviewer statistics.
           </p>
         </div>
 
         <button
-          type="button"
           onClick={handleExportCSV}
-          disabled={loading || !reportData}
-          className="
-            flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5
-            text-sm font-medium text-white transition hover:bg-primary-600
-            shadow-sm disabled:opacity-50
-          "
+          disabled={!reportData || loading}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs disabled:opacity-50 shrink-0"
         >
-          <Download size={18} />
-          Export CSV Report
+          <Download size={16} />
+          Export Executive Report (CSV)
         </button>
       </div>
 
-      {/* Control & Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-xs">
-        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
-          <Filter size={18} className="text-primary-500" />
-          <span>Report Filters</span>
+      {/* Global Report Filters */}
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Filter size={16} className="text-primary-600" />
+          <span className="text-xs font-bold text-text-primary uppercase tracking-wider">
+            HR Report Filters
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Time Period Filter */}
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-text-muted" />
+            <label className="text-xs font-medium text-text-secondary">Period:</label>
             <select
               value={periodFilter}
               onChange={(e) => setPeriodFilter(e.target.value)}
-              className="
-                rounded-lg border border-border bg-background px-3 py-1.5
-                text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none
-              "
+              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-text-primary outline-none focus:border-primary-500"
             >
               <option value="ALL">All Time</option>
               <option value="30_DAYS">Last 30 Days</option>
@@ -178,458 +155,174 @@ const ReportsPage = () => {
             </select>
           </div>
 
-          {/* Department Filter */}
-          {reportData?.allDepartments && reportData.allDepartments.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Briefcase size={16} className="text-text-muted" />
-              <select
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="
-                  rounded-lg border border-border bg-background px-3 py-1.5
-                  text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none
-                "
-              >
-                <option value="">All Departments</option>
-                {reportData.allDepartments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-text-secondary">Department:</label>
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-text-primary outline-none focus:border-primary-500"
+            >
+              <option value="">All Departments</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Product">Product</option>
+              <option value="Design">Design</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Operations">Operations</option>
+              <option value="Human Resources">Human Resources</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {loading || !reportData ? (
-        <div className="flex items-center justify-center py-16 text-sm text-text-muted">
-          Generating dynamic HR analytics report...
+      {loading && !reportData ? (
+        <div className="space-y-6 animate-pulse">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 rounded-xl bg-neutral-200" />
+            ))}
+          </div>
+          <div className="h-64 rounded-xl bg-neutral-200" />
         </div>
+      ) : !reportData ? (
+        <div className="p-8 text-center text-xs text-text-muted">No report data available.</div>
       ) : (
-        <div className="space-y-8">
-          {/* HR Executive KPI Cards */}
-          <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Total Applications */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <div className="space-y-6">
+          {/* Executive Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Total Applications
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                  <Users size={18} />
-                </div>
+                <Users size={18} className="text-indigo-600" />
               </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-bold text-text-primary">
-                  {reportData.summary.totalApplications}
-                </h3>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {reportData.summary.hiredCount} Candidates Hired
-                </p>
-              </div>
+              <p className="text-2xl font-bold text-text-primary">{reportData.summary.totalApplications}</p>
+              <p className="text-xs text-text-muted">Received candidate profiles</p>
             </div>
 
-            {/* Selection Rate */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Selection Rate
+                  Hired Candidates
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 size={18} />
-                </div>
+                <UserCheck size={18} className="text-emerald-600" />
               </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-bold text-emerald-600">
-                  {reportData.summary.selectionRate}%
-                </h3>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {reportData.summary.selectedCount} Candidates Selected
-                </p>
-              </div>
+              <p className="text-2xl font-bold text-emerald-700">{reportData.summary.hiredCount}</p>
+              <p className="text-xs text-emerald-800 font-medium">
+                Selection Rate: <strong>{reportData.summary.selectionRate}%</strong>
+              </p>
             </div>
 
-            {/* Vacancies Fill Rate */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Vacancies Fill Rate
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                  <Briefcase size={18} />
-                </div>
+                <Briefcase size={18} className="text-amber-600" />
               </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-bold text-text-primary">
-                  {reportData.summary.vacanciesFillRate}%
-                </h3>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {reportData.summary.activePositions} Active Job Roles
-                </p>
-              </div>
+              <p className="text-2xl font-bold text-amber-700">{reportData.summary.vacanciesFillRate}%</p>
+              <p className="text-xs text-text-muted">
+                {reportData.summary.activePositions} positions ({reportData.summary.totalVacancies} total vacancies)
+              </p>
             </div>
 
-            {/* Interview Pass Rate */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Interview Pass Rate
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                  <Award size={18} />
-                </div>
+                <Award size={18} className="text-purple-600" />
               </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-bold text-amber-600">
-                  {reportData.summary.interviewPassRate}%
-                </h3>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {reportData.summary.passedInterviews} / {reportData.summary.totalInterviews} Passed Rounds
-                </p>
-              </div>
+              <p className="text-2xl font-bold text-purple-700">{reportData.summary.interviewPassRate}%</p>
+              <p className="text-xs text-text-muted">
+                Over {reportData.summary.totalInterviews} scheduled sessions
+              </p>
             </div>
-          </section>
+          </div>
 
-          {/* Recharts Analytics Charts Section */}
-          <section className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Monthly Hiring & Application Trend Area Chart */}
-              <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-                <div className="mb-4">
-                  <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                    <BarChart3 size={18} className="text-primary-500" />
-                    Monthly Application & Hiring Trends
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Total candidates vs hired applicants over time
-                  </p>
-                </div>
-
-                <div className="h-72 w-full">
-                  {reportData.monthlyTrends.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-text-muted">
-                      No monthly trend data recorded yet.
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={reportData.monthlyTrends} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
-                        <defs>
-                          <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#4F46E5" stopOpacity={0.0} />
-                          </linearGradient>
-                          <linearGradient id="colorHired" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6B7280" }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E7EB",
-                            borderRadius: "0.5rem",
-                            fontSize: "0.875rem",
-                          }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
-                        <Area
-                          type="monotone"
-                          dataKey="applications"
-                          stroke="#4F46E5"
-                          fillOpacity={1}
-                          fill="url(#colorApps)"
-                          name="Applications"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="hired"
-                          stroke="#10B981"
-                          fillOpacity={1}
-                          fill="url(#colorHired)"
-                          name="Hired"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-
-              {/* Department Recruitment Bar Chart */}
-              <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-                <div className="mb-4">
-                  <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                    <Briefcase size={18} className="text-purple-500" />
-                    Department Recruitment
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Open vacancies vs candidate applicants by department
-                  </p>
-                </div>
-
-                <div className="h-72 w-full">
-                  {reportData.departmentVelocity.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-text-muted">
-                      No department velocity metrics found.
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={reportData.departmentVelocity} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="department" tick={{ fontSize: 11, fill: "#6B7280" }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E7EB",
-                            borderRadius: "0.5rem",
-                            fontSize: "0.875rem",
-                          }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
-                        <Bar dataKey="vacancies" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Vacancies" />
-                        <Bar dataKey="applicants" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Applicants" />
-                        <Bar dataKey="hired" fill="#10B981" radius={[4, 4, 0, 0]} name="Hired" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
+          {/* Department Velocity & Interviewer Performance */}
+          <section className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-sm font-bold text-text-primary">Department Recruitment Velocity</h3>
+              <BarChart3 size={16} className="text-primary-600" />
             </div>
 
-            {/* Row 2: Interviewer Leaderboard & Stage Funnel */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Interviewer Evaluation Performance Chart */}
-              <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-                <div className="mb-4">
-                  <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                    <UserCheck size={18} className="text-amber-500" />
-                    Interviewer Evaluation Performance
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Total conducted rounds and pass/fail evaluation outcomes
-                  </p>
-                </div>
-
-                <div className="h-72 w-full">
-                  {reportData.interviewerPerformance.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-text-muted">
-                      No interviewer evaluation records found.
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={reportData.interviewerPerformance}
-                        layout="vertical"
-                        margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} />
-                        <YAxis
-                          type="category"
-                          dataKey="interviewerName"
-                          tick={{ fontSize: 11, fill: "#6B7280" }}
-                          width={120}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E7EB",
-                            borderRadius: "0.5rem",
-                            fontSize: "0.875rem",
-                          }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
-                        <Bar dataKey="passedCount" stackId="a" fill="#10B981" name="Passed" />
-                        <Bar dataKey="failedCount" stackId="a" fill="#EF4444" name="Failed" />
-                        <Bar dataKey="holdCount" stackId="a" fill="#F59E0B" name="On Hold" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-
-              {/* Candidate Pipeline Stage Distribution */}
-              <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-                <div className="mb-4">
-                  <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                    <Users size={18} className="text-indigo-500" />
-                    Candidate Stage Breakdown
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Total pool distribution across recruitment stages
-                  </p>
-                </div>
-
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reportData.stageBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="stage" tick={{ fontSize: 10, fill: "#6B7280" }} interval={0} angle={-15} textAnchor="end" />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#FFFFFF",
-                          borderColor: "#E5E7EB",
-                          borderRadius: "0.5rem",
-                          fontSize: "0.875rem",
-                        }}
-                      />
-                      <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} name="Candidates" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Detailed Report Tables */}
-          <section className="space-y-6">
-            {/* Department Velocity Breakdown Table */}
-            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
-              <div className="border-b border-border bg-neutral-50 px-6 py-4">
-                <h3 className="text-base font-semibold text-text-primary">
-                  Department Recruitment Report
-                </h3>
-                <p className="text-xs text-text-secondary">
-                  Detailed vacancies, applicants, and position fill rate per department
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-neutral-50/50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Department
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Open Positions
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Total Vacancies
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Applicants
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Hired Candidates
-                      </th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase text-text-secondary">
-                        Fill Rate (%)
-                      </th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase">
+                    <th className="px-4 py-3">Department</th>
+                    <th className="px-4 py-3">Open Positions</th>
+                    <th className="px-4 py-3">Vacancies</th>
+                    <th className="px-4 py-3">Applicants</th>
+                    <th className="px-4 py-3">Hired</th>
+                    <th className="px-4 py-3 text-right">Fill Rate (%)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {reportData.departmentVelocity.map((row, i) => (
+                    <tr key={i} className="hover:bg-neutral-50/50">
+                      <td className="px-4 py-3 font-semibold text-text-primary">{row.department}</td>
+                      <td className="px-4 py-3 text-text-secondary">{row.openPositions}</td>
+                      <td className="px-4 py-3 text-text-secondary">{row.vacancies}</td>
+                      <td className="px-4 py-3 text-indigo-600 font-medium">{row.applicants}</td>
+                      <td className="px-4 py-3 text-emerald-600 font-semibold">{row.hired}</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-700">{row.fillRate}%</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.departmentVelocity.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-6 text-center text-xs text-text-muted">
-                          No department recruitment data available.
-                        </td>
-                      </tr>
-                    ) : (
-                      reportData.departmentVelocity.map((row) => (
-                        <tr key={row.department} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
-                          <td className="px-5 py-3 text-sm font-semibold text-text-primary">
-                            {row.department}
-                          </td>
-                          <td className="px-5 py-3 text-sm text-text-secondary font-medium">
-                            {row.openPositions} Active
-                          </td>
-                          <td className="px-5 py-3 text-sm text-text-secondary font-medium">
-                            {row.vacancies} Seats
-                          </td>
-                          <td className="px-5 py-3 text-sm text-text-secondary">
-                            {row.applicants} Applicants
-                          </td>
-                          <td className="px-5 py-3 text-sm text-emerald-600 font-semibold">
-                            {row.hired} Hired
-                          </td>
-                          <td className="px-5 py-3 text-right text-sm font-bold text-primary-600">
-                            {row.fillRate}%
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Interviewer Evaluation Performance Table */}
-            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
-              <div className="border-b border-border bg-neutral-50 px-6 py-4">
-                <h3 className="text-base font-semibold text-text-primary">
-                  Interviewer Evaluation Performance Leaderboard
-                </h3>
-                <p className="text-xs text-text-secondary">
-                  Assessment activity, evaluation pass/fail outcomes, and interviewer pass rate
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-neutral-50/50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Interviewer Name
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Total Conducted
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Passed
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        Failed
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                        On Hold
-                      </th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase text-text-secondary">
-                        Pass Rate (%)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.interviewerPerformance.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-6 text-center text-xs text-text-muted">
-                          No interviewer performance metrics available yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      reportData.interviewerPerformance.map((row) => (
-                        <tr key={row.interviewerId} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
-                          <td className="px-5 py-3 text-sm font-semibold text-text-primary">
-                            {row.interviewerName}
-                          </td>
-                          <td className="px-5 py-3 text-sm text-text-secondary font-medium">
-                            {row.totalConducted} Sessions
-                          </td>
-                          <td className="px-5 py-3 text-sm text-emerald-600 font-semibold">
-                            {row.passedCount} Passed
-                          </td>
-                          <td className="px-5 py-3 text-sm text-rose-600 font-semibold">
-                            {row.failedCount} Failed
-                          </td>
-                          <td className="px-5 py-3 text-sm text-amber-600 font-medium">
-                            {row.holdCount} On Hold
-                          </td>
-                          <td className="px-5 py-3 text-right text-sm font-bold text-emerald-600">
-                            {row.passRate}%
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         </div>
       )}
+    </div>
+  );
+};
+
+const ReportsPage = () => {
+  const { hasRole } = useAuth();
+  const isHRRole = hasRole(["HR"]);
+  const isManagerOrAdmin = hasRole(["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]);
+
+  const [activeReportType, setActiveReportType] = useState<"manager" | "hr">(
+    isManagerOrAdmin || !isHRRole ? "manager" : "hr"
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Top Report Switcher (Only visible if user has multiple roles/access) */}
+      {(isHRRole && isManagerOrAdmin) && (
+        <div className="flex items-center gap-3 border-b border-border pb-3">
+          <button
+            onClick={() => setActiveReportType("manager")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+              activeReportType === "manager"
+                ? "bg-primary-500 text-white shadow-2xs"
+                : "border border-border bg-surface text-text-secondary hover:bg-neutral-50"
+            }`}
+          >
+            <FileSpreadsheet size={16} />
+            Manager Reports
+          </button>
+
+          <button
+            onClick={() => setActiveReportType("hr")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+              activeReportType === "hr"
+                ? "bg-primary-500 text-white shadow-2xs"
+                : "border border-border bg-surface text-text-secondary hover:bg-neutral-50"
+            }`}
+          >
+            <FileText size={16} />
+            HR Recruitment Reports
+          </button>
+        </div>
+      )}
+
+      {/* Render Active View */}
+      {activeReportType === "manager" ? <ManagerReportsView /> : <HRReportsView />}
     </div>
   );
 };

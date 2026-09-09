@@ -81,10 +81,28 @@ export const navigationMenu: NavigationItem[] = [
     ],
   },
   {
+    title: "Approvals",
+    icon: CheckCircle2,
+    path: ROUTES.PITCH_APPROVALS,
+    roles: ["SUPER_ADMIN"],
+    children: [
+      {
+        title: "College Approvals",
+        path: ROUTES.PITCH_APPROVALS,
+        icon: CheckCircle2,
+      },
+      {
+        title: "Claim Requests",
+        path: ROUTES.CLAIM_REQUESTS,
+        icon: UserCheck,
+      },
+    ],
+  },
+  {
     title: "College Approvals",
     icon: CheckCircle2,
     path: ROUTES.PITCH_APPROVALS,
-    roles: ["SUPER_ADMIN", "MANAGER"],
+    roles: ["MANAGER"],
   },
   {
     title: "Colleges",
@@ -161,5 +179,18 @@ export const navigationMenu: NavigationItem[] = [
 ];
 
 export function getNavigationForRole(roleCode: RoleCode): NavigationItem[] {
-  return navigationMenu.filter((item) => item.roles.includes(roleCode));
+  return navigationMenu
+    .filter((item) => item.roles.includes(roleCode))
+    .map((item) => {
+      if (item.children) {
+        const filteredChildren = item.children.filter(
+          (child) => !child.roles || child.roles.includes(roleCode)
+        );
+        return {
+          ...item,
+          children: filteredChildren.length > 0 ? filteredChildren : undefined,
+        };
+      }
+      return item;
+    });
 }

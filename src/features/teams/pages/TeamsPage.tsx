@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, RefreshCw, Shield, UserCheck, CheckCircle2 } from "lucide-react";
+import { Plus, Search, RefreshCw, Shield, UserCheck, CheckCircle2, Users } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { fetchTeams, type TeamItem } from "../../../services/teamService";
 import CreateTeamModal from "../components/CreateTeamModal";
@@ -142,144 +142,166 @@ const TeamsPage = () => {
         </div>
       </div>
 
-      {/* Teams Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        {loading ? (
-          <div className="flex items-center justify-center p-12 text-sm text-text-secondary">
-            <RefreshCw className="animate-spin mr-2" size={18} />
-            Loading company teams...
-          </div>
-        ) : filteredTeams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
-              <Shield size={24} />
+      {/* Teams Card Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs animate-pulse space-y-4"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-neutral-200" />
+                  <div className="space-y-1.5">
+                    <div className="h-4 w-32 rounded bg-neutral-200" />
+                  </div>
+                </div>
+                <div className="h-5 w-16 rounded-full bg-neutral-200" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="h-3.5 w-full rounded bg-neutral-200" />
+                <div className="h-3.5 w-2/3 rounded bg-neutral-200" />
+              </div>
+
+              <div className="rounded-lg border border-border-light bg-neutral-50/60 p-3 space-y-2">
+                <div className="h-2.5 w-14 rounded bg-neutral-200" />
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-full bg-neutral-200" />
+                  <div className="space-y-1 flex-1">
+                    <div className="h-3.5 w-28 rounded bg-neutral-200" />
+                    <div className="h-3 w-36 rounded bg-neutral-200" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-4 w-24 rounded bg-neutral-200" />
+
+              <div className="pt-3 border-t border-border-light flex items-center justify-between">
+                <div className="h-3.5 w-20 rounded bg-neutral-200" />
+                <div className="h-7 w-24 rounded-lg bg-neutral-200" />
+              </div>
             </div>
-            <h3 className="text-base font-semibold text-text-primary">
-              No teams found
-            </h3>
-            <p className="text-sm text-text-secondary mt-1 max-w-sm">
-              {searchTerm
-                ? "No teams matched your search criteria."
-                : "Create your first team to get started."}
-            </p>
+          ))}
+        </div>
+      ) : filteredTeams.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface p-12 text-center shadow-xs">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-text-muted">
+            <Shield size={24} />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-neutral-50/80">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Team Name
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Description
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Manager
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Members
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Status
-                  </th>
-                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Created Date
-                  </th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTeams.map((team) => {
-                  const managerName = team.manager
-                    ? `${team.manager.firstName} ${team.manager.lastName || ""}`.trim()
-                    : "Unassigned";
-                  const createdDateStr = new Date(team.createdAt).toLocaleDateString(
-                    undefined,
-                    { year: "numeric", month: "short", day: "numeric" }
-                  );
-                  const memberCount = team.memberCount ?? 0;
+          <h3 className="text-base font-semibold text-text-primary">
+            No teams found
+          </h3>
+          <p className="mt-1 max-w-sm text-sm text-text-secondary">
+            {searchTerm
+              ? "No teams matched your search criteria."
+              : "Create your first team to get started."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTeams.map((team) => {
+            const managerName = team.manager
+              ? `${team.manager.firstName} ${team.manager.lastName || ""}`.trim()
+              : "Unassigned";
+            const createdDateStr = new Date(team.createdAt).toLocaleDateString(
+              undefined,
+              { year: "numeric", month: "short", day: "numeric" }
+            );
+            const memberCount = team.memberCount ?? 0;
 
-                  return (
-                    <tr
-                      key={team.id}
-                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
+            return (
+              <div
+                key={team.id}
+                className="flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs transition-all duration-200 hover:border-primary-200 hover:shadow-md group"
+              >
+                <div>
+                  {/* HEADER */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold shadow-2xs">
+                        <Shield size={20} />
+                      </div>
+                      <h3 className="text-base font-semibold text-text-primary truncate" title={team.name}>
+                        {team.name}
+                      </h3>
+                    </div>
+
+                    <span
+                      className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                        team.isActive
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                          : "bg-neutral-100 text-neutral-600 border-neutral-200/60"
+                      }`}
                     >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold text-xs shrink-0">
-                            <Shield size={18} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">
-                              {team.name}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                      {team.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary max-w-xs truncate">
-                        {team.description || <span className="text-text-muted italic">No description</span>}
-                      </td>
+                  {/* DESCRIPTION */}
+                  <div className="mb-4 text-sm text-text-secondary line-clamp-2 min-h-[2.5rem]">
+                    {team.description ? (
+                      team.description
+                    ) : (
+                      <span className="text-text-muted italic">No description</span>
+                    )}
+                  </div>
 
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-medium shrink-0">
-                            <UserCheck size={14} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-text-primary">
-                              {managerName}
-                            </p>
-                            {team.manager && (
-                              <p className="text-xs text-text-muted">
-                                {team.manager.email}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+                  {/* MANAGER SECTION */}
+                  <div className="mb-4 rounded-lg border border-border-light bg-neutral-50/70 p-3 transition group-hover:bg-neutral-50">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1.5">
+                      Manager
+                    </p>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                        {team.manager ? (
+                          `${team.manager.firstName[0]}${(team.manager.lastName || "")[0] || ""}`.toUpperCase()
+                        ) : (
+                          <UserCheck size={14} />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {managerName}
+                        </p>
+                        {team.manager?.email ? (
+                          <p className="text-xs text-text-muted truncate">
+                            {team.manager.email}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-text-muted italic truncate">
+                            No email available
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary font-medium">
-                        {memberCount} {memberCount === 1 ? "Member" : "Members"}
-                      </td>
+                  {/* TEAM STATS */}
+                  <div className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-4">
+                    <Users size={16} className="text-text-muted" />
+                    <span>
+                      {memberCount} {memberCount === 1 ? "Member" : "Members"}
+                    </span>
+                  </div>
+                </div>
 
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            team.isActive
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-neutral-100 text-neutral-600"
-                          }`}
-                        >
-                          {team.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        {createdDateStr}
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => navigate(`/teams/${team.id}`)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-100 transition shadow-2xs"
-                        >
-                          View Team →
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-
-        )}
-      </div>
+                {/* FOOTER */}
+                <div className="pt-3 border-t border-border-light flex items-center justify-between text-xs text-text-muted">
+                  <span>{createdDateStr}</span>
+                  <button
+                    onClick={() => navigate(`/teams/${team.id}`)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-100 transition shadow-2xs group-hover:border-primary-300"
+                  >
+                    View Team →
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create Team Modal */}
       {isCreateModalOpen && (

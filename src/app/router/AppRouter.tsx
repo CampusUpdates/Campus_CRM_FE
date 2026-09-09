@@ -11,6 +11,7 @@ import UpdatePasswordPage from "../../features/auth/pages/UpdatePasswordPage";
 import AccessDeniedPage from "../../features/auth/pages/AccessDeniedPage";
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 import LeadPage from "../../features/leads/pages/LeadPage";
+import LeadProfilePage from "../../features/leads/pages/LeadProfilePage";
 import AdmissionPage from "../../features/admissions/pages/AdmissionPage";
 import ReportsPage from "../../features/reports/pages/ReportsPage";
 import ProfilePage from "../../features/profile/pages/ProfilePage";
@@ -27,6 +28,7 @@ import TeamDetailsPage from "../../features/teams/pages/TeamDetailsPage";
 import DataUploadPage from "../../features/data-management/pages/DataUploadPage";
 import DataAssignmentPage from "../../features/data-management/pages/DataAssignmentPage";
 import CallWorkspace from "../../features/calls/pages/CallWorkspace";
+import ClaimRequestsPage from "../../features/claim-requests/pages/ClaimRequestsPage";
 
 const AppRouter = () => {
   return (
@@ -66,7 +68,12 @@ const AppRouter = () => {
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.LEADS} element={<LeadPage />} />
+            <Route path={ROUTES.LEAD_PROFILE} element={<LeadProfilePage />} />
             <Route path={ROUTES.TPC} element={<Tpc />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
+            <Route path={ROUTES.CLAIM_REQUESTS} element={<ClaimRequestsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER"]} />}>

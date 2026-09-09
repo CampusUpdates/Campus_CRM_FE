@@ -1,12 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   Plus,
 
   Search,
   RefreshCw,
   Users,
-  Building2,
   Pencil,
   Tag,
   Headphones,
@@ -17,6 +16,8 @@ import {
   XCircle,
   Filter,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import CreateLeadModal from "../components/CreateLeadModal";
@@ -25,7 +26,7 @@ import ChangeStatusModal from "../components/ChangeStatusModal";
 import TPCModal from "../components/TPCModal";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchLeads, claimLead, type LeadItem } from "../../../services/leadService";
+import { fetchLeads, createLeadClaimRequest, type LeadItem } from "../../../services/leadService";
 
 export type StatusTabType = "ALL" | "LEAD" | "INTERESTED" | "ADMISSION" | "CLOSED";
 
@@ -74,27 +75,38 @@ const LeadPage = () => {
   };
 
 
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [activeStatusTab, setActiveStatusTab] = useState<StatusTabType>("ALL");
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeStatusTab, searchParams]);
+
   // Active Lead Action States
   const [editingLead, setEditingLead] = useState<LeadItem | null>(null);
   const [changingStatusLead, setChangingStatusLead] = useState<LeadItem | null>(null);
   const [tpcLead, setTpcLead] = useState<LeadItem | null>(null);
   const [claimingLeadId, setClaimingLeadId] = useState<string | null>(null);
+  const [pendingClaimLeadIds, setPendingClaimLeadIds] = useState<Set<string>>(new Set());
 
   const handleClaimLead = async (leadId: string) => {
     if (!accessToken) return;
     setClaimingLeadId(leadId);
     try {
-      await claimLead(accessToken, leadId);
-      toast.success("Lead claimed successfully!");
-      loadLeads();
+      await createLeadClaimRequest(accessToken, leadId);
+      toast.success("Claim request submitted! Awaiting Super Admin approval.");
+      setPendingClaimLeadIds((prev) => new Set(prev).add(leadId));
     } catch (err: any) {
-      toast.error(err.message || "Failed to claim lead");
+      if (err.message && err.message.includes("already exists")) {
+        setPendingClaimLeadIds((prev) => new Set(prev).add(leadId));
+      }
+      toast.error(err.message || "Failed to submit claim request");
     } finally {
       setClaimingLeadId(null);
     }
@@ -185,6 +197,47 @@ const LeadPage = () => {
 
     return true;
   });
+
+  // Dynamic counts for each status pipeline tab
+  const tabCounts = useMemo(() => {
+    let leadCount = 0;
+    let interestedCount = 0;
+    let admissionCount = 0;
+    let closedCount = 0;
+
+    leads.forEach((lead) => {
+      const statusName = (lead.status?.name || "LEAD").toUpperCase();
+      if (statusName === "LEAD" || statusName === "NEW" || statusName === "CONNECTED") {
+        leadCount++;
+      } else if (
+        ["APPLICATION", "INTERVIEW_SCHEDULED", "INTERVIEW_DONE", "LETTER_OUT"].includes(statusName) ||
+        statusName.includes("INTEREST") ||
+        statusName.includes("PITCH") ||
+        statusName.includes("FOLLOWER")
+      ) {
+        interestedCount++;
+      } else if (statusName.includes("ADMISSION") || statusName.includes("HIRED") || statusName.includes("ENROLLED")) {
+        admissionCount++;
+      } else if (statusName.includes("CLOSE") || statusName.includes("CANCEL") || statusName.includes("REJECT")) {
+        closedCount++;
+      }
+    });
+
+    return {
+      all: leads.length,
+      lead: leadCount,
+      interested: interestedCount,
+      admission: admissionCount,
+      closed: closedCount,
+    };
+  }, [leads]);
+
+  const totalLeads = filteredLeads.length;
+  const totalPages = Math.ceil(totalLeads / ITEMS_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalLeads);
+  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
 
 
   const getStatusBadgeStyle = (statusName?: string) => {
@@ -307,7 +360,7 @@ const LeadPage = () => {
           `}
         >
           <Users size={14} />
-          All Leads ({leads.length})
+          All Leads ({tabCounts.all})
         </button>
 
         <button
@@ -321,7 +374,7 @@ const LeadPage = () => {
           `}
         >
           <Clock size={14} />
-          New / Active Leads
+          New / Active Leads ({tabCounts.lead})
         </button>
 
         <button
@@ -335,7 +388,7 @@ const LeadPage = () => {
           `}
         >
           <Briefcase size={14} />
-          Application Done
+          Application Done ({tabCounts.interested})
         </button>
 
         <button
@@ -349,7 +402,7 @@ const LeadPage = () => {
           `}
         >
           <CheckCircle2 size={14} />
-          Admissions Confirmed
+          Admissions Confirmed ({tabCounts.admission})
         </button>
 
         <button
@@ -363,7 +416,7 @@ const LeadPage = () => {
           `}
         >
           <XCircle size={14} />
-          Closed / Cancelled
+          Closed / Cancelled ({tabCounts.closed})
         </button>
       </div>
 
@@ -419,271 +472,365 @@ const LeadPage = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Lead Name
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Phone
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Email
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Course & Location
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Colleges Pitched
-                  </th>
-                  {isSuperAdminOrManager && (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-neutral-50">
                     <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                      Current Owner / Claimed By
+                      Lead Name
                     </th>
-                  )}
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      Phone
+                    </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      Email
+                    </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      Course & Location
+                    </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      Colleges Pitched
+                    </th>
+                    {isSuperAdminOrManager && (
+                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                        Current Owner / Claimed By
+                      </th>
+                    )}
 
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Status
-                  </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      Status
+                    </th>
 
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {filteredLeads.map((lead) => {
-                  const fullName = `${lead.firstName} ${lead.lastName || ""}`.trim();
-                  const shortId = `LD${lead.id.slice(0, 4).toUpperCase()}`;
+                <tbody>
+                  {paginatedLeads.map((lead) => {
+                    const fullName = `${lead.firstName} ${lead.lastName || ""}`.trim();
+                    const shortId = `LD${lead.id.slice(0, 4).toUpperCase()}`;
 
-                  const statusName = lead.status?.name || "LEAD";
-                  const isAdmissionDone = statusName === "ADMISSION_DONE";
+                    const statusName = lead.status?.name || "LEAD";
+                    const isAdmissionDone = statusName === "ADMISSION_DONE";
 
-                  const activeAssignment = lead.assignments?.find(
-                    (a) =>
-                      a.status === "ACTIVE" &&
-                      a.expiresAt &&
-                      new Date(a.expiresAt).getTime() > Date.now()
-                  );
-                  const hasActiveWindow = Boolean(activeAssignment);
+                    const activeAssignment = lead.assignments?.find(
+                      (a) =>
+                        a.status === "ACTIVE" &&
+                        a.expiresAt &&
+                        new Date(a.expiresAt).getTime() > Date.now()
+                    );
+                    const hasActiveWindow = Boolean(activeAssignment);
 
-                  const isProtected = [
-                    "APPLICATION",
-                    "INTERVIEW_SCHEDULED",
-                    "INTERVIEW_DONE",
-                    "LETTER_OUT",
-                  ].includes(statusName);
+                    const isProtected = [
+                      "APPLICATION",
+                      "INTERVIEW_SCHEDULED",
+                      "INTERVIEW_DONE",
+                      "LETTER_OUT",
+                    ].includes(statusName);
 
-                  const isClaimable =
-                    !isAdmissionDone &&
-                    !hasActiveWindow &&
-                    !isProtected &&
-                    ["LEAD", "CANCELLED"].includes(statusName);
+                    const isClaimRequestPending =
+                      pendingClaimLeadIds.has(lead.id) ||
+                      Boolean((lead as any).claimRequests?.some((r: any) => r.status === "PENDING"));
 
-                  const isAssignmentExpired =
-                    !hasActiveWindow &&
-                    lead.assignments &&
-                    lead.assignments.length > 0;
+                    const isClaimable =
+                      !isAdmissionDone &&
+                      !hasActiveWindow &&
+                      !isProtected &&
+                      !isClaimRequestPending &&
+                      ["LEAD", "CANCELLED"].includes(statusName);
 
-                  const actionsDisabled =
-                    isAssignmentExpired && user?.roleCode !== "SUPER_ADMIN";
+                    const isAssignmentExpired =
+                      !hasActiveWindow &&
+                      lead.assignments &&
+                      lead.assignments.length > 0;
 
-                  return (
-                    <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition">
-                      <td className="px-5 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-text-primary">
-                            {fullName}
-                          </p>
-                          <p className="text-xs text-text-muted font-mono">
-                            #{shortId}
-                          </p>
-                        </div>
-                      </td>
+                    const actionsDisabled =
+                      isAssignmentExpired && user?.roleCode !== "SUPER_ADMIN";
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        {lead.phone}
-                      </td>
+                    const isSuperAdminUser = user?.roleCode === "SUPER_ADMIN";
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        {lead.email || "N/A"}
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        <div>
-                          <p className="font-medium text-text-primary">
-                            {lead.courseInterested || "N/A"}
-                          </p>
-                          {lead.city && (
-                            <p className="text-xs text-text-muted">
-                              {lead.city}{lead.state ? `, ${lead.state}` : ""}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        {lead.collegeApplications && lead.collegeApplications.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {lead.collegeApplications.map((app) => (
-                              <span
-                                key={app.id}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 border border-neutral-200 px-2.5 py-1 text-xs font-medium text-text-primary"
+                    return (
+                      <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition">
+                        <td className="px-5 py-4">
+                          <div>
+                            {isSuperAdminUser ? (
+                              <Link
+                                to={`/leads/${lead.id}`}
+                                className="text-sm font-semibold text-primary-700 hover:text-primary-900 hover:underline transition cursor-pointer"
+                                title="View Super Admin Lead 360 Profile"
                               >
-                                <Building2 size={13} className="text-primary-600 shrink-0" />
-                                {app.college?.name || "College"}
-                              </span>
-                            ))}
+                                {fullName}
+                              </Link>
+                            ) : (
+                              <p className="text-sm font-semibold text-text-primary">
+                                {fullName}
+                              </p>
+                            )}
+                            <p className="text-xs text-text-muted font-mono">
+                              #{shortId}
+                            </p>
                           </div>
-                        ) : (
-                          <span className="text-xs text-text-muted">None</span>
-                        )}
-                      </td>
-
-                      {isSuperAdminOrManager && (
-                        <td className="px-5 py-4 text-sm text-text-secondary">
-                          {(() => {
-                            const assignedUser = activeAssignment?.user || (lead.assignments && lead.assignments[0]?.user);
-                            const ownerName = assignedUser
-                              ? `${assignedUser.firstName} ${assignedUser.lastName || ""}`.trim()
-                              : lead.createdBy
-                                ? `${lead.createdBy.firstName} ${lead.createdBy.lastName || ""}`.trim()
-                                : null;
-
-                            const ownerTeamName = (assignedUser as any)?.team?.name;
-
-                            if (ownerName) {
-                              return (
-                                <div className="flex flex-col gap-1 items-start">
-                                  <div className="flex items-center gap-1.5 font-semibold text-text-primary text-xs">
-                                    <UserCheck size={14} className="text-primary-600 shrink-0" />
-                                    <span>{ownerName}</span>
-                                  </div>
-                                  {ownerTeamName && (
-                                    <span className="text-[11px] text-text-muted">
-                                      Team: {ownerTeamName}
-                                    </span>
-                                  )}
-                                  {hasActiveWindow ? (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                                      Claimed & Active
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-text-muted bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-md">
-                                      Assigned / Created
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
-                                Unclaimed / Pool
-                              </span>
-                            );
-                          })()}
                         </td>
-                      )}
 
+                        <td className="px-5 py-4 text-sm text-text-secondary">
+                          {lead.phone}
+                        </td>
 
+                        <td className="px-5 py-4 text-sm text-text-secondary">
+                          {lead.email || "N/A"}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col items-start gap-1">
-                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeStyle(statusName)}`}>
-                            {statusName.replace(/_/g, " ")}
-                          </span>
+                        <td className="px-5 py-4 text-sm text-text-secondary">
+                          <div>
+                            <p className="font-medium text-text-primary">
+                              {lead.courseInterested || "N/A"}
+                            </p>
+                            {lead.city && (
+                              <p className="text-xs text-text-muted">
+                                {lead.city}{lead.state ? `, ${lead.state}` : ""}
+                              </p>
+                            )}
+                          </div>
+                        </td>
 
-                          {isAdmissionDone ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold">
-                              Admission Done (Locked)
-                            </span>
-                          ) : hasActiveWindow ? (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold"
-                              title={`Active 4-day window assigned to ${activeAssignment?.user?.firstName || 'User'}`}
-                            >
-                              <Clock size={10} />
-                              Active ({formatExpiryTime(activeAssignment?.expiresAt)})
-                            </span>
-                          ) : isProtected ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-semibold">
-                              Pipeline Protected
-                            </span>
-                          ) : isClaimable ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold">
-                              Claimable
-                            </span>
+                        <td className="px-5 py-4 text-sm text-text-secondary">
+                          {lead.collegeApplications && lead.collegeApplications.length > 0 ? (
+                            <div className="flex flex-col gap-1.5 items-start max-w-[240px]">
+                              {lead.collegeApplications.map((app) => {
+                                const rawColor = app.status?.color || "#3b82f6";
+                                return (
+                                  <span
+                                    key={app.id}
+                                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium max-w-full transition-all"
+                                    style={{
+                                      backgroundColor: `color-mix(in srgb, ${rawColor} 12%, transparent)`,
+                                      borderColor: `color-mix(in srgb, ${rawColor} 30%, transparent)`,
+                                      color: `color-mix(in srgb, ${rawColor} 90%, #ffffff)`,
+                                    }}
+                                    title={`${app.college?.name || "College"}${app.status?.name ? ` (${app.status.name})` : ""}`}
+                                  >
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: rawColor }}
+                                    />
+                                    <span className="truncate">
+                                      {app.college?.name || "College"}
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                            </div>
                           ) : (
-                            <span className="inline-flex rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                              Expired
-                            </span>
+                            <span className="text-xs text-text-muted">None</span>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Actions Column: 1. Claim Lead, 2. Edit Lead, 3. Change Status, 4. TPC */}
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Claim Lead Button */}
-                          <button
-                            onClick={() => isClaimable && handleClaimLead(lead.id)}
-                            disabled={!isClaimable || claimingLeadId === lead.id}
-                            title={
-                              isAdmissionDone
-                                ? "Leads with completed admission cannot be assigned or reassigned."
-                                : hasActiveWindow
-                                  ? "This lead is currently inside an active 4-day assignment window and cannot be reassigned."
-                                  : isProtected
-                                    ? "This lead has progressed in the pipeline and cannot be reassigned."
-                                    : "Claim this lead to your portfolio"
-                            }
-                            className="p-1.5 rounded-lg border border-border text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
-                          >
-                            <UserCheck size={16} className={claimingLeadId === lead.id ? "animate-spin" : ""} />
-                          </button>
+                        {isSuperAdminOrManager && (
+                          <td className="px-5 py-4 text-sm text-text-secondary">
+                            {(() => {
+                              const assignedUser = activeAssignment?.user || (lead.assignments && lead.assignments[0]?.user);
+                              const ownerName = assignedUser
+                                ? `${assignedUser.firstName} ${assignedUser.lastName || ""}`.trim()
+                                : lead.createdBy
+                                  ? `${lead.createdBy.firstName} ${lead.createdBy.lastName || ""}`.trim()
+                                  : null;
 
-                          {/* Edit Lead */}
-                          <button
-                            onClick={() => !actionsDisabled && setEditingLead(lead)}
-                            disabled={actionsDisabled}
-                            title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Edit Lead Details"}
-                            className="p-1.5 rounded-lg border border-border text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
-                          >
-                            <Pencil size={16} />
-                          </button>
+                              const ownerTeamName = (assignedUser as any)?.team?.name;
 
-                          {/* Change Status */}
-                          <button
-                            onClick={() => !actionsDisabled && setChangingStatusLead(lead)}
-                            disabled={actionsDisabled}
-                            title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Change Lead Status Stage"}
-                            className="p-1.5 rounded-lg border border-border text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
-                          >
-                            <Tag size={16} />
-                          </button>
+                              if (ownerName) {
+                                return (
+                                  <div className="flex flex-col gap-1 items-start">
+                                    <div className="flex items-center gap-1.5 font-semibold text-text-primary text-xs">
+                                      <UserCheck size={14} className="text-primary-600 shrink-0" />
+                                      <span>{ownerName}</span>
+                                    </div>
+                                    {ownerTeamName && (
+                                      <span className="text-[11px] text-text-muted">
+                                        Team: {ownerTeamName}
+                                      </span>
+                                    )}
+                                    {hasActiveWindow ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                        Claimed & Active
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-text-muted bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-md">
+                                        Assigned / Created
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              }
 
-                          {/* TPC (Third Party Calling) */}
-                          <button
-                            onClick={() => !actionsDisabled && setTpcLead(lead)}
-                            disabled={actionsDisabled}
-                            title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Third Party Calling (TPC)"}
-                            className="p-1.5 rounded-lg border border-border text-purple-600 hover:bg-purple-50 hover:border-purple-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
-                          >
-                            <Headphones size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                              return (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
+                                  Unclaimed / Pool
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        )}
 
-              </tbody>
-            </table>
-          </div>
+
+
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeStyle(statusName)}`}>
+                              {statusName.replace(/_/g, " ")}
+                            </span>
+
+                            {isAdmissionDone ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold">
+                                Admission Done (Locked)
+                              </span>
+                            ) : hasActiveWindow ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold"
+                                title={`Active 4-day window assigned to ${activeAssignment?.user?.firstName || 'User'}`}
+                              >
+                                <Clock size={10} />
+                                Active ({formatExpiryTime(activeAssignment?.expiresAt)})
+                              </span>
+                            ) : isClaimRequestPending ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold">
+                                <Clock size={10} />
+                                Claim Request Pending
+                              </span>
+                            ) : isProtected ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-semibold">
+                                Pipeline Protected
+                              </span>
+                            ) : isClaimable ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold">
+                                Claimable
+                              </span>
+                            ) : (
+                              <span className="inline-flex rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                                Expired
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Actions Column: 1. Claim Lead, 2. Edit Lead, 3. Change Status, 4. TPC */}
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Claim Lead Button */}
+                            {isClaimRequestPending ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg"
+                                title="Claim request is currently pending Super Admin approval"
+                              >
+                                <Clock size={13} className="shrink-0" />
+                                Request Pending
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => isClaimable && handleClaimLead(lead.id)}
+                                disabled={!isClaimable || claimingLeadId === lead.id}
+                                title={
+                                  isAdmissionDone
+                                    ? "Leads with completed admission cannot be assigned or reassigned."
+                                    : hasActiveWindow
+                                      ? "This lead is currently inside an active 4-day assignment window and cannot be reassigned."
+                                      : isProtected
+                                        ? "This lead has progressed in the pipeline and cannot be reassigned."
+                                        : "Submit claim request to Super Admin"
+                                }
+                                className="p-1.5 rounded-lg border border-border text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
+                              >
+                                <UserCheck size={16} className={claimingLeadId === lead.id ? "animate-spin" : ""} />
+                              </button>
+                            )}
+
+                            {/* Edit Lead */}
+                            <button
+                              onClick={() => !actionsDisabled && setEditingLead(lead)}
+                              disabled={actionsDisabled}
+                              title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Edit Lead Details"}
+                              className="p-1.5 rounded-lg border border-border text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
+                            >
+                              <Pencil size={16} />
+                            </button>
+
+                            {/* Change Status */}
+                            <button
+                              onClick={() => !actionsDisabled && setChangingStatusLead(lead)}
+                              disabled={actionsDisabled}
+                              title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Change Lead Status Stage"}
+                              className="p-1.5 rounded-lg border border-border text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
+                            >
+                              <Tag size={16} />
+                            </button>
+
+                            {/* TPC (Third Party Calling) */}
+                            <button
+                              onClick={() => !actionsDisabled && setTpcLead(lead)}
+                              disabled={actionsDisabled}
+                              title={actionsDisabled ? "Lead assignment has expired. Actions are disabled." : "Third Party Calling (TPC)"}
+                              className="p-1.5 rounded-lg border border-border text-purple-600 hover:bg-purple-50 hover:border-purple-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-border"
+                            >
+                              <Headphones size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer Bar */}
+            {filteredLeads.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border px-6 py-4 bg-surface rounded-b-2xl">
+                <div className="text-xs text-text-muted font-medium">
+                  Showing <span className="font-bold text-text-primary">{startIndex + 1}</span> to{" "}
+                  <span className="font-bold text-text-primary">{endIndex}</span> of{" "}
+                  <span className="font-bold text-text-primary">{totalLeads}</span> leads
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={safeCurrentPage === 1}
+                    className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-50 hover:text-text-primary transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Previous</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 max-w-[200px] overflow-x-auto">
+                    {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold transition cursor-pointer ${safeCurrentPage === pageNum
+                          ? "bg-primary-500 text-white shadow-2xs"
+                          : "border border-border text-text-secondary hover:bg-neutral-50 hover:text-text-primary"
+                          }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={safeCurrentPage >= totalPages}
+                    className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-50 hover:text-text-primary transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

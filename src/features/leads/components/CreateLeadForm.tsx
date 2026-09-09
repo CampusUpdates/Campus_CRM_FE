@@ -210,7 +210,7 @@ const CreateLeadForm = ({
           delete updatePayload.statusId;
           const updated = await updateLead(accessToken, initialLead.id, updatePayload);
           setUpdatedLeadState(updated || initialLead);
-          toast.success("Lead details saved! Complete stage transition in the pipeline drawer.");
+          toast.info("Lead details saved. Complete stage transition in the pipeline drawer.");
           setActivePipelineStatus(selectedStatusObj);
           return;
         }
