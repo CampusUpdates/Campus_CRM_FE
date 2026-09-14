@@ -1,15 +1,27 @@
 import { API_URL } from "../config/api";
 
-export async function login(username: string, password: string) {
+export async function login(
+  username: string,
+  password: string,
+  latitude?: number,
+  longitude?: number
+) {
+  const payload: any = {
+    username,
+    password,
+  };
+
+  if (latitude !== undefined && longitude !== undefined) {
+    payload.latitude = latitude;
+    payload.longitude = longitude;
+  }
+
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();

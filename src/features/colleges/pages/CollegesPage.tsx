@@ -16,14 +16,22 @@ import {
   List,
   Trash2,
   Edit3,
+  Loader2,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchActiveColleges, deleteCollege, type College } from "../../../services/collegeService";
+import {
+  fetchActiveColleges,
+  fetchManagementColleges,
+  toggleCollegeStatus,
+  deleteCollege,
+  type College,
+} from "../../../services/collegeService";
 import CreateCollegeModal from "../components/CreateCollegeModal";
 import CollegeDetailsModal from "../components/CollegeDetailsModal";
 import EditCollegeModal from "../components/EditCollegeModal";
+import DeleteCollegeModal from "../components/DeleteCollegeModal";
 
 const CollegesPage = () => {
   const { accessToken, hasRole, user } = useAuth();
@@ -37,6 +45,8 @@ const CollegesPage = () => {
   const [isCreateCollegeOpen, setIsCreateCollegeOpen] = useState(false);
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
   const [editingCollege, setEditingCollege] = useState<College | null>(null);
+  const [deletingCollege, setDeletingCollege] = useState<College | null>(null);
+  const [togglingCollegeId, setTogglingCollegeId] = useState<string | null>(null);
 
   useEffect(() => {
     setSearchTerm(urlSearchQuery);
@@ -53,7 +63,6 @@ const CollegesPage = () => {
 
   const isAdvisor = user?.roleCode === "PROGRAM_ADVISOR";
   const canManageCollege = hasRole(["SUPER_ADMIN", "HR"]);
-  const isHR = user?.roleCode === "HR";
 
   // Default to card layout for advisors, allow view toggle for admins/HR
   const [viewMode, setViewMode] = useState<"card" | "table">(isAdvisor ? "card" : "card");
@@ -62,33 +71,87 @@ const CollegesPage = () => {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const data = await fetchActiveColleges(accessToken);
+      const data = canManageCollege
+        ? await fetchManagementColleges(accessToken)
+        : await fetchActiveColleges(accessToken);
       setColleges(data);
     } catch (err) {
       console.error("Failed to load colleges:", err);
+      toast.error("Failed to load colleges");
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, canManageCollege, toast]);
 
   useEffect(() => {
     loadColleges();
   }, [loadColleges]);
 
-  const handleRemoveCollege = async (id: string, name: string) => {
+  // Server-Confirmed Status Toggle Handler (NO Optimistic UI Updates)
+  const handleToggleStatus = async (college: College) => {
     if (!accessToken) return;
-    if (!window.confirm(`Are you sure you want to remove "${name}" from partner colleges?`)) {
+
+    // Prevent race conditions (Requirement 9)
+    if (togglingCollegeId === college.id) {
       return;
     }
+
+    const requestedStatus = !college.isActive;
+
+    // Immediately disable toggle & show loading state (Requirement 5)
+    // DO NOT update colleges state before API success (Requirement 1 & 6)
+    setTogglingCollegeId(college.id);
+
     try {
-      await deleteCollege(accessToken, id);
-      toast.success(`Removed "${name}" successfully`);
-      if (selectedCollege?.id === id) {
+      // Call status API (Requirement 2 & 3)
+      const updatedCollege = await toggleCollegeStatus(
+        accessToken,
+        college.id,
+        requestedStatus
+      );
+
+      // Update state strictly using server-returned value (Requirement 3)
+      setColleges((prev) =>
+        prev.map((item) =>
+          item.id === updatedCollege.id
+            ? {
+                ...item,
+                ...updatedCollege,
+              }
+            : item
+        )
+      );
+
+      toast.success(
+        `College "${updatedCollege.name}" is now ${
+          updatedCollege.isActive ? "Active" : "Inactive"
+        }`
+      );
+    } catch (err: any) {
+      // Preserve previous state on failure (Requirement 4 & 8)
+      toast.error(
+        err.message || "Unable to update college status. Please try again."
+      );
+    } finally {
+      // Re-enable toggle after completion (Requirement 5)
+      setTogglingCollegeId(null);
+    }
+  };
+
+  // Permanent Delete Confirmation Handler
+  const handleConfirmDelete = async () => {
+    if (!accessToken || !deletingCollege) return;
+    try {
+      await deleteCollege(accessToken, deletingCollege.id);
+      toast.success(`College "${deletingCollege.name}" permanently deleted`);
+      setColleges((prev) => prev.filter((c) => c.id !== deletingCollege.id));
+      if (selectedCollege?.id === deletingCollege.id) {
         setSelectedCollege(null);
       }
-      loadColleges();
+      setDeletingCollege(null);
     } catch (err: any) {
-      toast.error(err.message || "Failed to remove college");
+      toast.error(err.message || "Failed to delete college");
+      throw err;
     }
   };
 
@@ -114,7 +177,7 @@ const CollegesPage = () => {
           <p className="mt-1 text-sm text-text-secondary">
             {!canManageCollege
               ? "Browse partner colleges, university details, and admission pitch guidelines in read-only mode."
-              : "View partner colleges, university details, and affiliation programs."}
+              : "View partner colleges, university details, activation status, and affiliation programs."}
           </p>
         </div>
 
@@ -245,22 +308,29 @@ const CollegesPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredColleges.map((college) => {
             const location = [college.city, college.state].filter(Boolean).join(", ");
+            const isInactive = college.isActive === false;
+            const isToggling = togglingCollegeId === college.id;
 
             return (
               <div
                 key={college.id}
-                className="
+                style={{ opacity: isInactive ? 0.6 : 1 }}
+                className={`
                   group flex flex-col justify-between
-                  rounded-2xl border border-border bg-surface p-6
-                  shadow-xs hover:shadow-md hover:border-primary-200
-                  transition duration-200
-                "
+                  rounded-2xl border bg-surface p-6
+                  shadow-xs transition duration-200
+                  ${isInactive ? "border-neutral-300 bg-neutral-50/40" : "border-border hover:shadow-md hover:border-primary-200"}
+                `}
               >
                 <div className="space-y-4">
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-600 shrink-0 group-hover:bg-primary-500 group-hover:text-white transition duration-200">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition duration-200 ${
+                        isInactive
+                          ? "bg-neutral-200 text-neutral-500"
+                          : "bg-primary-50 text-primary-600 group-hover:bg-primary-500 group-hover:text-white"
+                      }`}>
                         <Building2 size={22} />
                       </div>
                       <div>
@@ -277,16 +347,80 @@ const CollegesPage = () => {
                     </div>
                   </div>
 
-                  {/* Partnership Badge */}
-                  <div className="flex items-center gap-2">
-                    {college.hasTieUp ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                        <CheckCircle2 size={12} />
-                        Official Partner
-                      </span>
+                  {/* Partnership Badge & HR Toggle */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap border-y border-border/50 py-2.5 my-1">
+                    {/* TieUp Badge */}
+                    <div>
+                      {college.hasTieUp ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          <CheckCircle2 size={12} />
+                          Official Partner
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                          Affiliated
+                        </span>
+                      )}
+                    </div>
+
+                    {/* HR Activation / Deactivation Toggle Switch */}
+                    {canManageCollege ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(college)}
+                          disabled={isToggling}
+                          className={`
+                            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                            transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            ${college.isActive !== false ? "bg-emerald-600" : "bg-neutral-300"}
+                          `}
+                          title={
+                            isToggling
+                              ? "Updating status..."
+                              : college.isActive !== false
+                              ? "Click to deactivate college"
+                              : "Click to activate college"
+                          }
+                        >
+                          <span
+                            className={`
+                              pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md
+                              transition duration-200 ease-in-out flex items-center justify-center text-[9px] font-black
+                              ${college.isActive !== false ? "translate-x-5 text-emerald-700" : "translate-x-0 text-neutral-500"}
+                            `}
+                          >
+                            {isToggling ? (
+                              <Loader2 size={11} className="animate-spin text-neutral-500" />
+                            ) : college.isActive !== false ? (
+                              "ON"
+                            ) : (
+                              "OFF"
+                            )}
+                          </span>
+                        </button>
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            college.isActive !== false
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-neutral-200 text-neutral-700 border border-neutral-300"
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${college.isActive !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                          {college.isActive !== false ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                        Active College
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                          college.isActive !== false
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-neutral-200 text-neutral-700 border border-neutral-300"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${college.isActive !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                        {college.isActive !== false ? "Active" : "Inactive"}
                       </span>
                     )}
                   </div>
@@ -353,7 +487,7 @@ const CollegesPage = () => {
                   >
                     View Details
                   </button>
-                  {isHR && (
+                  {canManageCollege && (
                     <button
                       onClick={() => setEditingCollege(college)}
                       className="
@@ -371,7 +505,7 @@ const CollegesPage = () => {
                   )}
                   {canManageCollege && (
                     <button
-                      onClick={() => handleRemoveCollege(college.id, college.name)}
+                      onClick={() => setDeletingCollege(college)}
                       className="
                         text-xs font-semibold
                         text-rose-600 hover:text-rose-700
@@ -379,10 +513,10 @@ const CollegesPage = () => {
                         px-3 py-1.5 rounded-lg transition
                         flex items-center gap-1
                       "
-                      title="Remove College"
+                      title="Delete Permanently"
                     >
                       <Trash2 size={13} />
-                      Remove
+                      Delete
                     </button>
                   )}
                 </div>
@@ -404,7 +538,7 @@ const CollegesPage = () => {
                     Location
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Status
+                    Status & Toggle
                   </th>
                   <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
                     Actions
@@ -416,15 +550,22 @@ const CollegesPage = () => {
                   const location = [college.city, college.state]
                     .filter(Boolean)
                     .join(", ") || "N/A";
+                  const isInactive = college.isActive === false;
+                  const isToggling = togglingCollegeId === college.id;
 
                   return (
                     <tr
                       key={college.id}
-                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
+                      style={{ opacity: isInactive ? 0.6 : 1 }}
+                      className={`border-b border-border last:border-0 hover:bg-neutral-50/50 transition ${
+                        isInactive ? "bg-neutral-50/30" : ""
+                      }`}
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600 shrink-0">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg shrink-0 ${
+                            isInactive ? "bg-neutral-200 text-neutral-500" : "bg-primary-50 text-primary-600"
+                          }`}>
                             <Building2 size={20} />
                           </div>
                           <div>
@@ -443,15 +584,65 @@ const CollegesPage = () => {
                         {location}
                       </td>
                       <td className="px-5 py-4">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            college.isActive !== false
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {college.isActive !== false ? "Active" : "Inactive"}
-                        </span>
+                        {canManageCollege ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(college)}
+                              disabled={isToggling}
+                              className={`
+                                relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                                transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                ${college.isActive !== false ? "bg-emerald-600" : "bg-neutral-300"}
+                              `}
+                              title={
+                                isToggling
+                                  ? "Updating status..."
+                                  : college.isActive !== false
+                                  ? "Click to deactivate college"
+                                  : "Click to activate college"
+                              }
+                            >
+                              <span
+                                className={`
+                                  pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md
+                                  transition duration-200 ease-in-out flex items-center justify-center text-[9px] font-black
+                                  ${college.isActive !== false ? "translate-x-5 text-emerald-700" : "translate-x-0 text-neutral-500"}
+                                `}
+                              >
+                                {isToggling ? (
+                                  <Loader2 size={11} className="animate-spin text-neutral-500" />
+                                ) : college.isActive !== false ? (
+                                  "ON"
+                                ) : (
+                                  "OFF"
+                                )}
+                              </span>
+                            </button>
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                                college.isActive !== false
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : "bg-neutral-200 text-neutral-700 border border-neutral-300"
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${college.isActive !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                              {college.isActive !== false ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                              college.isActive !== false
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-neutral-200 text-neutral-700 border border-neutral-300"
+                            }`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${college.isActive !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                            {college.isActive !== false ? "Active" : "Inactive"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-3">
@@ -461,7 +652,7 @@ const CollegesPage = () => {
                           >
                             View Details
                           </button>
-                          {isHR && (
+                          {canManageCollege && (
                             <button
                               onClick={() => setEditingCollege(college)}
                               className="text-sm font-medium text-neutral-700 hover:text-text-primary flex items-center gap-1"
@@ -473,12 +664,12 @@ const CollegesPage = () => {
                           )}
                           {canManageCollege && (
                             <button
-                              onClick={() => handleRemoveCollege(college.id, college.name)}
+                              onClick={() => setDeletingCollege(college)}
                               className="text-sm font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1"
-                              title="Remove College"
+                              title="Delete Permanently"
                             >
                               <Trash2 size={14} />
-                              Remove
+                              Delete
                             </button>
                           )}
                         </div>
@@ -507,8 +698,8 @@ const CollegesPage = () => {
         <CollegeDetailsModal
           college={selectedCollege}
           onClose={() => setSelectedCollege(null)}
-          onDelete={canManageCollege ? () => handleRemoveCollege(selectedCollege.id, selectedCollege.name) : undefined}
-          onEdit={isHR ? () => {
+          onDelete={canManageCollege ? () => setDeletingCollege(selectedCollege) : undefined}
+          onEdit={canManageCollege ? () => {
             setEditingCollege(selectedCollege);
             setSelectedCollege(null);
           } : undefined}
@@ -526,9 +717,17 @@ const CollegesPage = () => {
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal (HR only) */}
+      {deletingCollege && (
+        <DeleteCollegeModal
+          college={deletingCollege}
+          onClose={() => setDeletingCollege(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 };
 
 export default CollegesPage;
-

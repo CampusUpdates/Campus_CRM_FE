@@ -77,7 +77,7 @@ export const ManagerReportsView = () => {
 
       setColleges(collegesRes);
       setStatuses(statusesRes);
-      setRawLeads(leadsRes);
+      setRawLeads(Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || []);
 
       // Fetch team members from all managed teams
       if (teamsRes.length > 0) {

@@ -16,6 +16,27 @@ const LoginPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
 
+  const requestCoordinates = (): Promise<{ lat?: number; lon?: number }> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({});
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+          });
+        },
+        () => {
+          resolve({});
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) return;
@@ -24,7 +45,8 @@ const LoginPage = () => {
     setErrorMsg(null);
 
     try {
-      const data = await login(username.trim(), password);
+      const coords = await requestCoordinates();
+      const data = await login(username.trim(), password, coords.lat, coords.lon);
 
       // Check if backend flags first-time temporary password login
       if (data.requiresPasswordChange) {

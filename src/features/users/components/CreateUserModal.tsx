@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import CreateUserForm from "./CreateUserForm";
+import type { UserItem } from "../../../services/userService";
 
 type CreateUserModalProps = {
   onClose: () => void;
+  userToEdit?: UserItem | null;
+  onSuccessWithUser?: (updatedUser: UserItem) => void;
 };
 
-const CreateUserModal = ({ onClose }: CreateUserModalProps) => {
+const CreateUserModal = ({
+  onClose,
+  userToEdit,
+  onSuccessWithUser,
+}: CreateUserModalProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
   const handleClose = () => {
@@ -17,6 +24,13 @@ const CreateUserModal = ({ onClose }: CreateUserModalProps) => {
     if (isClosing) {
       onClose();
     }
+  };
+
+  const handleFormSuccess = (updatedUser?: UserItem) => {
+    if (updatedUser && onSuccessWithUser) {
+      onSuccessWithUser(updatedUser);
+    }
+    handleClose();
   };
 
   return (
@@ -50,10 +64,12 @@ const CreateUserModal = ({ onClose }: CreateUserModalProps) => {
         <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
           <div>
             <h2 className="text-xl font-semibold text-text-primary">
-              Add New User
+              {userToEdit ? "Edit User" : "Add New User"}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
-              Create employee account and generate temporary access tokens.
+              {userToEdit
+                ? "Update employee account and organization."
+                : "Create employee account and generate temporary access tokens."}
             </p>
           </div>
 
@@ -75,7 +91,10 @@ const CreateUserModal = ({ onClose }: CreateUserModalProps) => {
 
         {/* Scrollable Form */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <CreateUserForm onSuccess={handleClose} />
+          <CreateUserForm
+            userToEdit={userToEdit}
+            onSuccess={handleFormSuccess}
+          />
         </div>
       </div>
     </div>
@@ -83,3 +102,4 @@ const CreateUserModal = ({ onClose }: CreateUserModalProps) => {
 };
 
 export default CreateUserModal;
+

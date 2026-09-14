@@ -3,22 +3,28 @@ import { X, Loader2, AlertCircle, Search, ChevronDown, Check } from "lucide-reac
 import { useAuth } from "../../../context/AuthContext";
 import {
   createTeam,
+  updateTeam,
   fetchEligibleManagers,
   fetchEligibleMembers,
+  fetchTeamMembers,
   type EligibleManager,
   type EligibleMember,
+  type TeamItem,
 } from "../../../services/teamService";
 
 interface CreateTeamModalProps {
+  teamToEdit?: TeamItem | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
+const CreateTeamModal = ({ teamToEdit, onClose, onSuccess }: CreateTeamModalProps) => {
   const { accessToken } = useAuth();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [managerId, setManagerId] = useState("");
+  const isEditMode = !!teamToEdit;
+
+  const [name, setName] = useState(teamToEdit?.name || "");
+  const [description, setDescription] = useState(teamToEdit?.description || "");
+  const [managerId, setManagerId] = useState(teamToEdit?.managerId || "");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
   const [managers, setManagers] = useState<EligibleManager[]>([]);
@@ -40,22 +46,64 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
       try {
         setLoadingManagers(true);
         setLoadingMembers(true);
-        const [managersData, membersData] = await Promise.all([
+
+        const promises: [
+          Promise<EligibleManager[]>,
+          Promise<EligibleMember[]>,
+          Promise<EligibleMember[]>
+        ] = [
           fetchEligibleManagers(accessToken),
           fetchEligibleMembers(accessToken),
-        ]);
+          teamToEdit ? fetchTeamMembers(accessToken, teamToEdit.id) : Promise.resolve([]),
+        ];
+
+        const [managersData, membersData, currentTeamMembersData] = await Promise.all(promises);
+
         setManagers(managersData);
-        setMembers(membersData);
+
+        // Pre-select current team members if in edit mode
+        const currentMemberIds = currentTeamMembersData.map((m) => m.id);
+        if (isEditMode) {
+          setSelectedMemberIds(currentMemberIds);
+        }
+
+        // Build combined members list ensuring all CRM users are present with accurate team info
+        const memberMap = new Map<string, EligibleMember>();
+        
+        // 1. Populate all active CRM users from membersData
+        membersData.forEach((m) => {
+          memberMap.set(m.id, m);
+        });
+
+        // 2. Ensure current team members are present and assigned to teamToEdit
+        currentTeamMembersData.forEach((cm) => {
+          if (memberMap.has(cm.id)) {
+            const existing = memberMap.get(cm.id)!;
+            memberMap.set(cm.id, {
+              ...existing,
+              teamId: teamToEdit?.id,
+              team: teamToEdit ? { id: teamToEdit.id, name: teamToEdit.name } : existing.team,
+            });
+          } else {
+            memberMap.set(cm.id, {
+              ...cm,
+              teamId: teamToEdit?.id,
+              team: teamToEdit ? { id: teamToEdit.id, name: teamToEdit.name } : null,
+            });
+          }
+        });
+
+        setMembers(Array.from(memberMap.values()));
       } catch (err) {
-        console.error("Failed to load initial form data:", err);
-        setError("Failed to load eligible managers or members. Please try again.");
+        console.error("Failed to load form data:", err);
+        setError("Failed to load managers or team members. Please try again.");
       } finally {
         setLoadingManagers(false);
         setLoadingMembers(false);
       }
     }
     loadData();
-  }, [accessToken]);
+  }, [accessToken, teamToEdit, isEditMode]);
 
   // Close member dropdown on click outside
   useEffect(() => {
@@ -92,8 +140,15 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
   const filteredMembers = members.filter((m) => {
     const fullName = `${m.firstName} ${m.lastName || ""}`.toLowerCase();
     const email = m.email.toLowerCase();
+    const teamName = (m.team?.name || "").toLowerCase();
+    const roleName = (m.role?.name || "").toLowerCase();
     const query = memberSearchQuery.toLowerCase().trim();
-    return fullName.includes(query) || email.includes(query);
+    return (
+      fullName.includes(query) ||
+      email.includes(query) ||
+      teamName.includes(query) ||
+      roleName.includes(query)
+    );
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,18 +170,27 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
 
     try {
       setIsSubmitting(true);
-      await createTeam(accessToken, {
-        name: trimmedName,
-        description: description.trim() || undefined,
-        managerId,
-        memberIds: selectedMemberIds,
-      });
+      if (isEditMode && teamToEdit) {
+        await updateTeam(accessToken, teamToEdit.id, {
+          name: trimmedName,
+          description: description.trim() || undefined,
+          managerId,
+          memberIds: selectedMemberIds,
+        });
+      } else {
+        await createTeam(accessToken, {
+          name: trimmedName,
+          description: description.trim() || undefined,
+          managerId,
+          memberIds: selectedMemberIds,
+        });
+      }
       onSuccess();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("An unexpected error occurred while creating the team.");
+        setError(`An unexpected error occurred while ${isEditMode ? "updating" : "creating"} the team.`);
       }
     } finally {
       setIsSubmitting(false);
@@ -140,10 +204,12 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
         <div className="flex items-center justify-between border-b border-border p-6 bg-surface">
           <div>
             <h2 className="text-xl font-semibold text-text-primary">
-              Create Team
+              {isEditMode ? "Edit Team" : "Create Team"}
             </h2>
             <p className="mt-0.5 text-xs text-text-secondary">
-              Add a new operational team and assign a team manager and members.
+              {isEditMode
+                ? "Update operational team details, manager, and team members."
+                : "Add a new operational team and assign a team manager and members."}
             </p>
           </div>
           <button
@@ -283,20 +349,31 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
                   <div className="flex flex-wrap gap-1.5">
                     {selectedMemberObjects.map((m) => {
                       const nameStr = `${m.firstName} ${m.lastName || ""}`.trim();
+                      const isFromOtherTeam = m.team && teamToEdit && m.team.id !== teamToEdit.id;
                       return (
                         <span
                           key={m.id}
-                          className="
-                            inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-200
-                            px-3 py-1 text-xs font-medium text-primary-800 animate-in fade-in zoom-in-95 duration-150
-                          "
+                          className={`
+                            inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium animate-in fade-in zoom-in-95 duration-150
+                            ${
+                              isFromOtherTeam
+                                ? "bg-amber-50 border-amber-300 text-amber-900"
+                                : "bg-primary-50 border-primary-200 text-primary-800"
+                            }
+                          `}
+                          title={isFromOtherTeam ? `Moved from ${m.team?.name}` : undefined}
                         >
                           <span>{nameStr}</span>
+                          {isFromOtherTeam && (
+                            <span className="text-[10px] text-amber-700 font-normal">
+                              ({m.team?.name})
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleRemoveMember(m.id)}
                             disabled={isSubmitting}
-                            className="rounded-full p-0.5 text-primary-600 hover:bg-primary-200/60 hover:text-primary-900 transition"
+                            className="rounded-full p-0.5 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 transition"
                           >
                             <X size={13} />
                           </button>
@@ -318,19 +395,22 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
                   ) : filteredMembers.length === 0 ? (
                     <div className="p-3 text-xs text-text-muted text-center">
                       {members.length === 0
-                        ? "No eligible members available (all active users belong to a team)."
+                        ? "No eligible members available."
                         : "No matching members found."}
                     </div>
                   ) : (
                     filteredMembers.map((m) => {
                       const isSelected = selectedMemberIds.includes(m.id);
                       const nameStr = `${m.firstName} ${m.lastName || ""}`.trim();
+                      const isOtherTeam = m.team && (!teamToEdit || m.team.id !== teamToEdit.id);
+                      const isCurrentTeam = m.team && teamToEdit && m.team.id === teamToEdit.id;
+
                       return (
                         <div
                           key={m.id}
                           onClick={() => handleToggleMember(m.id)}
                           className={`
-                            flex items-center justify-between px-3.5 py-2 text-xs cursor-pointer transition
+                            flex items-center justify-between px-3.5 py-2 text-xs cursor-pointer transition border-b border-border/40 last:border-0
                             ${
                               isSelected
                                 ? "bg-primary-50/70 text-primary-900 font-medium"
@@ -339,8 +419,30 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
                           `}
                         >
                           <div>
-                            <p className="font-medium">{nameStr}</p>
-                            <p className="text-text-muted text-[11px]">{m.email}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-text-primary">{nameStr}</p>
+                              {m.role?.name && (
+                                <span className="text-[10px] text-text-muted font-normal">
+                                  ({m.role.name})
+                                </span>
+                              )}
+                              {isOtherTeam && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800" title={`Currently assigned to ${m.team?.name}. Selecting will move member to this team.`}>
+                                  {m.team?.name}
+                                </span>
+                              )}
+                              {isCurrentTeam && (
+                                <span className="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-800">
+                                  This team
+                                </span>
+                              )}
+                              {!m.team && (
+                                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">
+                                  Unassigned
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-text-muted text-[11px] mt-0.5">{m.email}</p>
                           </div>
                           {isSelected && <Check size={15} className="text-primary-600 shrink-0" />}
                         </div>
@@ -374,7 +476,7 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
               "
             >
               {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-              Create Team
+              {isEditMode ? "Save Changes" : "Create Team"}
             </button>
           </div>
         </form>
@@ -384,4 +486,3 @@ const CreateTeamModal = ({ onClose, onSuccess }: CreateTeamModalProps) => {
 };
 
 export default CreateTeamModal;
-

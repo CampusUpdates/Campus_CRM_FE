@@ -22,5 +22,6 @@ export const ROUTES = {
   CALLS: "/calls",
   LEAD_PROFILE: "/leads/:leadId",
   CLAIM_REQUESTS: "/claim-requests",
+  OFFICE_SETTINGS: "/office-settings",
   ACCESS_DENIED: "/access-denied",
 };

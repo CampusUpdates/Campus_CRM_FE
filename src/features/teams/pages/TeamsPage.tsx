@@ -1,21 +1,41 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, RefreshCw, Shield, UserCheck, CheckCircle2, Users } from "lucide-react";
+import {
+  Plus,
+  Search,
+  RefreshCw,
+  Shield,
+  UserCheck,
+  CheckCircle2,
+  Users,
+  Trash2,
+  Pencil,
+} from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
-import { fetchTeams, type TeamItem } from "../../../services/teamService";
+import { useToast } from "../../../context/ToastContext";
+import {
+  fetchTeams,
+  deleteTeam,
+  type TeamItem,
+} from "../../../services/teamService";
 import CreateTeamModal from "../components/CreateTeamModal";
+import DeleteTeamDrawer from "../components/DeleteTeamDrawer";
 
 const TeamsPage = () => {
   const navigate = useNavigate();
   const { accessToken, hasRole } = useAuth();
+  const toast = useToast();
 
   const [teams, setTeams] = useState<TeamItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<TeamItem | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  const canCreateTeam = hasRole(["SUPER_ADMIN", "HR"]);
+  const [deletingTeam, setDeletingTeam] = useState<TeamItem | null>(null);
+
+  const canManageTeam = hasRole(["SUPER_ADMIN", "HR"]);
 
   const loadTeams = useCallback(async () => {
     if (!accessToken) return;
@@ -39,6 +59,25 @@ const TeamsPage = () => {
     setSuccessToast("Team created successfully.");
     loadTeams();
     setTimeout(() => setSuccessToast(null), 4000);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingTeam(null);
+    toast.success("Team updated successfully.");
+    loadTeams();
+  };
+
+  const handleConfirmDelete = async (teamToDelete: TeamItem) => {
+    if (!accessToken) return;
+    try {
+      const res = await deleteTeam(accessToken, teamToDelete.id);
+      setTeams((prev) => prev.filter((t) => t.id !== teamToDelete.id));
+      toast.success(res.message || `Permanently deleted team ${teamToDelete.name}`);
+      setDeletingTeam(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete team.");
+      throw err;
+    }
   };
 
   const filteredTeams = teams.filter((t) => {
@@ -88,7 +127,7 @@ const TeamsPage = () => {
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
 
-          {canCreateTeam && (
+          {canManageTeam && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="
@@ -102,7 +141,6 @@ const TeamsPage = () => {
                 hover:bg-primary-600
               "
             >
-
               <Plus size={18} />
               Create Team
             </button>
@@ -223,20 +261,48 @@ const TeamsPage = () => {
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold shadow-2xs">
                         <Shield size={20} />
                       </div>
-                      <h3 className="text-base font-semibold text-text-primary truncate" title={team.name}>
+                      <h3
+                        className="text-base font-semibold text-text-primary truncate"
+                        title={team.name}
+                      >
                         {team.name}
                       </h3>
                     </div>
 
-                    <span
-                      className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                        team.isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                          : "bg-neutral-100 text-neutral-600 border-neutral-200/60"
-                      }`}
-                    >
-                      {team.isActive ? "Active" : "Inactive"}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                          team.isActive
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                            : "bg-neutral-100 text-neutral-600 border-neutral-200/60"
+                        }`}
+                      >
+                        {team.isActive ? "Active" : "Inactive"}
+                      </span>
+
+                      {canManageTeam && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingTeam(team)}
+                            title="Edit Team"
+                            aria-label="Edit team"
+                            className="p-1.5 rounded-lg text-text-muted hover:text-primary-600 hover:bg-primary-50 transition"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingTeam(team)}
+                            title="Delete team"
+                            aria-label="Delete team"
+                            className="p-1.5 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* DESCRIPTION */}
@@ -244,7 +310,9 @@ const TeamsPage = () => {
                     {team.description ? (
                       team.description
                     ) : (
-                      <span className="text-text-muted italic">No description</span>
+                      <span className="text-text-muted italic">
+                        No description
+                      </span>
                     )}
                   </div>
 
@@ -256,7 +324,9 @@ const TeamsPage = () => {
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
                         {team.manager ? (
-                          `${team.manager.firstName[0]}${(team.manager.lastName || "")[0] || ""}`.toUpperCase()
+                          `${team.manager.firstName[0]}${
+                            (team.manager.lastName || "")[0] || ""
+                          }`.toUpperCase()
                         ) : (
                           <UserCheck size={14} />
                         )}
@@ -303,11 +373,24 @@ const TeamsPage = () => {
         </div>
       )}
 
-      {/* Create Team Modal */}
-      {isCreateModalOpen && (
+      {/* Create / Edit Team Modal */}
+      {(isCreateModalOpen || editingTeam) && (
         <CreateTeamModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={handleCreateSuccess}
+          teamToEdit={editingTeam}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setEditingTeam(null);
+          }}
+          onSuccess={editingTeam ? handleEditSuccess : handleCreateSuccess}
+        />
+      )}
+
+      {/* Right-Side Delete Team Drawer */}
+      {deletingTeam && (
+        <DeleteTeamDrawer
+          team={deletingTeam}
+          onClose={() => setDeletingTeam(null)}
+          onConfirm={handleConfirmDelete}
         />
       )}
     </div>

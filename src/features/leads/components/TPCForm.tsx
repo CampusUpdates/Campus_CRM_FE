@@ -52,8 +52,8 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
       if (initialLead || !accessToken) return;
       try {
         setLoadingLeads(true);
-        const data = await fetchLeads(accessToken);
-        setAllLeads(data);
+        const res = await fetchLeads(accessToken);
+        setAllLeads(Array.isArray(res) ? res : res.data || []);
       } catch (err) {
         console.error("Failed to load leads:", err);
       } finally {
@@ -297,11 +297,10 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                     </p>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
-                      a.status === "COMPLETED"
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium border ${a.status === "COMPLETED"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
+                      }`}
                   >
                     {a.status}
                   </span>
@@ -342,10 +341,9 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
               className={`
                 min-h-[44px] w-full rounded-xl border bg-background p-2 transition cursor-text
                 flex flex-wrap items-center gap-1.5 pr-10
-                ${
-                  isDropdownOpen
-                    ? "border-primary-500 ring-2 ring-primary-500/20 shadow-sm"
-                    : "border-border hover:border-neutral-400"
+                ${isDropdownOpen
+                  ? "border-primary-500 ring-2 ring-primary-500/20 shadow-sm"
+                  : "border-border hover:border-neutral-400"
                 }
               `}
             >
@@ -461,10 +459,9 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                           onClick={() => toggleUserSelection(u.id)}
                           className={`
                             flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition text-xs select-none
-                            ${
-                              isSelected
-                                ? "bg-primary-50/70 text-primary-900 font-medium"
-                                : "hover:bg-neutral-100/70 text-text-primary"
+                            ${isSelected
+                              ? "bg-primary-50/70 text-primary-900 font-medium"
+                              : "hover:bg-neutral-100/70 text-text-primary"
                             }
                           `}
                         >
@@ -472,10 +469,9 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                             <div
                               className={`
                                 w-4 h-4 rounded border flex items-center justify-center transition shrink-0
-                                ${
-                                  isSelected
-                                    ? "bg-primary-600 border-primary-600 text-white"
-                                    : "border-neutral-300 bg-background"
+                                ${isSelected
+                                  ? "bg-primary-600 border-primary-600 text-white"
+                                  : "border-neutral-300 bg-background"
                                 }
                               `}
                             >

@@ -177,8 +177,51 @@ export async function updateLead(
   return data;
 }
 
-export async function fetchLeads(token: string): Promise<LeadItem[]> {
-  const response = await fetch(`${API_URL}/leads`, {
+export interface FetchLeadsParams {
+  search?: string;
+  statusGroup?: string;
+  status?: string;
+  time?: string;
+  fromDate?: string;
+  toDate?: string;
+  date?: string;
+  teamId?: string;
+  assignedToId?: string;
+  admissionDueDate?: string;
+  admissionOverdue?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface FetchLeadsResponse {
+  data: LeadItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  tabCounts: {
+    all: number;
+    lead: number;
+    interested: number;
+    admission: number;
+    closed: number;
+  };
+}
+
+export async function fetchLeads(
+  token: string,
+  params?: FetchLeadsParams
+): Promise<FetchLeadsResponse> {
+  const query = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== "") {
+        query.append(key, String(val));
+      }
+    });
+  }
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+  const response = await fetch(`${API_URL}/leads${queryString}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -190,8 +233,24 @@ export async function fetchLeads(token: string): Promise<LeadItem[]> {
     throw new Error("Failed to fetch leads");
   }
 
-  const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  const res = await response.json();
+  if (Array.isArray(res)) {
+    return {
+      data: res,
+      total: res.length,
+      page: 1,
+      limit: res.length || 10,
+      totalPages: 1,
+      tabCounts: {
+        all: res.length,
+        lead: 0,
+        interested: 0,
+        admission: 0,
+        closed: 0,
+      },
+    };
+  }
+  return res;
 }
 
 export async function fetchLeadById(token: string, leadId: string): Promise<LeadItem> {

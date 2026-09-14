@@ -6,11 +6,11 @@ import NotificationDrawer from "../../components/Notifications/NotificationDrawe
 
 const DashboardLayout = () => {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
 
       <Sidebar />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
 
         <Navbar />
 

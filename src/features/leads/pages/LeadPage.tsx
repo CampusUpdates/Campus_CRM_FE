@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Plus,
@@ -9,16 +9,17 @@ import {
   Pencil,
   Tag,
   Headphones,
-  CheckCircle2,
-  Clock,
-  Briefcase,
   UserCheck,
-  XCircle,
+  Clock,
   Filter,
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Eye,
 } from "lucide-react";
+
+import { ROUTES } from "../../../app/router/routes";
 
 import CreateLeadModal from "../components/CreateLeadModal";
 import EditLeadModal from "../components/EditLeadModal";
@@ -26,7 +27,7 @@ import ChangeStatusModal from "../components/ChangeStatusModal";
 import TPCModal from "../components/TPCModal";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchLeads, createLeadClaimRequest, type LeadItem } from "../../../services/leadService";
+import { fetchLeads, fetchLeadStatuses, createLeadClaimRequest, type LeadItem, type LeadStatusItem } from "../../../services/leadService";
 
 export type StatusTabType = "ALL" | "LEAD" | "INTERESTED" | "ADMISSION" | "CLOSED";
 
@@ -49,44 +50,156 @@ const LeadPage = () => {
 
   const isSuperAdminOrManager = user?.roleCode === "SUPER_ADMIN" || user?.roleCode === "MANAGER";
 
-
   const paramDate = searchParams.get("date");
   const paramStatus = searchParams.get("status");
   const paramTeamId = searchParams.get("teamId");
   const paramAssignedToId = searchParams.get("assignedToId");
   const paramAdmissionDueDate = searchParams.get("admissionDueDate");
   const paramAdmissionOverdue = searchParams.get("admissionOverdue");
+  const paramTime = searchParams.get("time");
+  const paramFromDate = searchParams.get("fromDate");
+  const paramToDate = searchParams.get("toDate");
 
   const hasActiveUrlFilters = Boolean(
-    paramDate || paramStatus || paramTeamId || paramAssignedToId || paramAdmissionDueDate || paramAdmissionOverdue
+    paramDate ||
+      paramStatus ||
+      paramTeamId ||
+      paramAssignedToId ||
+      paramAdmissionDueDate ||
+      paramAdmissionOverdue ||
+      paramTime ||
+      paramFromDate ||
+      paramToDate
   );
-
-  const handleClearAllFilters = () => {
-    setSearchParams({});
-    setActiveStatusTab("ALL");
-    setSearchTerm("");
-  };
-
-  const handleTabClick = (tab: StatusTabType) => {
-    setActiveStatusTab(tab);
-    if (tab === "ALL") {
-      setSearchParams({});
-    }
-  };
-
 
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [totalLeads, setTotalLeads] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [dbStatuses, setDbStatuses] = useState<LeadStatusItem[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
-  const [activeStatusTab, setActiveStatusTab] = useState<StatusTabType>("ALL");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+  const [selectedStatus, setSelectedStatus] = useState<string>(() => {
+    const param = searchParams.get("status") || searchParams.get("statusGroup");
+    return param ? param.toUpperCase() : "LEAD";
+  });
+
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    const param = searchParams.get("time");
+    return param ? param.toLowerCase() : "all";
+  });
+
+  const [fromDate, setFromDate] = useState<string>(() => searchParams.get("fromDate") || "");
+  const [toDate, setToDate] = useState<string>(() => searchParams.get("toDate") || "");
+
+  // Custom Range Modal state
+  const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false);
+  const [pickerFromDate, setPickerFromDate] = useState<string>(fromDate);
+  const [pickerToDate, setPickerToDate] = useState<string>(toDate);
+
+  useEffect(() => {
+    async function loadStatuses() {
+      if (!accessToken) return;
+      try {
+        const data = await fetchLeadStatuses(accessToken);
+        setDbStatuses(data);
+      } catch (err) {
+        console.error("Failed to fetch lead statuses", err);
+      }
+    }
+    loadStatuses();
+  }, [accessToken]);
+
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
+
+  // Debounce search term changes by 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeStatusTab, searchParams]);
+  }, [debouncedSearch]);
+
+  const handleStatusChange = (newStatus: string) => {
+    setSelectedStatus(newStatus);
+    setCurrentPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newStatus === "ALL") {
+        next.set("status", "ALL");
+        next.delete("statusGroup");
+      } else {
+        next.set("status", newStatus);
+        next.delete("statusGroup");
+      }
+      return next;
+    });
+  };
+
+  const handleTimeChange = (newTime: string) => {
+    setSelectedTime(newTime);
+    setFromDate("");
+    setToDate("");
+    setCurrentPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newTime === "all") {
+        next.delete("time");
+      } else {
+        next.set("time", newTime);
+      }
+      next.delete("fromDate");
+      next.delete("toDate");
+      return next;
+    });
+  };
+
+  const handleApplyCustomRange = () => {
+    if (pickerFromDate && pickerToDate && pickerFromDate > pickerToDate) {
+      toast.error("From date cannot be after To date");
+      return;
+    }
+    setSelectedTime("custom");
+    setFromDate(pickerFromDate);
+    setToDate(pickerToDate);
+    setIsCustomRangeOpen(false);
+    setCurrentPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("time", "custom");
+      if (pickerFromDate) next.set("fromDate", pickerFromDate);
+      else next.delete("fromDate");
+      if (pickerToDate) next.set("toDate", pickerToDate);
+      else next.delete("toDate");
+      return next;
+    });
+  };
+
+  const handleCancelCustomRange = () => {
+    setPickerFromDate(fromDate);
+    setPickerToDate(toDate);
+    setIsCustomRangeOpen(false);
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchParams({});
+    setSelectedStatus("LEAD");
+    setSelectedTime("all");
+    setFromDate("");
+    setToDate("");
+    setSearchTerm("");
+    setDebouncedSearch("");
+    setCurrentPage(1);
+  };
 
   // Active Lead Action States
   const [editingLead, setEditingLead] = useState<LeadItem | null>(null);
@@ -116,128 +229,58 @@ const LeadPage = () => {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const data = await fetchLeads(accessToken);
-      setLeads(data);
+      const res = await fetchLeads(accessToken, {
+        search: debouncedSearch,
+        status: selectedStatus,
+        time: selectedTime,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        date: paramDate || undefined,
+        teamId: paramTeamId || undefined,
+        assignedToId: paramAssignedToId || undefined,
+        admissionDueDate: paramAdmissionDueDate || undefined,
+        admissionOverdue: paramAdmissionOverdue || undefined,
+      });
+
+      if (Array.isArray(res)) {
+        setLeads(res);
+        setTotalLeads(res.length);
+        setTotalPages(Math.ceil(res.length / ITEMS_PER_PAGE) || 1);
+      } else {
+        setLeads(res.data || []);
+        setTotalLeads(res.total || 0);
+        setTotalPages(res.totalPages || 1);
+      }
     } catch (err) {
       console.error("Failed to load leads:", err);
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [
+    accessToken,
+    debouncedSearch,
+    selectedStatus,
+    selectedTime,
+    fromDate,
+    toDate,
+    currentPage,
+    paramDate,
+    paramTeamId,
+    paramAssignedToId,
+    paramAdmissionDueDate,
+    paramAdmissionOverdue,
+  ]);
 
   useEffect(() => {
     loadLeads();
   }, [loadLeads]);
 
-  const filteredLeads = leads.filter((lead) => {
-    const term = searchTerm.toLowerCase();
-    const fullName = `${lead.firstName} ${lead.lastName || ""}`.toLowerCase();
-    const phone = lead.phone.toLowerCase();
-    const email = (lead.email || "").toLowerCase();
-    const course = (lead.courseInterested || "").toLowerCase();
-    const city = (lead.city || "").toLowerCase();
-
-    const matchesSearch =
-      fullName.includes(term) ||
-      phone.includes(term) ||
-      email.includes(term) ||
-      course.includes(term) ||
-      city.includes(term);
-
-    if (!matchesSearch) return false;
-
-    // Filter by URL query parameters if present
-    if (paramDate === "today") {
-      const leadDate = new Date(lead.createdAt).toDateString();
-      const todayDate = new Date().toDateString();
-      if (leadDate !== todayDate) return false;
-    }
-
-    if (paramTeamId && paramTeamId !== "all") {
-      const activeAssign = lead.assignments?.[0];
-      const teamId = (activeAssign?.user as any)?.teamId || (activeAssign?.user as any)?.team?.id;
-      if (teamId?.toString() !== paramTeamId) return false;
-    }
-
-    if (paramAssignedToId) {
-      const assignedUserId = lead.assignments?.[0]?.user?.id;
-      if (assignedUserId !== paramAssignedToId) return false;
-    }
-
-
-    const statusName = (lead.status?.name || "LEAD").toUpperCase();
-
-    if (paramStatus && paramStatus.toUpperCase() !== "ALL") {
-      if (statusName !== paramStatus.toUpperCase()) return false;
-    }
-
-    if (paramAdmissionDueDate === "today") {
-      const leadDate = new Date(lead.createdAt).toDateString();
-      const todayDate = new Date().toDateString();
-      if (leadDate !== todayDate && !["APPLICATION", "INTERVIEW_SCHEDULED", "LETTER_OUT"].includes(statusName)) {
-        return false;
-      }
-    }
-
-    if (paramAdmissionOverdue === "true") {
-      if (!["APPLICATION", "INTERVIEW_SCHEDULED", "LETTER_OUT"].includes(statusName)) return false;
-    }
-
-    if (activeStatusTab === "ALL") return true;
-    if (activeStatusTab === "LEAD") return statusName === "LEAD" || statusName === "NEW" || statusName === "CONNECTED";
-    if (activeStatusTab === "INTERESTED")
-      return (
-        ["APPLICATION", "INTERVIEW_SCHEDULED", "INTERVIEW_DONE", "LETTER_OUT"].includes(statusName) ||
-        statusName.includes("INTEREST") ||
-        statusName.includes("PITCH") ||
-        statusName.includes("FOLLOWER")
-      );
-    if (activeStatusTab === "ADMISSION") return statusName.includes("ADMISSION") || statusName.includes("HIRED") || statusName.includes("ENROLLED");
-    if (activeStatusTab === "CLOSED") return statusName.includes("CLOSE") || statusName.includes("CANCEL") || statusName.includes("REJECT");
-
-    return true;
-  });
-
-  // Dynamic counts for each status pipeline tab
-  const tabCounts = useMemo(() => {
-    let leadCount = 0;
-    let interestedCount = 0;
-    let admissionCount = 0;
-    let closedCount = 0;
-
-    leads.forEach((lead) => {
-      const statusName = (lead.status?.name || "LEAD").toUpperCase();
-      if (statusName === "LEAD" || statusName === "NEW" || statusName === "CONNECTED") {
-        leadCount++;
-      } else if (
-        ["APPLICATION", "INTERVIEW_SCHEDULED", "INTERVIEW_DONE", "LETTER_OUT"].includes(statusName) ||
-        statusName.includes("INTEREST") ||
-        statusName.includes("PITCH") ||
-        statusName.includes("FOLLOWER")
-      ) {
-        interestedCount++;
-      } else if (statusName.includes("ADMISSION") || statusName.includes("HIRED") || statusName.includes("ENROLLED")) {
-        admissionCount++;
-      } else if (statusName.includes("CLOSE") || statusName.includes("CANCEL") || statusName.includes("REJECT")) {
-        closedCount++;
-      }
-    });
-
-    return {
-      all: leads.length,
-      lead: leadCount,
-      interested: interestedCount,
-      admission: admissionCount,
-      closed: closedCount,
-    };
-  }, [leads]);
-
-  const totalLeads = filteredLeads.length;
-  const totalPages = Math.ceil(totalLeads / ITEMS_PER_PAGE) || 1;
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
   const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalLeads);
-  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + leads.length, totalLeads);
+  const paginatedLeads = leads;
 
 
   const getStatusBadgeStyle = (statusName?: string) => {
@@ -332,7 +375,7 @@ const LeadPage = () => {
               </span>
             )}
             <span className="ml-1 font-semibold text-primary-700">
-              (Showing {filteredLeads.length} of {leads.length} total database leads)
+              (Showing {leads.length} of {totalLeads} matching database leads)
             </span>
           </div>
 
@@ -342,115 +385,221 @@ const LeadPage = () => {
             className="flex items-center gap-1.5 rounded-lg border border-primary-300 bg-surface px-3 py-1.5 text-xs font-bold text-primary-700 hover:bg-primary-100 hover:text-primary-900 transition shadow-2xs"
           >
             <X size={14} />
-            Clear Filters & Show All {leads.length} Leads
+            Clear Filters & Show All {totalLeads} Leads
           </button>
         </div>
       )}
 
-      {/* Status Pipeline Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-1">
-        <button
-          onClick={() => handleTabClick("ALL")}
-          className={`
-            flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition
-            ${activeStatusTab === "ALL"
-              ? "bg-primary-500 text-white shadow-xs"
-              : "bg-surface text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-            }
-          `}
-        >
-          <Users size={14} />
-          All Leads ({tabCounts.all})
-        </button>
+      {/* Search & Status Filter Controls */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full min-w-0">
+        {/* Search Input */}
+        <div className="relative flex-1 w-full min-w-0">
+          <Search
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+          />
+          <input
+            type="text"
+            placeholder="Search leads by name, email, phone number, course interested, or city..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="
+              h-11
+              w-full
+              rounded-xl
+              border
+              border-border
+              bg-surface
+              pl-11
+              pr-10
+              text-sm
+              outline-none
+              transition
+              focus:border-primary-500
+              focus:ring-2
+              focus:ring-primary-100
+            "
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
-        <button
-          onClick={() => handleTabClick("LEAD")}
-          className={`
-            flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition
-            ${activeStatusTab === "LEAD"
-              ? "bg-primary-500 text-white shadow-xs"
-              : "bg-surface text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-            }
-          `}
-        >
-          <Clock size={14} />
-          New / Active Leads ({tabCounts.lead})
-        </button>
+        {/* Status Filter Dropdown */}
+        <div className="relative w-full sm:w-auto sm:min-w-[190px]">
+          <div className="relative">
+            <Filter
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+            <select
+              value={selectedStatus}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="
+                h-11
+                w-full
+                rounded-xl
+                border
+                border-border
+                bg-surface
+                pl-10
+                pr-9
+                text-sm
+                font-medium
+                text-text-primary
+                outline-none
+                transition
+                focus:border-primary-500
+                focus:ring-2
+                focus:ring-primary-100
+                appearance-none
+                cursor-pointer
+              "
+            >
+              <option value="ALL">All</option>
+              {dbStatuses.length > 0 ? (
+                dbStatuses.map((st) => (
+                  <option key={st.id} value={st.name}>
+                    {st.name === "LEAD" ? "Active Leads" : st.name}
+                  </option>
+                ))
+              ) : (
+                <option value="LEAD">Active Leads</option>
+              )}
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+          </div>
+        </div>
 
-        <button
-          onClick={() => handleTabClick("INTERESTED")}
-          className={`
-            flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition
-            ${activeStatusTab === "INTERESTED"
-              ? "bg-primary-500 text-white shadow-xs"
-              : "bg-surface text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-            }
-          `}
-        >
-          <Briefcase size={14} />
-          Application Done ({tabCounts.interested})
-        </button>
-
-        <button
-          onClick={() => handleTabClick("ADMISSION")}
-          className={`
-            flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition
-            ${activeStatusTab === "ADMISSION"
-              ? "bg-primary-500 text-white shadow-xs"
-              : "bg-surface text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-            }
-          `}
-        >
-          <CheckCircle2 size={14} />
-          Admissions Confirmed ({tabCounts.admission})
-        </button>
-
-        <button
-          onClick={() => handleTabClick("CLOSED")}
-          className={`
-            flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition
-            ${activeStatusTab === "CLOSED"
-              ? "bg-primary-500 text-white shadow-xs"
-              : "bg-surface text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-            }
-          `}
-        >
-          <XCircle size={14} />
-          Closed / Cancelled ({tabCounts.closed})
-        </button>
+        {/* Time Filter Dropdown */}
+        <div className="relative w-full sm:w-auto sm:min-w-[180px]">
+          <div className="relative">
+            <Clock
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+            <select
+              value={selectedTime}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "custom") {
+                  setPickerFromDate(fromDate);
+                  setPickerToDate(toDate);
+                  setIsCustomRangeOpen(true);
+                } else {
+                  handleTimeChange(val);
+                }
+              }}
+              className="
+                h-11
+                w-full
+                rounded-xl
+                border
+                border-border
+                bg-surface
+                pl-10
+                pr-9
+                text-sm
+                font-medium
+                text-text-primary
+                outline-none
+                transition
+                focus:border-primary-500
+                focus:ring-2
+                focus:ring-primary-100
+                appearance-none
+                cursor-pointer
+              "
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="custom">
+                {selectedTime === "custom" && (fromDate || toDate)
+                  ? `${fromDate || "Start"} to ${toDate || "End"}`
+                  : "Custom Range"}
+              </option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+          </div>
+        </div>
       </div>
 
+      {/* Custom Date Range Picker Modal */}
+      {isCustomRangeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
+                <Clock size={18} className="text-primary-500" />
+                Select Custom Date Range
+              </h3>
+              <button
+                type="button"
+                onClick={handleCancelCustomRange}
+                className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search
-          size={18}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
-        />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">
+                  From Date
+                </label>
+                <input
+                  type="date"
+                  value={pickerFromDate}
+                  onChange={(e) => setPickerFromDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-sm text-text-primary focus:outline-none focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">
+                  To Date
+                </label>
+                <input
+                  type="date"
+                  value={pickerToDate}
+                  onChange={(e) => setPickerToDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-sm text-text-primary focus:outline-none focus:border-primary-500"
+                />
+              </div>
+            </div>
 
-        <input
-          type="text"
-          placeholder="Search leads by name, email, phone number, course interested, or city..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="
-            h-11
-            w-full
-            rounded-xl
-            border
-            border-border
-            bg-surface
-            pl-11
-            pr-4
-            text-sm
-            outline-none
-            transition
-            focus:border-primary-500
-            focus:ring-2
-            focus:ring-primary-100
-          "
-        />
-      </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelCustomRange}
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyCustomRange}
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-500 text-white hover:bg-primary-600 shadow-sm transition"
+              >
+                Apply Range
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leads Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
@@ -459,7 +608,7 @@ const LeadPage = () => {
             <RefreshCw className="animate-spin mr-2" size={18} />
             Loading lead pipeline records...
           </div>
-        ) : filteredLeads.length === 0 ? (
+        ) : leads.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
             <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
               <Users size={24} />
@@ -695,9 +844,9 @@ const LeadPage = () => {
                                 Active ({formatExpiryTime(activeAssignment?.expiresAt)})
                               </span>
                             ) : isClaimRequestPending ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold">
-                                <Clock size={10} />
-                                Claim Request Pending
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 pl-0.5">
+                                <Clock size={11} className="shrink-0 text-amber-500" />
+                                <span>Claim request pending</span>
                               </span>
                             ) : isProtected ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-semibold">
@@ -718,15 +867,26 @@ const LeadPage = () => {
                         {/* Actions Column: 1. Claim Lead, 2. Edit Lead, 3. Change Status, 4. TPC */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Claim Lead Button */}
+                            {/* Claim Lead / View Request / Pending Approval */}
                             {isClaimRequestPending ? (
-                              <span
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg"
-                                title="Claim request is currently pending Super Admin approval"
-                              >
-                                <Clock size={13} className="shrink-0" />
-                                Request Pending
-                              </span>
+                              isSuperAdminUser ? (
+                                <Link
+                                  to={ROUTES.CLAIM_REQUESTS}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200/80 bg-amber-50/80 text-amber-800 hover:bg-amber-100 hover:border-amber-300 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60 text-xs font-medium transition shrink-0"
+                                  title="View claim requests awaiting approval"
+                                >
+                                  <Eye size={13} className="shrink-0" />
+                                  <span>View Request</span>
+                                </Link>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/80 bg-neutral-100/70 text-text-muted dark:border-neutral-700/60 dark:bg-neutral-800/50 text-xs font-medium select-none shrink-0"
+                                  title="Claim request submitted and awaiting Super Admin approval"
+                                >
+                                  <Clock size={12} className="shrink-0 text-amber-500" />
+                                  <span>Pending Approval</span>
+                                </span>
+                              )
                             ) : (
                               <button
                                 onClick={() => isClaimable && handleClaimLead(lead.id)}
@@ -786,7 +946,7 @@ const LeadPage = () => {
             </div>
 
             {/* Pagination Footer Bar */}
-            {filteredLeads.length > 0 && (
+            {leads.length > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border px-6 py-4 bg-surface rounded-b-2xl">
                 <div className="text-xs text-text-muted font-medium">
                   Showing <span className="font-bold text-text-primary">{startIndex + 1}</span> to{" "}

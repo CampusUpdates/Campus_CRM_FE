@@ -67,6 +67,50 @@ export async function fetchActiveColleges(token: string, search?: string): Promi
   return Array.isArray(data) ? data : [];
 }
 
+export async function fetchManagementColleges(token: string, search?: string): Promise<College[]> {
+  const url = search ? `${API_URL}/colleges/management?search=${encodeURIComponent(search)}` : `${API_URL}/colleges/management`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch management colleges");
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function toggleCollegeStatus(
+  token: string,
+  id: string,
+  isActive: boolean
+): Promise<College> {
+  const response = await fetch(`${API_URL}/colleges/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ isActive }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Unable to update college status. Please try again.";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
 export async function createCollege(
   token: string,
   payload: CreateCollegePayload
@@ -121,7 +165,7 @@ export async function updateCollege(
 export async function deleteCollege(
   token: string,
   id: string
-): Promise<College> {
+): Promise<{ message: string }> {
   const response = await fetch(`${API_URL}/colleges/${id}`, {
     method: "DELETE",
     headers: {
@@ -135,7 +179,7 @@ export async function deleteCollege(
   if (!response.ok) {
     const errorMsg = Array.isArray(data.message)
       ? data.message.join(", ")
-      : data.message || "Failed to remove college";
+      : data.message || "Failed to delete college permanently";
     throw new Error(errorMsg);
   }
 

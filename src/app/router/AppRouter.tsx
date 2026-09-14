@@ -29,6 +29,7 @@ import DataUploadPage from "../../features/data-management/pages/DataUploadPage"
 import DataAssignmentPage from "../../features/data-management/pages/DataAssignmentPage";
 import CallWorkspace from "../../features/calls/pages/CallWorkspace";
 import ClaimRequestsPage from "../../features/claim-requests/pages/ClaimRequestsPage";
+import OfficeSettingsPage from "../../features/office/pages/OfficeSettingsPage";
 
 const AppRouter = () => {
   return (
@@ -74,6 +75,7 @@ const AppRouter = () => {
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
             <Route path={ROUTES.CLAIM_REQUESTS} element={<ClaimRequestsPage />} />
+            <Route path={ROUTES.OFFICE_SETTINGS} element={<OfficeSettingsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER"]} />}>

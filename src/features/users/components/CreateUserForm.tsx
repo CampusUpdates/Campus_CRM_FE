@@ -4,21 +4,26 @@ import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import {
   createUser,
+  updateUser,
   fetchRoles,
   fetchTeams,
   type CreateUserPayload,
   type CreateUserResponse,
+  type UserItem,
   type UserRole,
   type UserTeam,
 } from "../../../services/userService";
 
 type CreateUserFormProps = {
-  onSuccess?: () => void;
+  userToEdit?: UserItem | null;
+  onSuccess?: (updatedUser?: UserItem) => void;
 };
 
-const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
-  const { accessToken } = useAuth();
+const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
+  const { accessToken, user: currentUser } = useAuth();
   const toast = useToast();
+
+  const isSuperAdmin = currentUser?.roleCode === "SUPER_ADMIN" || currentUser?.roleId === 1;
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -37,6 +42,30 @@ const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [createdUserCredentials, setCreatedUserCredentials] = useState<CreateUserResponse | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (userToEdit) {
+      let formattedDob = "";
+      if (userToEdit.dob) {
+        try {
+          formattedDob = new Date(userToEdit.dob).toISOString().split("T")[0];
+        } catch (e) {
+          formattedDob = "";
+        }
+      }
+
+      setFormData({
+        firstName: userToEdit.firstName || "",
+        lastName: userToEdit.lastName || "",
+        email: userToEdit.email || "",
+        phone: userToEdit.phone || "",
+        alternatePhone: userToEdit.alternatePhone || "",
+        dob: formattedDob,
+        roleId: userToEdit.roleId ? String(userToEdit.roleId) : "",
+        teamId: userToEdit.teamId ? String(userToEdit.teamId) : "",
+      });
+    }
+  }, [userToEdit]);
 
   useEffect(() => {
     if (accessToken) {
@@ -109,20 +138,27 @@ const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
         alternatePhone: formData.alternatePhone.trim() || undefined,
         dob: formData.dob ? new Date(formData.dob).toISOString() : undefined,
         roleId: Number(formData.roleId),
-        teamId: formData.teamId ? Number(formData.teamId) : undefined,
+        teamId: formData.teamId ? Number(formData.teamId) : null,
       };
 
-      const result = await createUser(accessToken, payload);
-      setCreatedUserCredentials(result);
-      toast.success("User account created successfully!");
+      if (userToEdit) {
+        const updated = await updateUser(accessToken, userToEdit.id, payload);
+        toast.success("Employee profile updated successfully!");
+        if (onSuccess) onSuccess(updated);
+      } else {
+        const result = await createUser(accessToken, payload);
+        setCreatedUserCredentials(result);
+        toast.success("User account created successfully!");
+      }
     } catch (err: any) {
-      const msg = err.message || "Failed to create user";
+      const msg = err.message || (userToEdit ? "Failed to update user" : "Failed to create user");
       setErrorMsg(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
+
 
   // If user was created, show generated Credentials & Token Card
   if (createdUserCredentials) {
@@ -355,14 +391,16 @@ const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
             >
               <option value="">Select Role</option>
               {roles.length > 0 ? (
-                roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))
+                roles
+                  .filter((r) => isSuperAdmin || (r.name !== "SUPER_ADMIN" && r.id !== 1))
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))
               ) : (
                 <>
-                  <option value="1">Super Admin</option>
+                  {isSuperAdmin && <option value="1">Super Admin</option>}
                   <option value="2">Manager</option>
                   <option value="3">Program Advisor</option>
                   <option value="4">HR</option>
@@ -394,7 +432,7 @@ const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
                 focus:ring-primary-100
               "
             >
-              <option value="">No Team / General</option>
+              <option value="">Unassigned</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -420,7 +458,13 @@ const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
             disabled:opacity-50
           "
         >
-          {loading ? "Creating User Account..." : "Create User"}
+          {userToEdit
+            ? loading
+              ? "Saving Changes..."
+              : "Save Changes"
+            : loading
+            ? "Creating User Account..."
+            : "Create User"}
         </button>
       </div>
     </form>

@@ -15,6 +15,7 @@ import {
   Shield,
   Database,
   Upload,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 
@@ -121,6 +122,12 @@ export const navigationMenu: NavigationItem[] = [
     icon: CalendarCheck,
     path: ROUTES.ATTENDANCE,
     roles: ["SUPER_ADMIN", "HR"],
+  },
+  {
+    title: "Office Settings",
+    icon: MapPin,
+    path: ROUTES.OFFICE_SETTINGS,
+    roles: ["SUPER_ADMIN"],
   },
   {
     title: "Recruitment",

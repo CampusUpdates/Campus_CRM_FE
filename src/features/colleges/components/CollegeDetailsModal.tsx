@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Building2, MapPin, Phone, Mail, Globe, UserCheck, GraduationCap, CheckCircle2, Trash2, Edit3 } from "lucide-react";
 import { type College } from "../../../services/collegeService";
+import CollegeDescription from "./CollegeDescription";
 
 type CollegeDetailsModalProps = {
   college: College;
@@ -91,11 +92,10 @@ const CollegeDetailsModal = ({ college, onClose, onDelete, onEdit }: CollegeDeta
           {/* Status Badges */}
           <div className="flex items-center gap-2">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                college.isActive !== false
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${college.isActive !== false
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                   : "bg-amber-100 text-amber-800 border border-amber-200"
-              }`}
+                }`}
             >
               {college.isActive !== false ? "Active Partner" : "Inactive"}
             </span>
@@ -113,9 +113,7 @@ const CollegeDetailsModal = ({ college, onClose, onDelete, onEdit }: CollegeDeta
             <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider text-xs">
               Institution Description
             </h3>
-            <div className="rounded-xl border border-border bg-neutral-50/60 p-4 text-sm text-text-secondary leading-relaxed">
-              {college.description || "No description provided."}
-            </div>
+            <CollegeDescription description={college.description} />
           </section>
 
           {/* Contact Information */}

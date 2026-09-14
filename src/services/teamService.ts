@@ -41,6 +41,16 @@ export interface EligibleMember {
   firstName: string;
   lastName?: string;
   email: string;
+  status?: string;
+  role?: {
+    id: number;
+    name: string;
+  };
+  teamId?: number | null;
+  team?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export async function fetchTeams(token: string): Promise<TeamItem[]> {
@@ -164,5 +174,63 @@ export async function createTeam(
 
   return data;
 }
+
+export interface UpdateTeamPayload {
+  name?: string;
+  description?: string;
+  managerId?: string;
+  memberIds?: string[];
+}
+
+export async function updateTeam(
+  token: string,
+  teamId: number | string,
+  payload: UpdateTeamPayload
+): Promise<TeamItem> {
+  const response = await fetch(`${API_URL}/teams/${teamId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to update team";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export async function deleteTeam(
+  token: string,
+  teamId: number | string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/teams/${teamId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to delete team";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
 
 
