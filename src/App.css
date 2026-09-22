@@ -16,7 +16,7 @@
   --color-primary-700: #21433a;
   --color-primary-800: #19342d;
   --color-primary-900: #112520;
-  
+
 
   /* ===========================
      Secondary
@@ -100,12 +100,12 @@
   --color-background: #f6f7f6;
   --color-surface: #ffffff;
 
- /* Layout */
+  /* Layout */
 
   --color-sidebar: #fcfcfa;
   --color-navbar: #ffffff;
 
-/* Sidebar */
+  /* Sidebar */
 
   --color-sidebar-active: #edf8f2;
   --color-primary-muted: #5d8b78;
@@ -163,10 +163,10 @@
 
   /* Sidebar */
 
---color-sidebar: #fcfcfa;
---color-sidebar-active: #edf8f2;
---color-primary-muted: #6e9a84;
---color-primary-25: #f8fcfa;
+  --color-sidebar: #fcfcfa;
+  --color-sidebar-active: #edf8f2;
+  --color-primary-muted: #6e9a84;
+  --color-primary-25: #f8fcfa;
 }
 
 html,
@@ -196,4 +196,48 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* ===========================
+   Global Custom Scrollbar Design
+   =========================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #a7d5bf;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #2f5d50;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #4e8771;
+}
+
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a7d5bf transparent;
+}
+
+.dark,
+.dark * {
+  scrollbar-color: #334155 transparent;
 }

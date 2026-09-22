@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import CreateLeadForm from "./CreateLeadForm";
+import type { LeadItem } from "../../../services/leadService";
 
 type CreateLeadModalProps = {
   onClose: () => void;
+  initialLead?: Partial<LeadItem>;
+  onSuccess?: (createdLead?: any) => void;
 };
 
-const CreateLeadModal = ({ onClose }: CreateLeadModalProps) => {
+const CreateLeadModal = ({ onClose, initialLead, onSuccess }: CreateLeadModalProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
   const handleClose = () => {
@@ -80,12 +83,19 @@ const CreateLeadModal = ({ onClose }: CreateLeadModalProps) => {
 
         {/* Scrollable Form */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <CreateLeadForm onSuccess={handleClose} onCancel={handleClose} />
+          <CreateLeadForm
+            initialLead={initialLead}
+            onSuccess={(created) => {
+              if (onSuccess) onSuccess(created);
+              handleClose();
+            }}
+          />
         </div>
 
       </div>
     </div>
   );
 };
+
 
 export default CreateLeadModal;

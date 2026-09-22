@@ -2,8 +2,8 @@
 @import "tailwindcss";
 
 @theme {
-  
-     /* Primary */
+
+  /* Primary */
 
   --color-primary-50: #f4fbf8;
   --color-primary-100: #e7f6ef;
@@ -15,11 +15,11 @@
   --color-primary-700: #21433a;
   --color-primary-800: #19342d;
   --color-primary-900: #112520;
-  
 
-  
-     /* Secondary */
-   
+
+
+  /* Secondary */
+
 
   --color-secondary-50: #eef5ff;
   --color-secondary-100: #dceaff;
@@ -32,8 +32,8 @@
   --color-secondary-800: #274a8a;
   --color-secondary-900: #1c3563;
 
- 
-     /* Success  */
+
+  /* Success  */
 
   --color-success-50: #effaf4;
   --color-success-100: #d8f3e5;
@@ -46,9 +46,9 @@
   --color-success-800: #1c5435;
   --color-success-900: #123924;
 
- 
-     /* Warning */
-     
+
+  /* Warning */
+
 
   --color-warning-50: #fffdf2;
   --color-warning-100: #fff7d6;
@@ -61,7 +61,7 @@
   --color-warning-800: #8c6d10;
   --color-warning-900: #645009;
 
-     /* Danger */
+  /* Danger */
 
   --color-danger-50: #fff4f4;
   --color-danger-100: #ffe3e3;
@@ -74,7 +74,7 @@
   --color-danger-800: #812b2b;
   --color-danger-900: #5c1d1d;
 
-     /* Info */
+  /* Info */
 
   --color-info-50: #eefbff;
   --color-info-100: #d9f6ff;
@@ -86,18 +86,18 @@
   --color-info-700: #317b96;
   --color-info-800: #255e73;
   --color-info-900: #19404f;
-  
-     /* Neutral */
- 
+
+  /* Neutral */
+
   --color-background: #f6f7f6;
   --color-surface: #ffffff;
 
- /* Layout */
+  /* Layout */
 
   --color-sidebar: #fcfcfa;
   --color-navbar: #ffffff;
 
-/* Sidebar */
+  /* Sidebar */
 
   --color-sidebar-active: #edf8f2;
   --color-primary-muted: #5d8b78;
@@ -109,8 +109,8 @@
   --color-text-secondary: #4b5563;
   --color-text-muted: #9ca3af;
 
-     /* Neutral Scale */
-     
+  /* Neutral Scale */
+
   --color-neutral-50: #fafafa;
   --color-neutral-100: #f5f5f5;
   --color-neutral-200: #e5e7eb;
@@ -122,7 +122,7 @@
   --color-neutral-800: #1f2937;
   --color-neutral-900: #111827;
 
-     /* Typography */
+  /* Typography */
 
   --text-xxs: 11px;
   --text-xs: 12px;
@@ -138,7 +138,7 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-     /* Radius */
+  /* Radius */
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -149,10 +149,48 @@
 
   /* Sidebar */
 
---color-sidebar: #fcfcfa;
---color-sidebar-active: #edf8f2;
---color-primary-muted: #6e9a84;
---color-primary-25: #f8fcfa;
+  --color-sidebar: #fcfcfa;
+  --color-sidebar-active: #edf8f2;
+  --color-primary-muted: #6e9a84;
+  --color-primary-25: #f8fcfa;
+}
+
+.dark {
+  /* Layout & Surfaces */
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-sidebar: #0f172a;
+  --color-navbar: #1e293b;
+
+  /* Accent & Active states */
+  --color-sidebar-active: #132a24;
+  --color-primary-muted: #4e8771;
+  --color-primary-25: #162e27;
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+
+  /* Typography */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Inverted Neutral Scale for dark surfaces */
+  --color-neutral-50: #1e293b;
+  --color-neutral-100: #334155;
+  --color-neutral-200: #475569;
+  --color-neutral-300: #64748b;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #cbd5e1;
+  --color-neutral-600: #e2e8f0;
+  --color-neutral-700: #f1f5f9;
+  --color-neutral-800: #f8fafc;
+  --color-neutral-900: #ffffff;
+
+  --color-primary-800: #74b697;
+  --color-primary-700: #579f80;
+  --color-success-900: #58c68b;
+
+  color-scheme: dark;
 }
 
 html,
@@ -210,4 +248,48 @@ select {
 
 .animate-slide-out {
   animation: slideOut 0.3s ease-in forwards;
+}
+
+/* ===========================
+   Global Custom Scrollbar Design
+   =========================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #a7d5bf;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #2f5d50;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #4e8771;
+}
+
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a7d5bf transparent;
+}
+
+.dark,
+.dark * {
+  scrollbar-color: #334155 transparent;
 }
