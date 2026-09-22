@@ -199,6 +199,14 @@ const LeadPipelineDrawer = ({
       collegeId: selectedCollegeId,
     };
 
+    // Include the exact LeadCollege record ID for precise targeting
+    const matchedApp = existingApps.find(
+      (app) => (app.college?.id || app.collegeId) === selectedCollegeId
+    );
+    if (matchedApp) {
+      payload.leadCollegeId = matchedApp.id;
+    }
+
     try {
       if (statusName === "APPLICATION") {
         payload.applicationId = applicationId.trim();

@@ -1,5 +1,6 @@
 import { API_URL } from "../config/api";
 import { type LeadItem } from "./leadService";
+import { type UserItem } from "./userService";
 
 export type TPCStatus = "PENDING" | "COMPLETED" | "NO_REPLY" | "NOT_INTERESTED" | "CANCELLED";
 
@@ -57,6 +58,24 @@ export interface TPCResponse {
   lead?: LeadItem;
   assignments?: TPCUserItem[];
 }
+
+export async function fetchTpcUsers(token: string): Promise<UserItem[]> {
+  const response = await fetch(`${API_URL}/tpc/users`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch TPC users");
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
 
 export async function fetchAllTpcs(token: string): Promise<TPCResponse[]> {
   const response = await fetch(`${API_URL}/tpc`, {

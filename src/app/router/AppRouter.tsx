@@ -67,7 +67,7 @@ const AppRouter = () => {
             <Route path={ROUTES.DATA_ASSIGNMENT} element={<DataAssignmentPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.LEADS} element={<LeadPage />} />
             <Route path={ROUTES.LEAD_PROFILE} element={<LeadProfilePage />} />
             <Route path={ROUTES.TPC} element={<Tpc />} />
@@ -78,11 +78,11 @@ const AppRouter = () => {
             <Route path={ROUTES.OFFICE_SETTINGS} element={<OfficeSettingsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD"]} />}>
             <Route path={ROUTES.PITCH_APPROVALS} element={<PitchApprovalsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.COLLEGES} element={<CollegesPage />} />
           </Route>
 
@@ -102,7 +102,7 @@ const AppRouter = () => {
             <Route path={ROUTES.ADMISSIONS} element={<AdmissionPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.TODO} element={<Todo />} />
           </Route>
 

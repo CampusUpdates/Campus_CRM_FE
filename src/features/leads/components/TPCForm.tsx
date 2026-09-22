@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { Search, Check, RefreshCw, Users, Clock, X, ChevronDown, ChevronUp, CheckSquare, Square } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchUsers, type UserItem } from "../../../services/userService";
+import { type UserItem } from "../../../services/userService";
 import {
   assignTpc,
   fetchTpcsForLead,
+  fetchTpcUsers,
   type TPCUserItem,
 } from "../../../services/tpcService";
 import { fetchLeads, type LeadItem } from "../../../services/leadService";
@@ -70,7 +71,7 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
       try {
         setLoadingOptions(true);
         const [userData, tpcData] = await Promise.all([
-          fetchUsers(accessToken),
+          fetchTpcUsers(accessToken),
           selectedLead ? fetchTpcsForLead(accessToken, selectedLead.id) : Promise.resolve(null),
         ]);
         setUsers(userData);
@@ -298,8 +299,8 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                   </div>
                   <span
                     className={`px-2 py-0.5 rounded text-[11px] font-medium border ${a.status === "COMPLETED"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}
                   >
                     {a.status}

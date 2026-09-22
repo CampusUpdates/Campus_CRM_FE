@@ -48,7 +48,10 @@ const LeadPage = () => {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const isSuperAdminOrManager = user?.roleCode === "SUPER_ADMIN" || user?.roleCode === "MANAGER";
+  const isSuperAdminOrManager =
+    user?.roleCode === "SUPER_ADMIN" ||
+    user?.roleCode === "MANAGER" ||
+    user?.roleCode === "TEAM_LEAD";
 
   const paramDate = searchParams.get("date");
   const paramStatus = searchParams.get("status");
@@ -62,14 +65,14 @@ const LeadPage = () => {
 
   const hasActiveUrlFilters = Boolean(
     paramDate ||
-      paramStatus ||
-      paramTeamId ||
-      paramAssignedToId ||
-      paramAdmissionDueDate ||
-      paramAdmissionOverdue ||
-      paramTime ||
-      paramFromDate ||
-      paramToDate
+    paramStatus ||
+    paramTeamId ||
+    paramAssignedToId ||
+    paramAdmissionDueDate ||
+    paramAdmissionOverdue ||
+    paramTime ||
+    paramFromDate ||
+    paramToDate
   );
 
   const ITEMS_PER_PAGE = 10;

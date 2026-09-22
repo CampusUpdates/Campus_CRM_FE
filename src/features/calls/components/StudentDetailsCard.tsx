@@ -1,16 +1,18 @@
-import { User, Phone, Mail, MapPin, FileSpreadsheet, Clock, ShieldCheck } from "lucide-react";
+import { User, Phone, Mail, MapPin, FileSpreadsheet, Clock, ShieldCheck, History } from "lucide-react";
 import type { MockCallQueueStudentItem } from "../../../services/mockCallService";
 
 interface StudentDetailsCardProps {
   student: MockCallQueueStudentItem | null;
   totalAssigned: number;
   currentIndex: number;
+  onOpenHistory?: () => void;
 }
 
 const StudentDetailsCard = ({
   student,
   totalAssigned,
   currentIndex,
+  onOpenHistory,
 }: StudentDetailsCardProps) => {
   if (!student) {
     return (
@@ -42,6 +44,18 @@ const StudentDetailsCard = ({
           <h2 className="text-xl font-bold text-text-primary mt-1.5">{fullName}</h2>
           <p className="text-xs text-text-muted">Assigned student prospect</p>
         </div>
+
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-bold text-text-primary hover:bg-neutral-100 transition shadow-2xs"
+            title="View persistent call history for this contact"
+          >
+            <History size={15} className="text-primary-600 shrink-0" />
+            <span>Call History</span>
+          </button>
+        )}
       </div>
 
       {/* Details Grid */}

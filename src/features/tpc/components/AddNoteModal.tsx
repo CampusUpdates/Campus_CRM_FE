@@ -66,16 +66,16 @@ const AddNoteModal = ({
         outcome === "NOT_INTERESTED"
           ? "Not Interested"
           : outcome === "NO_REPLY"
-          ? "No Response"
-          : "TPC Note";
+            ? "No Response"
+            : "TPC Note";
 
       let statusToUpdate: TPCStatus = markCompleted
         ? "COMPLETED"
         : outcome === "NOT_INTERESTED"
-        ? "NOT_INTERESTED"
-        : outcome === "NO_REPLY"
-        ? "NO_REPLY"
-        : "COMPLETED";
+          ? "NOT_INTERESTED"
+          : outcome === "NO_REPLY"
+            ? "NO_REPLY"
+            : "COMPLETED";
 
       if (assignmentId && statusToUpdate) {
         await updateTpcAssignmentStatus(accessToken, assignmentId, statusToUpdate);
@@ -152,11 +152,10 @@ const AddNoteModal = ({
                 <button
                   type="button"
                   onClick={() => handleSelectOutcome("NOT_INTERESTED")}
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${
-                    outcome === "NOT_INTERESTED"
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${outcome === "NOT_INTERESTED"
                       ? "border-red-500 bg-red-50 text-red-700 ring-2 ring-red-200 font-semibold"
                       : "border-border text-text-secondary hover:bg-neutral-50"
-                  }`}
+                    }`}
                 >
                   <XCircle size={16} className="text-red-600 shrink-0" />
                   Not Interested
@@ -165,11 +164,10 @@ const AddNoteModal = ({
                 <button
                   type="button"
                   onClick={() => handleSelectOutcome("NO_REPLY")}
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${
-                    outcome === "NO_REPLY"
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${outcome === "NO_REPLY"
                       ? "border-amber-500 bg-amber-50 text-amber-700 ring-2 ring-amber-200 font-semibold"
                       : "border-border text-text-secondary hover:bg-neutral-50"
-                  }`}
+                    }`}
                 >
                   <Clock size={16} className="text-amber-600 shrink-0" />
                   No Response

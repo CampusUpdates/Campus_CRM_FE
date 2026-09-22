@@ -126,6 +126,18 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
       return;
     }
 
+    const selectedRole = roles.find((r) => String(r.id) === String(formData.roleId));
+    const isTeamLeadSelected = selectedRole
+      ? (selectedRole.name.toUpperCase().includes("TEAM_LEAD") || selectedRole.name.toUpperCase().includes("TEAM LEAD"))
+      : String(formData.roleId) === "5";
+
+    if (isTeamLeadSelected && !formData.teamId) {
+      const msg = "Team Lead must be assigned to a team";
+      setErrorMsg(msg);
+      toast.error(msg);
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -401,9 +413,10 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
               ) : (
                 <>
                   {isSuperAdmin && <option value="1">Super Admin</option>}
-                  <option value="2">Manager</option>
-                  <option value="3">Program Advisor</option>
+                  <option value="2">Program Advisor</option>
+                  <option value="3">Manager</option>
                   <option value="4">HR</option>
+                  <option value="5">Team Lead</option>
                 </>
               )}
             </select>
@@ -411,7 +424,17 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-text-primary">
-              Assign Team (Optional)
+              Assign Team {(() => {
+                const selectedRole = roles.find((r) => String(r.id) === String(formData.roleId));
+                const isTL = selectedRole
+                  ? (selectedRole.name.toUpperCase().includes("TEAM_LEAD") || selectedRole.name.toUpperCase().includes("TEAM LEAD"))
+                  : String(formData.roleId) === "5";
+                return isTL ? (
+                  <span className="text-danger-500">*</span>
+                ) : (
+                  <span className="text-text-tertiary font-normal">(Optional)</span>
+                );
+              })()}
             </label>
             <select
               name="teamId"

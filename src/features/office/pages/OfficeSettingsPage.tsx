@@ -172,11 +172,10 @@ const OfficeSettingsPage = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`p-2.5 rounded-xl shrink-0 ${
-                          office.isActive && hasLocation
+                        className={`p-2.5 rounded-xl shrink-0 ${office.isActive && hasLocation
                             ? "bg-primary-50 text-primary-600"
                             : "bg-neutral-100 text-neutral-500"
-                        }`}
+                          }`}
                       >
                         <Building2 size={22} />
                       </div>
@@ -192,16 +191,14 @@ const OfficeSettingsPage = () => {
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        office.isActive
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${office.isActive
                           ? "bg-emerald-100 text-emerald-800"
                           : "bg-rose-100 text-rose-800"
-                      }`}
+                        }`}
                     >
                       <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          office.isActive ? "bg-emerald-600" : "bg-rose-600"
-                        }`}
+                        className={`h-1.5 w-1.5 rounded-full ${office.isActive ? "bg-emerald-600" : "bg-rose-600"
+                          }`}
                       />
                       {office.isActive ? "Active" : "Inactive"}
                     </span>
@@ -250,11 +247,10 @@ const OfficeSettingsPage = () => {
                     type="button"
                     disabled={isUpdating}
                     onClick={() => handleToggleStatus(office)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${
-                      office.isActive
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${office.isActive
                         ? "border-rose-200 text-rose-700 hover:bg-rose-50"
                         : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                    }`}
+                      }`}
                   >
                     {isUpdating ? (
                       <RefreshCw size={14} className="animate-spin" />

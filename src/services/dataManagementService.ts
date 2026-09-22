@@ -131,6 +131,64 @@ export interface DataAssignmentRecord {
   };
 }
 
+export interface RecentCallRecord {
+  id: string;
+  outcome: string;
+  notes?: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  durationSeconds?: number | null;
+  createdAt: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    email?: string | null;
+  } | null;
+}
+
+export interface DataAssignmentItemDetail {
+  id: number;
+  studentDataId: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName?: string | null;
+  phone: string;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  createdAt: string;
+  recentCall?: RecentCallRecord | null;
+}
+
+export interface DataAssignmentDetailsResponse {
+  id: string;
+  assignedToId: string;
+  assignedById: string;
+  assignedAt: string;
+  expiresAt: string;
+  status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "RECLAIMED";
+  reclaimedAt?: string | null;
+  assignedTo?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    username?: string | null;
+    email?: string | null;
+    role?: { id: number; name: string } | null;
+    team?: { id: number; name: string } | null;
+  };
+  assignedBy?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    username?: string | null;
+    email?: string | null;
+  };
+  totalRecords: number;
+  items: DataAssignmentItemDetail[];
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -344,6 +402,33 @@ export async function fetchDataAssignments(
       data,
       pagination: { page: 1, limit: data.length, total: data.length, totalPages: 1 },
     };
+  }
+
+  return data;
+}
+
+export async function fetchDataAssignmentDetails(
+  token: string,
+  assignmentId: string,
+): Promise<DataAssignmentDetailsResponse> {
+  const response = await fetch(
+    `${API_URL}/uploads/data-assignments/${assignmentId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch data assignment details";
+    throw new Error(errorMsg);
   }
 
   return data;

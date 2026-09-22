@@ -42,7 +42,7 @@ export const navigationMenu: NavigationItem[] = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: ROUTES.DASHBOARD,
-    roles: ["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
   {
     title: "Teams",
@@ -54,13 +54,13 @@ export const navigationMenu: NavigationItem[] = [
     title: "Leads",
     icon: Users,
     path: ROUTES.LEADS,
-    roles: ["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
   },
   {
     title: "Call Workspace",
     icon: PhoneCall,
     path: ROUTES.CALLS,
-    roles: ["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
   },
 
   {
@@ -103,13 +103,13 @@ export const navigationMenu: NavigationItem[] = [
     title: "College Approvals",
     icon: CheckCircle2,
     path: ROUTES.PITCH_APPROVALS,
-    roles: ["MANAGER"],
+    roles: ["MANAGER", "TEAM_LEAD"],
   },
   {
     title: "Colleges",
     icon: Building2,
     path: ROUTES.COLLEGES,
-    roles: ["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
   {
     title: "Users",
@@ -139,7 +139,7 @@ export const navigationMenu: NavigationItem[] = [
     title: "TPC",
     icon: PhoneCall,
     path: ROUTES.TPC,
-    roles: ["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
     children: [
       {
         title: "My TPCs",
@@ -169,19 +169,19 @@ export const navigationMenu: NavigationItem[] = [
     title: "My Todo",
     icon: CheckSquare,
     path: ROUTES.TODO,
-    roles: ["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
   {
     title: "Notifications",
     icon: Bell,
     path: ROUTES.NOTIFICATIONS,
-    roles: ["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
   {
     title: "Profile",
     icon: User,
     path: ROUTES.PROFILE,
-    roles: ["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
 ];
 

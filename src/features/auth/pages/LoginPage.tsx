@@ -32,9 +32,29 @@ const LoginPage = () => {
         () => {
           resolve({});
         },
-        { timeout: 8000, enableHighAccuracy: true }
+        { timeout: 8000, enableHighAccuracy: true, maximumAge: 0 }
       );
     });
+  };
+
+  const handleLoginSuccess = (data: any) => {
+    if (data.requiresPasswordChange) {
+      toast.info("First-time login detected. Please update your temporary password.");
+      navigate("/update-password", {
+        state: {
+          passwordChangeToken: data.passwordChangeToken,
+          username: username.trim(),
+          oldPassword: password,
+        },
+      });
+      return;
+    }
+
+    if (data.access_token) {
+      setAuth(data.access_token);
+      toast.success("Signed in successfully!");
+      navigate("/dashboard");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,31 +65,39 @@ const LoginPage = () => {
     setErrorMsg(null);
 
     try {
-      const coords = await requestCoordinates();
-      const data = await login(username.trim(), password, coords.lat, coords.lon);
-
-      // Check if backend flags first-time temporary password login
-      if (data.requiresPasswordChange) {
-        toast.info("First-time login detected. Please update your temporary password.");
-        navigate("/update-password", {
-          state: {
-            passwordChangeToken: data.passwordChangeToken,
-            username: username.trim(),
-            oldPassword: password,
-          },
-        });
-        return;
-      }
-
-      if (data.access_token) {
-        setAuth(data.access_token);
-        toast.success("Signed in successfully!");
-        navigate("/dashboard");
-      }
+      // 1. Initial attempt: Submit username & password directly without GPS
+      const data = await login(username.trim(), password);
+      handleLoginSuccess(data);
     } catch (err: any) {
-      const msg = err.message || "Invalid login credentials";
-      setErrorMsg(msg);
-      toast.error(msg);
+      // 2. If backend specifically responds that location is required for this user:
+      if (err.locationRequired) {
+        try {
+          const coords = await requestCoordinates();
+          if (coords.lat === undefined || coords.lon === undefined) {
+            const locErrMsg = "Location permission is required to log in. Please enable GPS in your browser.";
+            setErrorMsg(locErrMsg);
+            toast.error(locErrMsg);
+            return;
+          }
+
+          // Retry with coordinates
+          const retryData = await login(
+            username.trim(),
+            password,
+            coords.lat,
+            coords.lon
+          );
+          handleLoginSuccess(retryData);
+        } catch (retryErr: any) {
+          const msg = retryErr.message || "Location verification failed";
+          setErrorMsg(msg);
+          toast.error(msg);
+        }
+      } else {
+        const msg = err.message || "Invalid login credentials";
+        setErrorMsg(msg);
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }

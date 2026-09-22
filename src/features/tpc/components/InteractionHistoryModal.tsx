@@ -109,9 +109,8 @@ const InteractionHistoryModal = ({
           ) : (
             <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-200">
               {interactions.map((item) => {
-                const authorName = `${item.createdBy?.firstName || "User"} ${
-                  item.createdBy?.lastName || ""
-                }`.trim();
+                const authorName = `${item.createdBy?.firstName || "User"} ${item.createdBy?.lastName || ""
+                  }`.trim();
                 const roleName = item.createdBy?.role?.name || "Member";
                 const isCall = (item.title || "").toLowerCase().includes("call");
 
@@ -133,7 +132,7 @@ const InteractionHistoryModal = ({
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                           <User size={13} className="text-text-muted" />
                           <span>{authorName}</span>
-                          <span className="text-[10px] font-normal text-text-muted bg-white border border-border px-1.5 py-0.2 rounded">
+                          <span className="text-[10px] font-semibold text-text-secondary dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 px-2 py-0.5 rounded-md">
                             {roleName}
                           </span>
                         </div>

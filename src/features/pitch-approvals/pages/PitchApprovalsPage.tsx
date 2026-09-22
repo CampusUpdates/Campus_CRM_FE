@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Clock, CheckCircle2, XCircle, AlertCircle, Loader2, User, MapPin, Phone, Mail } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext";
 import {
   fetchPitchApprovals,
   processPitchApproval,
@@ -9,6 +10,7 @@ import {
 
 const PitchApprovalsPage = () => {
   const { accessToken } = useAuth();
+  const toast = useToast();
   const [approvals, setApprovals] = useState<PitchApprovalItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,9 @@ const PitchApprovalsPage = () => {
       );
       setApprovals(data);
     } catch (err: any) {
-      setError(err.message || "Failed to load college approvals");
+      const msg = err.message || "Failed to load college approvals";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -44,9 +48,12 @@ const PitchApprovalsPage = () => {
     try {
       setProcessingId(pitchId);
       await processPitchApproval(accessToken, pitchId, action);
+      toast.success(
+        `College pitch request ${action === "APPROVED" ? "approved" : "rejected"} successfully.`
+      );
       await loadApprovals();
     } catch (err: any) {
-      alert(err.message || `Failed to ${action.toLowerCase()} college approval`);
+      toast.error(err.message || `Failed to ${action.toLowerCase()} college approval`);
     } finally {
       setProcessingId(null);
     }

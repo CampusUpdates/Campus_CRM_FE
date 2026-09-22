@@ -51,7 +51,7 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
         onClick={handleClose}
         className={`
           fixed inset-0
-          bg-black/60 backdrop-blur-xs
+          bg-black/70 backdrop-blur-xs
           transition-opacity duration-300
           ${isClosing ? "opacity-0" : "opacity-100"}
         `}
@@ -65,18 +65,19 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
           h-[100dvh]
           w-[420px]
           max-w-[90vw]
-          bg-surface
+          bg-slate-900
           shadow-2xl
-          border-l border-border
+          border-l border-slate-800
+          text-slate-100
           flex flex-col
-          ${isClosing ? "animate-slide-out" : "animate-slide-in"}
+          ${isClosing ? "animate-slide-out-right" : "animate-slide-in-right"}
         `}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
-          <div className="flex items-center gap-2.5 text-rose-600">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-6 py-5 bg-slate-900">
+          <div className="flex items-center gap-2.5 text-rose-400">
             <AlertTriangle size={22} className="shrink-0" />
-            <h2 className="text-xl font-semibold text-text-primary">
+            <h2 className="text-xl font-bold text-slate-100">
               Delete Team
             </h2>
           </div>
@@ -89,10 +90,10 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
             className="
               rounded-lg
               p-2
-              text-text-secondary
+              text-slate-400
               transition
-              hover:bg-neutral-100
-              hover:text-text-primary
+              hover:bg-slate-800
+              hover:text-slate-100
               disabled:opacity-50
             "
           >
@@ -101,19 +102,19 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
         </div>
 
         {/* Content */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 space-y-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-900 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full">
           {/* Target Team Details Card */}
-          <div className="rounded-xl border border-border bg-neutral-50/70 p-4 space-y-2">
+          <div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 space-y-2">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-950 border border-emerald-700/60 text-emerald-400 font-semibold">
                 <Shield size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-text-primary truncate">
+                <h3 className="text-base font-bold text-slate-100 truncate">
                   {team.name}
                 </h3>
                 {team.manager && (
-                  <p className="text-xs text-text-muted truncate">
+                  <p className="text-xs text-slate-400 truncate">
                     Manager: {team.manager.firstName} {team.manager.lastName || ""}
                   </p>
                 )}
@@ -121,7 +122,7 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
             </div>
 
             {team.description && (
-              <p className="text-xs text-text-secondary line-clamp-2 pt-1 border-t border-border-light">
+              <p className="text-xs text-slate-300 line-clamp-2 pt-2 border-t border-slate-700/60">
                 {team.description}
               </p>
             )}
@@ -129,51 +130,53 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
 
           {/* Confirmation Wording */}
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-text-primary">
+            <h4 className="text-sm font-semibold text-slate-200">
               Are you sure you want to delete this team?
             </h4>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              This action will permanently delete the team. Any employees currently assigned to this team will be moved to <strong className="text-text-primary">Unassigned</strong>.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              This action will permanently delete the team. Any employees currently assigned to this team will be moved to <strong className="text-slate-200 font-semibold">Unassigned</strong>.
             </p>
           </div>
 
           {/* Warning Box: Employees Affected */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs uppercase tracking-wider">
-              <Users size={15} className="text-amber-600 shrink-0" />
+          <div className="rounded-xl border border-amber-900/60 bg-amber-950/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs uppercase tracking-wider">
+              <Users size={15} className="text-amber-400 shrink-0" />
               Employees affected
             </div>
 
             {memberCount > 0 ? (
-              <p className="text-xs text-amber-900 font-medium leading-relaxed">
+              <p className="text-xs text-amber-200 font-medium leading-relaxed">
                 <strong>{memberCount} employee{memberCount === 1 ? "" : "s"}</strong> will automatically become Unassigned.
               </p>
             ) : (
-              <p className="text-xs text-amber-900 font-medium leading-relaxed">
+              <p className="text-xs text-amber-200 font-medium leading-relaxed">
                 No employees are currently assigned to it.
               </p>
             )}
 
-            <p className="text-[11px] text-amber-700 pt-1.5 border-t border-amber-200/60">
+            <p className="text-[11px] text-amber-300/80 pt-1.5 border-t border-amber-900/50">
               Their leads, activities, TPCs, attendance, and other CRM data will remain unchanged.
             </p>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-800 bg-slate-900 px-6 py-4">
           <button
             type="button"
             disabled={deleting}
             onClick={handleClose}
             className="
               rounded-lg
-              border border-border
+              border border-slate-700
+              bg-slate-800/80
               px-4 py-2.5
               text-sm font-medium
-              text-text-secondary
+              text-slate-300
               transition
-              hover:bg-neutral-100
+              hover:bg-slate-800
+              hover:text-white
               disabled:opacity-50
             "
           >
@@ -192,8 +195,9 @@ const DeleteTeamDrawer = ({ team, onClose, onConfirm }: DeleteTeamDrawerProps) =
               text-sm font-medium
               text-white
               transition
-              hover:bg-rose-700
+              hover:bg-rose-500
               disabled:opacity-50
+              shadow-sm
             "
           >
             {deleting && <RefreshCw size={15} className="animate-spin" />}

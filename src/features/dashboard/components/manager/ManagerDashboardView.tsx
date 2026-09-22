@@ -72,8 +72,13 @@ function getStatusBadgeStyle(statusName?: string): string {
   return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
 }
 
-const ManagerDashboardView = () => {
-  const { accessToken } = useAuth();
+type ManagerDashboardViewProps = {
+  isTeamLeadView?: boolean;
+};
+
+const ManagerDashboardView = ({ isTeamLeadView }: ManagerDashboardViewProps) => {
+  const { accessToken, user } = useAuth();
+  const isTL = isTeamLeadView || user?.roleCode === "TEAM_LEAD";
 
 
   // Filters State
@@ -231,7 +236,7 @@ const ManagerDashboardView = () => {
               className="h-9 rounded-lg border border-border bg-white dark:bg-neutral-800 px-3 text-xs font-semibold text-neutral-900 dark:text-neutral-100 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 cursor-pointer"
             >
               <option value="all" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">
-                All Managed Teams ({managedTeams.length})
+                {isTL ? "All Assigned Teams" : "All Managed Teams"} ({managedTeams.length})
               </option>
               {managedTeams.map((t) => (
                 <option

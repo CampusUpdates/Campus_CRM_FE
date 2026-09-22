@@ -18,11 +18,27 @@ export interface TeamItem {
   createdAt: string;
 }
 
+export interface TeamLeadAdvisorAssignment {
+  teamLeadId: string;
+  advisorIds: string[];
+}
+
 export interface CreateTeamPayload {
   name: string;
   description?: string;
   managerId: string;
   memberIds: string[];
+  teamLeadIds?: string[];
+  teamLeadAdvisorAssignments?: TeamLeadAdvisorAssignment[];
+}
+
+export interface UpdateTeamPayload {
+  name?: string;
+  description?: string;
+  managerId?: string;
+  memberIds?: string[];
+  teamLeadIds?: string[];
+  teamLeadAdvisorAssignments?: TeamLeadAdvisorAssignment[];
 }
 
 export interface EligibleManager {
@@ -150,6 +166,56 @@ export async function fetchTeamMembers(
   return Array.isArray(data) ? data : [];
 }
 
+export async function fetchTeamLeads(
+  token: string,
+  teamId: number | string
+): Promise<EligibleMember[]> {
+  const response = await fetch(`${API_URL}/teams/${teamId}/team-leads`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch team leads";
+    throw new Error(errorMsg);
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+export async function fetchTeamLeadAdvisors(
+  token: string,
+  teamId: number | string,
+  teamLeadId: string
+): Promise<EligibleMember[]> {
+  const response = await fetch(
+    `${API_URL}/teams/${teamId}/team-leads/${teamLeadId}/advisors`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch team lead advisors";
+    throw new Error(errorMsg);
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
 export async function createTeam(
   token: string,
   payload: CreateTeamPayload
@@ -173,13 +239,6 @@ export async function createTeam(
   }
 
   return data;
-}
-
-export interface UpdateTeamPayload {
-  name?: string;
-  description?: string;
-  managerId?: string;
-  memberIds?: string[];
 }
 
 export async function updateTeam(
@@ -231,6 +290,3 @@ export async function deleteTeam(
 
   return data;
 }
-
-
-

@@ -108,8 +108,8 @@ const TpcCallModal = ({
       let status: TPCStatus = markCompleted
         ? "COMPLETED"
         : callResult === "NO_REPLY"
-        ? "NO_REPLY"
-        : "NOT_INTERESTED";
+          ? "NO_REPLY"
+          : "NOT_INTERESTED";
 
       let statusLabel = callResult === "NO_REPLY" ? "No Response" : "Not Interested";
 
@@ -218,11 +218,10 @@ const TpcCallModal = ({
                 <button
                   type="button"
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`p-4 rounded-full transition-all border ${
-                    isMuted
+                  className={`p-4 rounded-full transition-all border ${isMuted
                       ? "bg-red-500/20 border-red-500 text-red-400"
                       : "bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700"
-                  }`}
+                    }`}
                 >
                   {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
                 </button>
@@ -240,11 +239,10 @@ const TpcCallModal = ({
                 <button
                   type="button"
                   onClick={() => setIsSpeakerOn(!isSpeakerOn)}
-                  className={`p-4 rounded-full transition-all border ${
-                    isSpeakerOn
+                  className={`p-4 rounded-full transition-all border ${isSpeakerOn
                       ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
                       : "bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700"
-                  }`}
+                    }`}
                 >
                   {isSpeakerOn ? <Volume2 size={22} /> : <VolumeX size={22} />}
                 </button>
@@ -281,11 +279,10 @@ const TpcCallModal = ({
                   <button
                     type="button"
                     onClick={() => handleSelectOutcome("NOT_INTERESTED")}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${
-                      callResult === "NOT_INTERESTED"
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${callResult === "NOT_INTERESTED"
                         ? "border-red-500 bg-red-50 text-red-700 ring-2 ring-red-200 font-semibold"
                         : "border-border text-text-secondary hover:bg-neutral-50"
-                    }`}
+                      }`}
                   >
                     <XCircle size={16} className="text-red-600 shrink-0" />
                     Not Interested
@@ -294,11 +291,10 @@ const TpcCallModal = ({
                   <button
                     type="button"
                     onClick={() => handleSelectOutcome("NO_REPLY")}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${
-                      callResult === "NO_REPLY"
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${callResult === "NO_REPLY"
                         ? "border-amber-500 bg-amber-50 text-amber-700 ring-2 ring-amber-200 font-semibold"
                         : "border-border text-text-secondary hover:bg-neutral-50"
-                    }`}
+                      }`}
                   >
                     <Clock size={16} className="text-amber-600 shrink-0" />
                     No Response

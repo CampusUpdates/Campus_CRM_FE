@@ -16,6 +16,7 @@ import StudentDetailsCard from "../components/StudentDetailsCard";
 import MockCallPanel from "../components/MockCallPanel";
 import CallOutcomePanel from "../components/CallOutcomePanel";
 import { SuperAdminCallReportView } from "../components/SuperAdminCallReportView";
+import { CallHistoryDrawer } from "../components/CallHistoryDrawer";
 
 const CallWorkspace = () => {
   const { user, accessToken } = useAuth();
@@ -53,6 +54,10 @@ const CallWorkspace = () => {
   const [callSession, setCallSession] = useState<MockCallSession | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Call History drawer state
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
   const currentStudent = queue[currentIndex] || null;
   const isQueueCompleted = queue.length > 0 && currentIndex >= queue.length;
 
@@ -63,7 +68,11 @@ const CallWorkspace = () => {
       const res = await fetchMockCallQueue(accessToken);
       setQueue(res.items || []);
       setTotalAssigned(res.totalAssigned || 0);
-      setCurrentIndex(0);
+      const startIdx =
+        res.initialIndex !== undefined && res.initialIndex !== null
+          ? res.initialIndex
+          : 0;
+      setCurrentIndex(startIdx);
       setCompletedCount(0);
       setCallSession(null);
     } catch (err: any) {
@@ -96,9 +105,21 @@ const CallWorkspace = () => {
 
   const handleInitiateCall = async () => {
     if (!accessToken || !currentStudent || actionLoading) return;
+    if (
+      !currentStudent.phone ||
+      currentStudent.phone.trim() === "" ||
+      currentStudent.phone === "undefined" ||
+      currentStudent.phone === "null"
+    ) {
+      toast.error("Selected contact has no valid phone number.");
+      return;
+    }
     setActionLoading(true);
     try {
       const res = await initiateMockCall(accessToken, currentStudent.studentDataId);
+      if (!res?.session || !res.session.phoneNumber) {
+        throw new Error("Invalid call session returned by telephony provider.");
+      }
       setCallSession(res.session);
       toast.success(`Calling ${currentStudent.firstName} (${res.session.phoneNumber})...`);
     } catch (err: any) {
@@ -141,6 +162,7 @@ const CallWorkspace = () => {
   const handleOutcomeComplete = () => {
     setCallSession(null);
     setCompletedCount((prev) => prev + 1);
+    setHistoryRefreshKey((prev) => prev + 1);
     if (currentIndex < queue.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
@@ -377,6 +399,7 @@ const CallWorkspace = () => {
                     student={currentStudent}
                     totalAssigned={totalAssigned}
                     currentIndex={currentIndex}
+                    onOpenHistory={() => setIsHistoryDrawerOpen(true)}
                   />
 
                   <CallOutcomePanel
@@ -401,6 +424,14 @@ const CallWorkspace = () => {
           )}
         </div>
       )}
+
+      {/* Call History Slide-in Drawer */}
+      <CallHistoryDrawer
+        isOpen={isHistoryDrawerOpen}
+        onClose={() => setIsHistoryDrawerOpen(false)}
+        student={currentStudent}
+        refreshKey={historyRefreshKey}
+      />
     </div>
   );
 };

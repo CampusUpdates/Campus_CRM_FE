@@ -16,6 +16,7 @@ import {
   HelpCircle,
   History,
   User,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
@@ -159,10 +160,13 @@ const Tpc = () => {
     const email = (lead?.email || "").toLowerCase();
     const course = (lead?.courseInterested || "").toLowerCase();
 
-    const assignedToName = `${item.assignedTo?.firstName || ""} ${item.assignedTo?.lastName || ""
-      }`.toLowerCase();
-    const assignedByName = `${item.assignedBy?.firstName || ""} ${item.assignedBy?.lastName || ""
-      }`.toLowerCase();
+    const assignedToName = `${item.assignedTo?.firstName || ""} ${item.assignedTo?.lastName || ""}`.toLowerCase();
+    const assignedByName = `${item.assignedBy?.firstName || ""} ${item.assignedBy?.lastName || ""}`.toLowerCase();
+
+    const collegeNames = (lead?.collegeApplications || [])
+      .map((app) => app.college?.name || "")
+      .join(" ")
+      .toLowerCase();
 
     const matchesSearch =
       leadName.includes(searchTerm.toLowerCase()) ||
@@ -170,7 +174,8 @@ const Tpc = () => {
       email.includes(searchTerm.toLowerCase()) ||
       course.includes(searchTerm.toLowerCase()) ||
       assignedToName.includes(searchTerm.toLowerCase()) ||
-      assignedByName.includes(searchTerm.toLowerCase());
+      assignedByName.includes(searchTerm.toLowerCase()) ||
+      collegeNames.includes(searchTerm.toLowerCase());
 
     if (!matchesSearch) return false;
 
@@ -218,26 +223,26 @@ const Tpc = () => {
     switch (status) {
       case "COMPLETED":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/80 dark:text-emerald-200 dark:border-emerald-700 flex items-center gap-1 shrink-0">
             <CheckCircle2 size={13} /> Completed
           </span>
         );
       case "NO_REPLY":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 shrink-0">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/80 dark:text-amber-200 dark:border-amber-700 flex items-center gap-1 shrink-0">
             <HelpCircle size={13} /> No Reply
           </span>
         );
       case "NOT_INTERESTED":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300 flex items-center gap-1 shrink-0">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300 dark:bg-red-900/80 dark:text-red-200 dark:border-red-700 flex items-center gap-1 shrink-0">
             <XCircle size={13} /> Not Interested
           </span>
         );
       case "PENDING":
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300 flex items-center gap-1 shrink-0">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-900/80 dark:text-blue-200 dark:border-blue-700 flex items-center gap-1 shrink-0">
             <Clock size={13} /> Pending
           </span>
         );
@@ -459,24 +464,56 @@ const Tpc = () => {
                     )}
                   </div>
 
+                  {/* Associated Colleges */}
+                  {lead?.collegeApplications && lead.collegeApplications.length > 0 && (
+                    <div className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 p-2.5 border border-border/70 text-xs space-y-1.5">
+                      <p className="text-[11px] font-semibold text-text-muted dark:text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 size={13} className="text-primary-600 dark:text-primary-400 shrink-0" />
+                        Associated Colleges ({lead.collegeApplications.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {lead.collegeApplications.map((app) => (
+                          <span
+                            key={app.id || app.collegeId}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-900 border border-neutral-300 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 shadow-2xs"
+                          >
+                            <span>{app.college?.name || "College"}</span>
+                            {app.approvalStatus && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border ${app.approvalStatus === "APPROVED"
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/90 dark:text-emerald-200 dark:border-emerald-700"
+                                  : app.approvalStatus === "REJECTED"
+                                    ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/90 dark:text-rose-200 dark:border-rose-700"
+                                    : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/90 dark:text-amber-200 dark:border-amber-700"
+                                  }`}
+                              >
+                                {app.approvalStatus}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Assignment Detail (Assignee or Assigner) */}
                   <div className="text-xs border-t border-border/60 pt-2.5 space-y-1">
-                    <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+                    <p className="text-[11px] font-semibold text-text-muted dark:text-neutral-400 uppercase tracking-wider">
                       {activeTab === "MY_TPCS" ? "Assigned to" : "Assigned by"}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-text-primary flex items-center gap-1.5">
-                        <User size={13} className="text-text-muted" />
+                      <span className="font-semibold text-text-primary dark:text-neutral-100 flex items-center gap-1.5">
+                        <User size={13} className="text-text-muted dark:text-neutral-400" />
                         {targetUserName}
                       </span>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 border border-border text-text-secondary">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-neutral-100 text-text-secondary border border-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700">
                         {targetUserRole}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] pt-1">
-                      <span className="flex items-center gap-1.5 text-primary-900 font-medium bg-primary-50 px-2 py-0.5 rounded border border-primary-100">
-                        <Calendar size={12} className="text-primary-600 shrink-0" />
+                      <span className="flex items-center gap-1.5 font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-900 border border-primary-200 dark:bg-primary-950/70 dark:text-primary-200 dark:border-primary-800">
+                        <Calendar size={12} className="text-primary-600 dark:text-primary-400 shrink-0" />
                         <span>Assigned: {new Date(assignment.assignedAt).toLocaleString(undefined, {
                           month: "short",
                           day: "numeric",
@@ -490,7 +527,7 @@ const Tpc = () => {
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="border-t border-border bg-neutral-50/70 p-3 space-y-2">
+                <div className="border-t border-border bg-neutral-50/70 dark:bg-neutral-900/60 p-3 space-y-2">
                   {/* Actions for Assigned TPCs */}
                   {activeTab === "ASSIGNED_TPCS" && (
                     <div className="space-y-2">
@@ -520,21 +557,21 @@ const Tpc = () => {
                           <button
                             onClick={() => handleUpdateStatus(assignment, "COMPLETED")}
                             disabled={isUpdating}
-                            className="px-2 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition font-medium"
+                            className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition font-medium"
                           >
                             Mark Completed
                           </button>
                           <button
                             onClick={() => handleUpdateStatus(assignment, "NO_REPLY")}
                             disabled={isUpdating}
-                            className="px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition font-medium"
+                            className="px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 transition font-medium"
                           >
                             No Reply
                           </button>
                           <button
                             onClick={() => handleUpdateStatus(assignment, "NOT_INTERESTED")}
                             disabled={isUpdating}
-                            className="px-2 py-1 rounded bg-red-50 text-red-800 border border-red-200 hover:bg-red-100 transition font-medium"
+                            className="px-2 py-1 rounded-md bg-red-50 text-red-800 border border-red-300 dark:bg-red-950/80 dark:text-red-300 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900 transition font-medium"
                           >
                             Not Interested
                           </button>

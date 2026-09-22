@@ -17,7 +17,11 @@ import {
   type PhoneSearchResult,
 } from "../../../services/leadService";
 import { createInteraction } from "../../../services/interactionService";
-import type { MockCallQueueStudentItem, MockCallSession } from "../../../services/mockCallService";
+import {
+  recordCallOutcome,
+  type MockCallQueueStudentItem,
+  type MockCallSession,
+} from "../../../services/mockCallService";
 import CreateLeadModal from "../../leads/components/CreateLeadModal";
 
 export type CallOutcomeType =
@@ -25,6 +29,7 @@ export type CallOutcomeType =
   | "WRONG_NUMBER"
   | "NOT_INTERESTED"
   | "FOLLOW_UP"
+  | "CALL_BACK_LATER"
   | "INTERESTED";
 
 interface CallOutcomePanelProps {
@@ -38,6 +43,7 @@ const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; color: string }[
   { label: "Wrong Number", value: "WRONG_NUMBER", color: "border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100" },
   { label: "Not Interested", value: "NOT_INTERESTED", color: "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100" },
   { label: "Follow Up Required", value: "FOLLOW_UP", color: "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100" },
+  { label: "Call Back Later", value: "CALL_BACK_LATER", color: "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100" },
   { label: "Interested / Create Lead", value: "INTERESTED", color: "border-emerald-500 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold" },
 ];
 
@@ -85,10 +91,22 @@ const CallOutcomePanel = ({
   }
 
   const handleSaveNonLeadOutcome = async () => {
-    if (!selectedOutcome || !accessToken) return;
+    if (!selectedOutcome || !accessToken || !student?.studentDataId) return;
 
-    toast.success(`Call outcome recorded: ${selectedOutcome.replace("_", " ")}.`);
-    onOutcomeComplete();
+    try {
+      await recordCallOutcome(accessToken, {
+        studentDataId: student.studentDataId,
+        outcome: selectedOutcome,
+        notes: notes ? notes.trim() : undefined,
+        startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
+        endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
+        durationSeconds: callSession.durationSeconds || 0,
+      });
+      toast.success(`Call outcome recorded: ${selectedOutcome.replace(/_/g, " ")}.`);
+      onOutcomeComplete();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to record call outcome.");
+    }
   };
 
   const handleClaimExistingLead = async () => {
@@ -104,6 +122,19 @@ const CallOutcomePanel = ({
         title: "Call",
         description: `Mock call completed. Outcome: INTERESTED. Duration: ${duration}s. ${notes ? `Notes: ${notes}` : ""}`.trim(),
       }).catch(() => {});
+
+      // Record persistent CallRecord for claimed lead
+      if (student?.studentDataId) {
+        await recordCallOutcome(accessToken, {
+          studentDataId: student.studentDataId,
+          leadId: leadSearchResult.leadId,
+          outcome: "INTERESTED",
+          notes: notes ? notes.trim() : undefined,
+          startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
+          endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
+          durationSeconds: duration,
+        }).catch((err) => console.error("Failed to record call record for claimed lead:", err));
+      }
 
       toast.success("Lead claimed successfully!");
       onOutcomeComplete();
@@ -137,6 +168,20 @@ const CallOutcomePanel = ({
         title: "Call - Interested",
         description: `Student contacted through assigned dataset (${student?.upload?.fileName || "Data Upload"}). Call outcome: Interested. Duration: ${duration}s. ${notes ? `Advisor notes: ${notes}` : ""}`.trim(),
       }).catch(() => {});
+    }
+
+    // Record persistent CallRecord for created lead
+    if (accessToken && student?.studentDataId) {
+      const duration = callSession.durationSeconds || 0;
+      await recordCallOutcome(accessToken, {
+        studentDataId: student.studentDataId,
+        leadId: targetLeadId || undefined,
+        outcome: "INTERESTED",
+        notes: notes ? notes.trim() : undefined,
+        startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
+        endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
+        durationSeconds: duration,
+      }).catch((err) => console.error("Failed to record call record for created lead:", err));
     }
 
     toast.success(`Lead created successfully for ${student?.firstName || "contact"}! Loading next student...`);

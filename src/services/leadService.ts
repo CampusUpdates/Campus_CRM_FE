@@ -45,6 +45,7 @@ export interface LeadCollegeApplication {
 export interface UpdateLeadPipelinePayload {
   statusId: number;
   collegeId?: string;
+  leadCollegeId?: string;
   applicationId?: string;
   interview?: {
     scheduledAt?: string;

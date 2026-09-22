@@ -39,6 +39,7 @@ export interface SuperAdminDashboardData {
     id: string;
     student: string;
     leadId: string | null;
+    studentDataId?: string | null;
     phone: string;
     advisor: string;
     advisorId: string;
@@ -49,6 +50,7 @@ export interface SuperAdminDashboardData {
     duration: string;
     callOutcome: string;
     leadStatus: string;
+    notes?: string | null;
   }>;
   attendanceList: Array<{
     id: string;

@@ -77,7 +77,12 @@ const DashboardPage = () => {
     return <ManagerDashboardView />;
   }
 
-  // 3. HR Dashboard
+  // 3. TEAM_LEAD Dashboard
+  if (roleCode === "TEAM_LEAD" || roleCode === "TEAMLEAD" || roleCode.includes("LEAD")) {
+    return <ManagerDashboardView isTeamLeadView={true} />;
+  }
+
+  // 4. HR Dashboard
   if (roleCode === "HR") {
     return (
       <div className="space-y-8">
@@ -131,62 +136,72 @@ const DashboardPage = () => {
     );
   }
 
-  // 4. PROGRAM_ADVISOR / Default Advisor Dashboard
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            Program Advisor Performance Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Dynamic personal performance insights, lead pipeline stages, conversion rates, and TPC logs.
-          </p>
-        </div>
+  // 5. PROGRAM_ADVISOR Dashboard
+  if (
+    roleCode === "PROGRAM_ADVISOR" ||
+    roleCode === "ADVISOR" ||
+    roleCode.includes("ADVISOR") ||
+    roleCode.includes("SALES")
+  ) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">
+              Program Advisor Performance Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              Dynamic personal performance insights, lead pipeline stages, conversion rates, and TPC logs.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(ROUTES.CALLS)}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs"
-          >
-            <PhoneCall size={15} />
-            Open Call Workspace
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(ROUTES.CALLS)}
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs"
+            >
+              <PhoneCall size={15} />
+              Open Call Workspace
+            </button>
 
-          <button
-            onClick={loadAdvisorStats}
-            title="Refresh advisor dashboard metrics"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
-        </div>
-      </div>
-
-      {loading || !advisorData ? (
-        <div className="flex items-center justify-center py-16 text-sm text-text-muted">
-          <RefreshCw size={18} className="animate-spin mr-2" />
-          Loading personal Program Advisor insights...
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <AdvisorKpiSection kpis={advisorData.kpis} />
-          <AdvisorChartsSection data={advisorData} />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2">
-              <RecentAdvisorActivity
-                leads={advisorData.recentLeads}
-                onRefresh={loadAdvisorStats}
-              />
-            </div>
-            <div className="lg:col-span-1">
-              <TodayTodosSection />
-            </div>
+            <button
+              onClick={loadAdvisorStats}
+              title="Refresh advisor dashboard metrics"
+              className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
+            >
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+
+        {loading || !advisorData ? (
+          <div className="flex items-center justify-center py-16 text-sm text-text-muted">
+            <RefreshCw size={18} className="animate-spin mr-2" />
+            Loading personal Program Advisor insights...
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <AdvisorKpiSection kpis={advisorData.kpis} />
+            <AdvisorChartsSection data={advisorData} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2">
+                <RecentAdvisorActivity
+                  leads={advisorData.recentLeads}
+                  onRefresh={loadAdvisorStats}
+                />
+              </div>
+              <div className="lg:col-span-1">
+                <TodayTodosSection />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Safe Fallback: Default to Team Lead / Manager view for unclassified organizational roles
+  return <ManagerDashboardView isTeamLeadView={true} />;
 };
 
 export default DashboardPage;

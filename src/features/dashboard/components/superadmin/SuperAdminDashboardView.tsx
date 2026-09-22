@@ -315,7 +315,7 @@ const SuperAdminDashboardView = () => {
         {/* 4. INTERVIEWS TODAY KPI CARD */}
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-purple-400 transition-all duration-200">
           <div
-            onClick={() => navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today`)}
+            onClick={() => navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`)}
             className="flex items-center justify-between cursor-pointer group"
           >
             <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
@@ -327,7 +327,7 @@ const SuperAdminDashboardView = () => {
           </div>
 
           <div
-            onClick={() => navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today`)}
+            onClick={() => navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`)}
             className="cursor-pointer group flex items-baseline justify-between"
           >
             <p className="text-3xl font-bold text-purple-700">
@@ -343,9 +343,10 @@ const SuperAdminDashboardView = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=SCHEDULED`);
+                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
               }}
               className="px-2 py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 font-bold hover:bg-purple-100 transition"
+              title="Filter scheduled student lead interviews"
             >
               Sch: {kpis.interviewsScheduledCount}
             </button>
@@ -353,9 +354,10 @@ const SuperAdminDashboardView = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=COMPLETED`);
+                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
               }}
               className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
+              title="Filter completed student lead interviews"
             >
               Done: {kpis.interviewsCompletedCount}
             </button>
@@ -363,9 +365,10 @@ const SuperAdminDashboardView = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=PENDING`);
+                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
               }}
               className="px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold hover:bg-amber-100 transition"
+              title="Filter pending student lead interviews"
             >
               Pend: {kpis.interviewsPendingCount}
             </button>

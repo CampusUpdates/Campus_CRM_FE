@@ -14,12 +14,15 @@ import {
   Layers,
   PhoneOff,
   Activity,
+  History,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import {
   fetchSuperAdminDashboardStats,
   type SuperAdminDashboardData,
 } from "../../../services/superAdminDashboardService";
+import { CallHistoryDrawer } from "./CallHistoryDrawer";
+import type { MockCallQueueStudentItem } from "../../../services/mockCallService";
 
 type SortField = "advisorName" | "assignedDataCount" | "callsCount" | "admissionsCount";
 
@@ -28,6 +31,9 @@ export const SuperAdminCallReportView: React.FC = () => {
   const [data, setData] = useState<SuperAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Call history drawer state
+  const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<MockCallQueueStudentItem | null>(null);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
@@ -463,13 +469,14 @@ export const SuperAdminCallReportView: React.FC = () => {
                 <th className="px-4 py-3">Call Time</th>
                 <th className="px-4 py-3">Duration</th>
                 <th className="px-4 py-3 text-right">Call Outcome</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {callsTodayList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-xs text-text-muted">
-                    Calling analytics will appear once telephony tracking is connected.
+                  <td colSpan={8} className="px-4 py-12 text-center text-xs text-text-muted">
+                    No recent call activity logged today.
                   </td>
                 </tr>
               ) : (
@@ -488,6 +495,27 @@ export const SuperAdminCallReportView: React.FC = () => {
                         {call.callOutcome}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {call.studentDataId ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedStudentForHistory({
+                              studentDataId: call.studentDataId!,
+                              firstName: call.student,
+                              phone: call.phone,
+                            } as any)
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] font-semibold text-text-primary hover:bg-neutral-100 transition shadow-2xs"
+                          title="View complete call history"
+                        >
+                          <History size={13} className="text-primary-600" />
+                          History
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-text-muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -495,6 +523,13 @@ export const SuperAdminCallReportView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Super Admin Call History Drawer */}
+      <CallHistoryDrawer
+        isOpen={!!selectedStudentForHistory}
+        onClose={() => setSelectedStudentForHistory(null)}
+        student={selectedStudentForHistory}
+      />
     </div>
   );
 };

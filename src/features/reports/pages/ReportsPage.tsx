@@ -283,12 +283,37 @@ const HRReportsView = () => {
 
 const ReportsPage = () => {
   const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole(["SUPER_ADMIN"]);
+  const isManager = hasRole(["MANAGER"]);
+  const isTeamLead = hasRole(["TEAM_LEAD"]);
   const isHRRole = hasRole(["HR"]);
-  const isManagerOrAdmin = hasRole(["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]);
+  const isManagerOrAdmin = hasRole(["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"]);
 
-  const [activeReportType, setActiveReportType] = useState<"manager" | "hr">(
-    isManagerOrAdmin || !isHRRole ? "manager" : "hr"
+  const [activeReportType, setActiveReportType] = useState<"crm" | "hr">(
+    isManagerOrAdmin || !isHRRole ? "crm" : "hr"
   );
+
+  let headerTitle = "CRM Reports";
+  let subtitle = "Generate detailed reports across authorized CRM data.";
+  let leadScopeLabel = "Authorized Leads";
+
+  if (isSuperAdmin) {
+    headerTitle = "Super Admin Reports";
+    subtitle = "Generate detailed reports across the entire CRM.";
+    leadScopeLabel = "All CRM Leads";
+  } else if (isManager) {
+    headerTitle = "Manager Reports";
+    subtitle = "Generate detailed performance & funnel reports across your managed teams.";
+    leadScopeLabel = "All Team Leads";
+  } else if (isTeamLead) {
+    headerTitle = "Team Lead Reports";
+    subtitle = "Generate detailed reports for your own leads and supervised Program Advisors.";
+    leadScopeLabel = "Supervised Team Leads";
+  } else {
+    headerTitle = "Advisor Reports";
+    subtitle = "Generate detailed reports for your authorized leads.";
+    leadScopeLabel = "My Authorized Leads";
+  }
 
   return (
     <div className="space-y-6">
@@ -296,15 +321,15 @@ const ReportsPage = () => {
       {(isHRRole && isManagerOrAdmin) && (
         <div className="flex items-center gap-3 border-b border-border pb-3">
           <button
-            onClick={() => setActiveReportType("manager")}
+            onClick={() => setActiveReportType("crm")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
-              activeReportType === "manager"
+              activeReportType === "crm"
                 ? "bg-primary-500 text-white shadow-2xs"
                 : "border border-border bg-surface text-text-secondary hover:bg-neutral-50"
             }`}
           >
             <FileSpreadsheet size={16} />
-            Manager Reports
+            {headerTitle}
           </button>
 
           <button
@@ -322,7 +347,15 @@ const ReportsPage = () => {
       )}
 
       {/* Render Active View */}
-      {activeReportType === "manager" ? <ManagerReportsView /> : <HRReportsView />}
+      {activeReportType === "crm" ? (
+        <ManagerReportsView
+          headerTitle={headerTitle}
+          subtitle={subtitle}
+          leadScopeLabel={leadScopeLabel}
+        />
+      ) : (
+        <HRReportsView />
+      )}
     </div>
   );
 };

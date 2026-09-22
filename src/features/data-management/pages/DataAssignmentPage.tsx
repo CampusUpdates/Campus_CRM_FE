@@ -34,6 +34,7 @@ import {
 } from "../../../services/dataManagementService";
 import AssignmentReviewModal from "../components/AssignmentReviewModal";
 import PaginationControls from "../components/PaginationControls";
+import { AssignmentDetailsDrawer } from "../components/AssignmentDetailsDrawer";
 
 const PREDEFINED_QUANTITIES = [20, 50, 100, 200, 500];
 
@@ -77,6 +78,7 @@ const DataAssignmentPage = () => {
   const [historyPage, setHistoryPage] = useState<number>(1);
   const [historyTotalPages, setHistoryTotalPages] = useState<number>(1);
   const [historyTotalCount, setHistoryTotalCount] = useState<number>(0);
+  const [selectedAssignmentIdForDrawer, setSelectedAssignmentIdForDrawer] = useState<string | null>(null);
 
 
   // Dropdown Open States
@@ -1079,7 +1081,16 @@ const DataAssignmentPage = () => {
                         <p className="text-[11px] text-text-muted">{a.assignedTo?.team?.name || a.assignedTo?.email}</p>
                       </td>
                       <td className="px-5 py-3 text-xs text-text-secondary">{assignerName}</td>
-                      <td className="px-5 py-3 text-xs font-bold text-text-primary">{itemCount} records</td>
+                      <td className="px-5 py-3 text-xs font-bold text-text-primary">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAssignmentIdForDrawer(a.id)}
+                          className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                          title="Click to view assigned student records & recent call updates"
+                        >
+                          {itemCount} records
+                        </button>
+                      </td>
                       <td className="px-5 py-3 text-xs text-text-secondary">{new Date(a.assignedAt).toLocaleString()}</td>
                       <td className="px-5 py-3 text-xs text-text-secondary">Permanent</td>
                       <td className="px-5 py-3 text-xs font-semibold">
@@ -1146,6 +1157,15 @@ const DataAssignmentPage = () => {
           <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
           <span>{successToast}</span>
         </div>
+      )}
+
+      {/* Assignment Details & Recent Call Updates Drawer */}
+      {selectedAssignmentIdForDrawer && accessToken && (
+        <AssignmentDetailsDrawer
+          assignmentId={selectedAssignmentIdForDrawer}
+          token={accessToken}
+          onClose={() => setSelectedAssignmentIdForDrawer(null)}
+        />
       )}
 
       {/* Reclaim Confirmation Modal Dialog */}
