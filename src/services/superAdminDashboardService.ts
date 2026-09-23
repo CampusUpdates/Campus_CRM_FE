@@ -157,7 +157,9 @@ export interface SuperAdminDashboardData {
 }
 
 export async function fetchSuperAdminDashboardStats(
-  token?: string
+  token?: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<SuperAdminDashboardData> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -166,7 +168,13 @@ export async function fetchSuperAdminDashboardStats(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}/dashboard/super-admin`, {
+  const queryParams = new URLSearchParams();
+  if (startDate) queryParams.set("startDate", startDate);
+  if (endDate) queryParams.set("endDate", endDate);
+
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
+  const response = await fetch(`${API_URL}/dashboard/super-admin${queryString}`, {
     method: "GET",
     headers,
   });
@@ -177,3 +185,4 @@ export async function fetchSuperAdminDashboardStats(
 
   return response.json();
 }
+

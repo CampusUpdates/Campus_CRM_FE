@@ -59,24 +59,29 @@ const SuperAdminDashboardView = () => {
   const [activityPage, setActivityPage] = useState(1);
   const ACTIVITY_PAGE_SIZE = 5;
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (isSilent = false) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
       const res = await fetchSuperAdminDashboardStats(accessToken);
       setData(res);
     } catch (err: any) {
       console.error("Failed to load Super Admin dashboard:", err);
-      setError(err.message || "Failed to load dashboard metrics");
+      if (!isSilent) setError(err.message || "Failed to load dashboard metrics");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [accessToken]);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(false);
+    const timer = setInterval(() => {
+      loadDashboard(true);
+    }, 5000);
+    return () => clearInterval(timer);
   }, [loadDashboard]);
+
 
   if (loading && !data) {
     return (

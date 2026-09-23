@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   PhoneCall,
   Users,
@@ -15,6 +16,7 @@ import {
   PhoneOff,
   Activity,
   History,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -25,12 +27,49 @@ import { CallHistoryDrawer } from "./CallHistoryDrawer";
 import type { MockCallQueueStudentItem } from "../../../services/mockCallService";
 
 type SortField = "advisorName" | "assignedDataCount" | "callsCount" | "admissionsCount";
+type DatePeriod = "today" | "yesterday" | "7days" | "30days" | "all";
+
+function getDateRangeForPeriod(period: DatePeriod): { startDate?: string; endDate?: string } {
+  const now = new Date();
+  if (period === "all") {
+    return { startDate: "all" };
+  }
+  if (period === "yesterday") {
+    const y = new Date(now);
+    y.setDate(y.getDate() - 1);
+    const dateStr = y.toISOString().split("T")[0];
+    return { startDate: dateStr, endDate: dateStr };
+  }
+  if (period === "7days") {
+    const past = new Date(now);
+    past.setDate(past.getDate() - 6);
+    return {
+      startDate: past.toISOString().split("T")[0],
+      endDate: now.toISOString().split("T")[0],
+    };
+  }
+  if (period === "30days") {
+    const past = new Date(now);
+    past.setDate(past.getDate() - 29);
+    return {
+      startDate: past.toISOString().split("T")[0],
+      endDate: now.toISOString().split("T")[0],
+    };
+  }
+  const todayStr = now.toISOString().split("T")[0];
+  return { startDate: todayStr, endDate: todayStr };
+}
 
 export const SuperAdminCallReportView: React.FC = () => {
   const { accessToken } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDateParam = (searchParams.get("date") as DatePeriod) || "today";
+
   const [data, setData] = useState<SuperAdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [datePeriod, setDatePeriod] = useState<DatePeriod>(initialDateParam);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Call history drawer state
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<MockCallQueueStudentItem | null>(null);
@@ -44,24 +83,41 @@ export const SuperAdminCallReportView: React.FC = () => {
   const [sortField, setSortField] = useState<SortField>("callsCount");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const loadReport = useCallback(async () => {
+  const loadReport = useCallback(async (isSilent = false) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
-      const res = await fetchSuperAdminDashboardStats(accessToken);
+      const { startDate, endDate } = getDateRangeForPeriod(datePeriod);
+      const res = await fetchSuperAdminDashboardStats(accessToken, startDate, endDate);
       setData(res);
+      setLastUpdated(new Date());
     } catch (err: any) {
       console.error("Failed to load Super Admin Call Report:", err);
-      setError(err.message || "Failed to load call monitoring metrics.");
+      if (!isSilent) setError(err.message || "Failed to load call monitoring metrics.");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, datePeriod]);
 
+  // Handle period change
+  const handlePeriodChange = (period: DatePeriod) => {
+    setDatePeriod(period);
+    setSearchParams((prev) => {
+      prev.set("date", period);
+      return prev;
+    });
+  };
+
+  // Initial load & real-time background polling every 5 seconds
   useEffect(() => {
-    loadReport();
+    loadReport(false);
+    const timer = setInterval(() => {
+      loadReport(true);
+    }, 5000);
+    return () => clearInterval(timer);
   }, [loadReport]);
+
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -171,13 +227,44 @@ export const SuperAdminCallReportView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-            <Activity size={14} /> Telephony Tracking: Standby Mode
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date Period Filter Selector */}
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-surface p-1 text-xs shadow-xs">
+            {(
+              [
+                { id: "today", label: "Today" },
+                { id: "yesterday", label: "Yesterday" },
+                { id: "7days", label: "Last 7 Days" },
+                { id: "30days", label: "Last 30 Days" },
+                { id: "all", label: "All Time" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handlePeriodChange(tab.id)}
+                className={`rounded-lg px-3 py-1.5 font-semibold transition cursor-pointer ${
+                  datePeriod === tab.id
+                    ? "bg-primary-600 text-white shadow-xs"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Real-Time Live
           </span>
+
           <button
             type="button"
-            onClick={loadReport}
+            onClick={() => loadReport(false)}
             title="Refresh Report"
             className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer shadow-xs"
           >
@@ -186,6 +273,7 @@ export const SuperAdminCallReportView: React.FC = () => {
           </button>
         </div>
       </div>
+
 
       {/* 2. Overview Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
