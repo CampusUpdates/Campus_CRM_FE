@@ -104,7 +104,7 @@ const SuperAdminDashboardView = () => {
         <h3 className="text-base font-bold text-rose-900">Failed to Load Super Admin Dashboard</h3>
         <p className="text-xs text-rose-700 mt-1 max-w-md">{error}</p>
         <button
-          onClick={loadDashboard}
+          onClick={() => loadDashboard()}
           className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
         >
           <RefreshCw size={14} /> Retry Loading
@@ -184,7 +184,7 @@ const SuperAdminDashboardView = () => {
         </div>
 
         <button
-          onClick={loadDashboard}
+          onClick={() => loadDashboard()}
           disabled={loading}
           className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 text-xs font-semibold text-white border border-white/20 transition shadow-sm self-start sm:self-auto"
         >
