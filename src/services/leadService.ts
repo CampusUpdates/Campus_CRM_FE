@@ -19,8 +19,21 @@ export interface CreateLeadPayload {
   specializationInterested?: string;
   passingYear?: number;
   collegeIds: string[];
+  negativeCollegeIds?: string[];
   source: string;
   statusId?: number;
+}
+
+export interface LeadNegativeCollegeItem {
+  id: string;
+  leadId?: string;
+  collegeId: string;
+  college?: {
+    id: string;
+    name: string;
+    city?: string;
+    state?: string;
+  };
 }
 
 export interface LeadCollegeApplication {
@@ -119,6 +132,7 @@ export interface LeadItem {
   };
   assignments?: LeadAssignmentItem[];
   collegeApplications?: LeadCollegeApplication[];
+  negativeColleges?: LeadNegativeCollegeItem[];
 }
 
 

@@ -9,6 +9,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { SidebarProvider } from "./context/SidebarContext";
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
@@ -17,7 +18,9 @@ createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <ToastProvider>
             <NotificationProvider>
-              <App />
+              <SidebarProvider>
+                <App />
+              </SidebarProvider>
             </NotificationProvider>
           </ToastProvider>
         </AuthProvider>

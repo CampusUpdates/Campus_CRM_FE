@@ -749,9 +749,9 @@ const LeadPage = () => {
                         </td>
 
                         <td className="px-5 py-4 text-sm text-text-secondary">
-                          {lead.collegeApplications && lead.collegeApplications.length > 0 ? (
-                            <div className="flex flex-col gap-1.5 items-start max-w-[240px]">
-                              {lead.collegeApplications.map((app) => {
+                          <div className="flex flex-col gap-1.5 items-start max-w-[240px]">
+                            {lead.collegeApplications && lead.collegeApplications.length > 0 && (
+                              lead.collegeApplications.map((app) => {
                                 const rawColor = app.status?.color || "#3b82f6";
                                 return (
                                   <span
@@ -773,11 +773,29 @@ const LeadPage = () => {
                                     </span>
                                   </span>
                                 );
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-text-muted">None</span>
-                          )}
+                              })
+                            )}
+
+                            {lead.negativeColleges && lead.negativeColleges.length > 0 && (
+                              lead.negativeColleges.map((neg) => (
+                                <span
+                                  key={neg.id}
+                                  className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50/80 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 text-[11px] font-medium max-w-full"
+                                  title={`Negative: ${neg.college?.name || "College"}`}
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                                  <span className="truncate">
+                                    [Not Interested] {neg.college?.name || "College"}
+                                  </span>
+                                </span>
+                              ))
+                            )}
+
+                            {(!lead.collegeApplications || lead.collegeApplications.length === 0) &&
+                             (!lead.negativeColleges || lead.negativeColleges.length === 0) && (
+                              <span className="text-xs text-text-muted">None</span>
+                            )}
+                          </div>
                         </td>
 
                         {isSuperAdminOrManager && (

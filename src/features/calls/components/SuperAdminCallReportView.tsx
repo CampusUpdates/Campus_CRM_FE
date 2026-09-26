@@ -12,6 +12,8 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Layers,
   PhoneOff,
   History,
@@ -23,8 +25,9 @@ import {
 } from "../../../services/superAdminDashboardService";
 import { CallHistoryDrawer } from "./CallHistoryDrawer";
 import type { MockCallQueueStudentItem } from "../../../services/mockCallService";
+import { getCompactPageNumbers } from "../../../utils/paginationUtils";
 
-type SortField = "advisorName" | "assignedDataCount" | "callsCount" | "admissionsCount";
+type SortField = "advisorName" | "assignedDataCount" | "callsCount" | "answeredCallsCount" | "notAnsweredCallsCount";
 type DatePeriod = "today" | "yesterday" | "7days" | "30days" | "all";
 
 function getDateRangeForPeriod(period: DatePeriod): { startDate?: string; endDate?: string } {
@@ -75,18 +78,23 @@ export const SuperAdminCallReportView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState<string>("ALL");
   const [callingFilter, setCallingFilter] = useState<"ALL" | "CALLED" | "ZERO_CALLS">("ALL");
+  const [callTimeFilter, setCallTimeFilter] = useState<string>("ALL");
 
   // Sorting for Advisor table
   const [sortField, setSortField] = useState<SortField>("callsCount");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const loadReport = useCallback(async (isSilent = false) => {
+  // Call Logs Pagination
+  const CALLS_PER_PAGE = 10;
+  const [callLogsPage, setCallLogsPage] = useState(1);
+
+  const loadReport = useCallback(async (targetPage = callLogsPage, isSilent = false) => {
     if (!accessToken) return;
     if (!isSilent) setLoading(true);
     setError(null);
     try {
       const { startDate, endDate } = getDateRangeForPeriod(datePeriod);
-      const res = await fetchSuperAdminDashboardStats(accessToken, startDate, endDate);
+      const res = await fetchSuperAdminDashboardStats(accessToken, startDate, endDate, targetPage, CALLS_PER_PAGE, callTimeFilter);
       setData(res);
     } catch (err: any) {
       console.error("Failed to load Super Admin Call Report:", err);
@@ -94,25 +102,32 @@ export const SuperAdminCallReportView: React.FC = () => {
     } finally {
       if (!isSilent) setLoading(false);
     }
-  }, [accessToken, datePeriod]);
+  }, [accessToken, datePeriod, callLogsPage, callTimeFilter]);
 
   // Handle period change
   const handlePeriodChange = (period: DatePeriod) => {
     setDatePeriod(period);
+    setCallLogsPage(1);
     setSearchParams((prev) => {
       prev.set("date", period);
       return prev;
     });
   };
 
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setCallLogsPage(newPage);
+    loadReport(newPage, false);
+  };
+
   // Initial load & real-time background polling every 5 seconds
   useEffect(() => {
-    loadReport(false);
+    loadReport(callLogsPage, false);
     const timer = setInterval(() => {
-      loadReport(true);
+      loadReport(callLogsPage, true);
     }, 5000);
     return () => clearInterval(timer);
-  }, [loadReport]);
+  }, [loadReport, callLogsPage, callTimeFilter]);
 
 
   const handleSort = (field: SortField) => {
@@ -142,7 +157,7 @@ export const SuperAdminCallReportView: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center p-12 rounded-2xl border border-rose-500/20 bg-rose-500/10 text-center">
         <AlertCircle size={36} className="text-rose-500 mb-3" />
-        <h3 className="text-base font-bold text-text-primary">Failed to Load Program Advisor Calling Report</h3>
+        <h3 className="text-base font-bold text-text-primary">Failed to Load Team Member Call Performance Report</h3>
         <p className="text-xs text-text-secondary mt-1 max-w-md">{error}</p>
         <button
           type="button"
@@ -163,11 +178,24 @@ export const SuperAdminCallReportView: React.FC = () => {
     },
     advisorPerformance = [],
     dailyTeamReport = [],
-    callsTodayList = [],
+    callsTodayList: rawCallsList,
     attentionRequired = {
       zeroCallAdvisorsCount: 0,
     },
   } = data || {};
+
+  const callsList = Array.isArray(rawCallsList) ? rawCallsList : rawCallsList?.data || [];
+  const callsPagination = !Array.isArray(rawCallsList)
+    ? rawCallsList?.pagination
+    : { page: callLogsPage, limit: CALLS_PER_PAGE, total: callsList.length, totalPages: Math.ceil(callsList.length / CALLS_PER_PAGE) || 1 };
+
+  const currentCallLogsPage = callsPagination?.page || callLogsPage;
+  const totalCallLogsPages = callsPagination?.totalPages || 1;
+  const totalCallsCount = callsPagination?.total || callsList.length;
+
+  const startRecord = totalCallsCount === 0 ? 0 : (currentCallLogsPage - 1) * CALLS_PER_PAGE + 1;
+  const endRecord = Math.min(currentCallLogsPage * CALLS_PER_PAGE, totalCallsCount);
+  const paginatedCallsTodayList = callsList;
 
   // Extract distinct teams for filter dropdown
   const teamsList = Array.from(
@@ -206,7 +234,7 @@ export const SuperAdminCallReportView: React.FC = () => {
 
   // Total metrics calculations from existing data
   const totalAssignedData = advisorPerformance.reduce((acc, a) => acc + (a.assignedDataCount || 0), 0);
-  const totalCallsLogged = kpis.callsTodayCount || callsTodayList.length;
+  const totalCallsLogged = kpis.callsTodayCount || totalCallsCount;
   const zeroCallCount = attentionRequired.zeroCallAdvisorsCount || advisorPerformance.filter((a) => a.callsCount === 0).length;
 
   return (
@@ -216,10 +244,10 @@ export const SuperAdminCallReportView: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight flex items-center gap-2.5">
             <PhoneCall size={26} className="text-primary-500" />
-            Program Advisor Calling Report
+            Team Member Call Performance
           </h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Monitor calling activity, advisor performance, and assigned lead tracking across teams.
+            Monitor calling activity, team member performance, and assigned lead tracking across teams.
           </p>
         </div>
 
@@ -260,7 +288,7 @@ export const SuperAdminCallReportView: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => loadReport(false)}
+            onClick={() => loadReport(1, false)}
             title="Refresh Report"
             className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer shadow-xs"
           >
@@ -355,7 +383,7 @@ export const SuperAdminCallReportView: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {/* Search Box */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -396,6 +424,29 @@ export const SuperAdminCallReportView: React.FC = () => {
               <option value="ZERO_CALLS">Zero Call Advisors</option>
             </select>
           </div>
+
+          {/* Call Time (Hourly) Filter */}
+          <div>
+            <select
+              value={callTimeFilter}
+              onChange={(e) => {
+                setCallTimeFilter(e.target.value);
+                setCallLogsPage(1);
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            >
+              <option value="ALL">All Hours (10:00 AM - 07:00 PM)</option>
+              <option value="10:00-11:00">10:00 AM – 11:00 AM</option>
+              <option value="11:00-12:00">11:00 AM – 12:00 PM</option>
+              <option value="12:00-13:00">12:00 PM – 01:00 PM</option>
+              <option value="13:00-14:00">01:00 PM – 02:00 PM</option>
+              <option value="14:00-15:00">02:00 PM – 03:00 PM</option>
+              <option value="15:00-16:00">03:00 PM – 04:00 PM</option>
+              <option value="16:00-17:00">04:00 PM – 05:00 PM</option>
+              <option value="17:00-18:00">05:00 PM – 06:00 PM</option>
+              <option value="18:00-19:00">06:00 PM – 07:00 PM</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -407,19 +458,19 @@ export const SuperAdminCallReportView: React.FC = () => {
               <Users size={16} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary">Program Advisor Calling Performance</h3>
-              <p className="text-[11px] text-text-muted">Breakdown of assigned leads vs actual call activity per advisor</p>
+              <h3 className="text-sm font-bold text-text-primary">Team Member Call Performance</h3>
+              <p className="text-[11px] text-text-muted">Breakdown of assigned data vs actual call activity per team member</p>
             </div>
           </div>
 
           <div className="text-xs font-medium text-text-muted">
             Showing <span className="font-bold text-text-primary">{sortedAdvisors.length}</span> of{" "}
-            <span className="font-bold text-text-primary">{advisorPerformance.length}</span> advisors
+            <span className="font-bold text-text-primary">{advisorPerformance.length}</span> team members
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[650px] text-left text-sm">
+          <table className="w-full min-w-[750px] text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-background/50 text-xs font-semibold text-text-muted">
                 <th
@@ -427,7 +478,7 @@ export const SuperAdminCallReportView: React.FC = () => {
                   className="px-4 py-3 cursor-pointer hover:text-text-primary transition"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Program Advisor</span>
+                    <span>Advisor</span>
                     {sortField === "advisorName" ? (
                       sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                     ) : (
@@ -454,7 +505,7 @@ export const SuperAdminCallReportView: React.FC = () => {
                   className="px-4 py-3 text-right cursor-pointer hover:text-text-primary transition"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <span>Calls Made</span>
+                    <span>Calls Today</span>
                     {sortField === "callsCount" ? (
                       sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                     ) : (
@@ -463,12 +514,25 @@ export const SuperAdminCallReportView: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  onClick={() => handleSort("admissionsCount")}
+                  onClick={() => handleSort("answeredCallsCount")}
                   className="px-4 py-3 text-right cursor-pointer hover:text-text-primary transition"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <span>Admissions</span>
-                    {sortField === "admissionsCount" ? (
+                    <span>Answered Calls</span>
+                    {sortField === "answeredCallsCount" ? (
+                      sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                    ) : (
+                      <ArrowUpDown size={12} />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort("notAnsweredCallsCount")}
+                  className="px-4 py-3 text-right cursor-pointer hover:text-text-primary transition"
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Not Answered</span>
+                    {sortField === "notAnsweredCallsCount" ? (
                       sortDir === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                     ) : (
                       <ArrowUpDown size={12} />
@@ -481,8 +545,8 @@ export const SuperAdminCallReportView: React.FC = () => {
             <tbody className="divide-y divide-border/50">
               {sortedAdvisors.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-xs text-text-muted">
-                    No program advisors match the selected filters.
+                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-text-muted">
+                    No team members match the selected filters.
                   </td>
                 </tr>
               ) : (
@@ -496,14 +560,17 @@ export const SuperAdminCallReportView: React.FC = () => {
                       <td className="px-4 py-3 text-xs text-text-secondary">
                         {adv.teamName || "Unassigned"}
                       </td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-text-primary">
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-text-primary">
                         {adv.assignedDataCount}
                       </td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-text-primary">
                         {adv.callsCount}
                       </td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-primary-500">
-                        {adv.admissionsCount}
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-text-primary">
+                        {adv.answeredCallsCount || 0}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-text-primary">
+                        {adv.notAnsweredCallsCount || 0}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {hasCalls ? (
@@ -557,14 +624,14 @@ export const SuperAdminCallReportView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {callsTodayList.length === 0 ? (
+              {paginatedCallsTodayList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-xs text-text-muted">
                     No recent call activity logged today.
                   </td>
                 </tr>
               ) : (
-                callsTodayList.map((call) => (
+                paginatedCallsTodayList.map((call) => (
                   <tr key={call.id} className="hover:bg-surface-hover/50 transition">
                     <td className="px-4 py-3 font-semibold text-text-primary">{call.student}</td>
                     <td className="px-4 py-3 text-text-secondary font-mono">{call.phone}</td>
@@ -606,6 +673,70 @@ export const SuperAdminCallReportView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Call Logs Pagination Controls */}
+        {totalCallsCount > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-4">
+            <div className="text-xs text-text-muted">
+              Showing <span className="font-semibold text-text-primary">{startRecord}</span> to{" "}
+              <span className="font-semibold text-text-primary">{endRecord}</span> of{" "}
+              <span className="font-semibold text-text-primary">{totalCallsCount}</span> entries
+            </div>
+
+            {totalCallLogsPages > 1 && (
+              <div className="flex items-center gap-1 sm:gap-1.5 self-center sm:self-auto flex-wrap justify-center">
+                <button
+                  type="button"
+                  disabled={currentCallLogsPage <= 1}
+                  onClick={() => handlePageChange(Math.max(1, currentCallLogsPage - 1))}
+                  className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+
+                {getCompactPageNumbers(currentCallLogsPage, totalCallLogsPages).map((page, idx) => {
+                  if (page === "...") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-1 text-xs text-text-muted font-bold select-none"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  const pageNum = page as number;
+                  const isActive = currentCallLogsPage === pageNum;
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`flex h-7 min-w-[28px] sm:h-7.5 sm:min-w-[30px] px-1.5 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        isActive
+                          ? "bg-primary-600 text-white shadow-xs"
+                          : "border border-border text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={currentCallLogsPage >= totalCallLogsPages}
+                  onClick={() => handlePageChange(Math.min(totalCallLogsPages, currentCallLogsPage + 1))}
+                  className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Next page"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Super Admin Call History Drawer */}

@@ -14,8 +14,10 @@ const DashboardLayout = () => {
 
         <Navbar />
 
-        <main className="flex-1 overflow-y-auto bg-background p-14 custom-scrollbar">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto bg-background p-3 sm:p-6 lg:p-8 custom-scrollbar">
+          <div className="mx-auto w-full max-w-[1920px]">
+            <Outlet />
+          </div>
         </main>
 
       </div>

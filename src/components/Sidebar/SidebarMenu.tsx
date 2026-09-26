@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useSidebar } from "../../context/SidebarContext";
 import { getNavigationForRole, type NavigationItem } from "../../config/navigationConfig";
 
 const checkIsChildActive = (childPath: string, pathname: string, search: string) => {
@@ -29,6 +30,7 @@ const checkIsChildActive = (childPath: string, pathname: string, search: string)
 
 const SidebarMenu = () => {
   const { user } = useAuth();
+  const { closeSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const menuItems = user ? getNavigationForRole(user.roleCode) : [];
@@ -59,6 +61,7 @@ const SidebarMenu = () => {
 
     if (!isCurrentlyExpanded && item.children && item.children.length > 0) {
       navigate(item.children[0].path);
+      closeSidebar();
     }
   };
 
@@ -80,7 +83,7 @@ const SidebarMenu = () => {
                 <button
                   type="button"
                   onClick={() => toggleExpand(item)}
-                  className={`group flex w-full items-center justify-between gap-4 rounded-md px-4 py-3 text-lg transition-all duration-200 ${
+                  className={`group flex w-full items-center justify-between gap-4 rounded-md px-4 py-3 text-lg transition-all duration-200 cursor-pointer ${
                     isAnyChildActive
                       ? "text-text-primary font-medium hover:bg-primary-25"
                       : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
@@ -112,6 +115,7 @@ const SidebarMenu = () => {
                         <li key={child.path}>
                           <NavLink
                             to={child.path}
+                            onClick={closeSidebar}
                             className={`group flex items-center gap-3 rounded-md px-4 py-2.5 text-base transition-all duration-200 ${
                               isChildActive
                                 ? "bg-primary-500 text-white font-medium shadow-xs"
@@ -136,6 +140,7 @@ const SidebarMenu = () => {
             <li key={item.path}>
               <NavLink
                 to={item.path}
+                onClick={closeSidebar}
                 className={({ isActive }) =>
                   `group flex items-center gap-4 rounded-md px-4 py-3 text-lg transition-all duration-200 ${isActive
                     ? "bg-sidebar-active text-success-900 font-medium"

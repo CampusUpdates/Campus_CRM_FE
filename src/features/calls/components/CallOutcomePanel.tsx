@@ -30,7 +30,8 @@ export type CallOutcomeType =
   | "NOT_INTERESTED"
   | "FOLLOW_UP"
   | "CALL_BACK_LATER"
-  | "INTERESTED";
+  | "INTERESTED"
+  | "DISCONNECTED";
 
 interface CallOutcomePanelProps {
   student: MockCallQueueStudentItem | null;
@@ -45,6 +46,7 @@ const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; color: string }[
   { label: "Follow Up Required", value: "FOLLOW_UP", color: "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100" },
   { label: "Call Back Later", value: "CALL_BACK_LATER", color: "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100" },
   { label: "Interested / Create Lead", value: "INTERESTED", color: "border-emerald-500 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold" },
+  { label: "Disconnected", value: "DISCONNECTED", color: "border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100" },
 ];
 
 const CallOutcomePanel = ({
@@ -76,18 +78,31 @@ const CallOutcomePanel = ({
     }
   }, [accessToken, student]);
 
+  // Reset outcome panel state whenever the student or call session changes
+  useEffect(() => {
+    setSelectedOutcome(null);
+    setNotes("");
+    setSearchingLead(false);
+    setLeadSearchResult(null);
+    setClaiming(false);
+    setIsCreateLeadModalOpen(false);
+  }, [student?.studentDataId, callSession?.callId]);
+
   useEffect(() => {
     if (selectedOutcome === "INTERESTED") {
       checkExistingLead();
     }
   }, [selectedOutcome, checkExistingLead]);
 
-  if (!callSession || callSession.status !== "ENDED") {
-    return (
-      <div className="rounded-2xl border border-border bg-surface p-5 text-center text-xs text-text-muted">
-        Call outcome logging will activate after call disconnection.
-      </div>
-    );
+  // Only display Call Outcome & Disposition panel after current call has been ended/disconnected
+  const isCallEnded =
+    callSession &&
+    (callSession.status === "ENDED" ||
+      callSession.status === "FAILED" ||
+      (callSession.status as string) === "DISCONNECTED");
+
+  if (!isCallEnded) {
+    return null;
   }
 
   const handleSaveNonLeadOutcome = async () => {
@@ -98,9 +113,9 @@ const CallOutcomePanel = ({
         studentDataId: student.studentDataId,
         outcome: selectedOutcome,
         notes: notes ? notes.trim() : undefined,
-        startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
-        endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
-        durationSeconds: callSession.durationSeconds || 0,
+        startedAt: callSession?.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
+        endedAt: callSession?.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
+        durationSeconds: callSession?.durationSeconds || 0,
       });
       toast.success(`Call outcome recorded: ${selectedOutcome.replace(/_/g, " ")}.`);
       onOutcomeComplete();

@@ -10,6 +10,7 @@ import {
   Plus,
   FileText,
   Users,
+  History,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../../../services/dataManagementService";
 import UploadDataModal from "../components/UploadDataModal";
 import PaginationControls from "../components/PaginationControls";
+import { DatasetHistoryDrawer } from "../components/DatasetHistoryDrawer";
 
 const DataUploadPage = () => {
   const { accessToken } = useAuth();
@@ -28,6 +30,9 @@ const DataUploadPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  const [selectedUploadForHistory, setSelectedUploadForHistory] = useState<DataUploadItem | null>(null);
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
 
   const loadDataUploads = useCallback(async () => {
     if (!accessToken) return;
@@ -236,6 +241,9 @@ const DataUploadPage = () => {
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
                     Uploaded Date
                   </th>
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
@@ -280,6 +288,21 @@ const DataUploadPage = () => {
                       <td className="px-5 py-4 text-sm text-text-secondary">
                         {new Date(u.uploadedAt).toLocaleString()}
                       </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedUploadForHistory(u);
+                            setIsHistoryDrawerOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition shadow-2xs cursor-pointer"
+                          title="View dataset history and student call outcomes"
+                        >
+                          <History size={14} className="text-primary-600 shrink-0" />
+                          <span>History</span>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -296,6 +319,13 @@ const DataUploadPage = () => {
           itemLabel="uploads"
         />
       </div>
+
+      {/* Dataset History Slide-in Right Drawer */}
+      <DatasetHistoryDrawer
+        isOpen={isHistoryDrawerOpen}
+        onClose={() => setIsHistoryDrawerOpen(false)}
+        upload={selectedUploadForHistory}
+      />
 
       {/* Reusable CRM-Native Upload Drawer */}
       {isModalOpen && (

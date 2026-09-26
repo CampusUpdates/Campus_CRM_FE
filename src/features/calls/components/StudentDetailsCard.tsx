@@ -5,6 +5,7 @@ interface StudentDetailsCardProps {
   student: MockCallQueueStudentItem | null;
   totalAssigned: number;
   currentIndex: number;
+  phonePosition?: number;
   onOpenHistory?: () => void;
 }
 
@@ -12,6 +13,7 @@ const StudentDetailsCard = ({
   student,
   totalAssigned,
   currentIndex,
+  phonePosition = 1,
   onOpenHistory,
 }: StudentDetailsCardProps) => {
   if (!student) {
@@ -35,10 +37,13 @@ const StudentDetailsCard = ({
       {/* Header Info */}
       <div className="flex items-start justify-between border-b border-border pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-md bg-primary-50 px-2 py-0.5 text-[11px] font-bold text-primary-700">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary-50 px-2 py-0.5 text-[11px] font-bold text-primary-700 border border-primary-200">
               <ShieldCheck size={12} />
               Assigned Record #{currentIndex + 1} of {totalAssigned}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-text-secondary border border-border font-mono">
+              Phone Attempt #{phonePosition}
             </span>
           </div>
           <h2 className="text-xl font-bold text-text-primary mt-1.5">{fullName}</h2>

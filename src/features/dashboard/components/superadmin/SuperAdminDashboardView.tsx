@@ -28,12 +28,14 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
+import { getCompactPageNumbers } from "../../../../utils/paginationUtils";
 import { useAuth } from "../../../../context/AuthContext";
 import { ROUTES } from "../../../../app/router/routes";
 import {
   fetchSuperAdminDashboardStats,
   type SuperAdminDashboardData,
 } from "../../../../services/superAdminDashboardService";
+import TodayInterviewsDrawer from "./TodayInterviewsDrawer";
 
 function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return "Not Available";
@@ -49,6 +51,18 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function isTodayDate(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 const SuperAdminDashboardView = () => {
   const navigate = useNavigate();
   const { accessToken } = useAuth();
@@ -57,6 +71,8 @@ const SuperAdminDashboardView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityPage, setActivityPage] = useState(1);
+  const [isInterviewsDrawerOpen, setIsInterviewsDrawerOpen] = useState(false);
+  const [interviewsDrawerFilter, setInterviewsDrawerFilter] = useState("ALL");
   const ACTIVITY_PAGE_SIZE = 5;
 
   const loadDashboard = useCallback(async (isSilent = false) => {
@@ -128,12 +144,14 @@ const SuperAdminDashboardView = () => {
       selectionLettersTodayCount: 0,
       admissionsDueTodayCount: 0,
       availableDataCount: 0,
+      dataUploadedTodayCount: 0,
       expiredDataCount: 0,
       activeAssignmentsCount: 0,
     },
     dailyTeamReport = [],
     advisorPerformance = [],
     leadPipeline = [],
+    interviewsList = [],
 
     attentionRequired = {
       admissionsDueTodayCount: 0,
@@ -144,6 +162,13 @@ const SuperAdminDashboardView = () => {
     },
     recentActivity = [],
   } = data || {};
+
+  // Strictly filter interviewsList to only students with interviews scheduled for today's calendar date
+  const todaysInterviewsList = interviewsList.filter((i) => isTodayDate(i.interviewTime));
+  const todaysInterviewsCount = todaysInterviewsList.length || kpis.interviewsTodayCount || 0;
+  const todaysSchCount = todaysInterviewsList.filter((i) => i.status === "SCHEDULED").length;
+  const todaysDoneCount = todaysInterviewsList.filter((i) => i.status === "COMPLETED" || i.result === "PASSED" || i.result === "FAILED").length;
+  const todaysPendCount = todaysInterviewsList.filter((i) => i.result === "PENDING" || i.status === "PENDING").length;
 
   const totalActivityPages = Math.ceil(recentActivity.length / ACTIVITY_PAGE_SIZE) || 1;
   const currentActivityPage = Math.min(activityPage, totalActivityPages);
@@ -320,7 +345,10 @@ const SuperAdminDashboardView = () => {
         {/* 4. INTERVIEWS TODAY KPI CARD */}
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-purple-400 transition-all duration-200">
           <div
-            onClick={() => navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`)}
+            onClick={() => {
+              setInterviewsDrawerFilter("ALL");
+              setIsInterviewsDrawerOpen(true);
+            }}
             className="flex items-center justify-between cursor-pointer group"
           >
             <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
@@ -332,14 +360,17 @@ const SuperAdminDashboardView = () => {
           </div>
 
           <div
-            onClick={() => navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`)}
+            onClick={() => {
+              setInterviewsDrawerFilter("ALL");
+              setIsInterviewsDrawerOpen(true);
+            }}
             className="cursor-pointer group flex items-baseline justify-between"
           >
             <p className="text-3xl font-bold text-purple-700">
-              {kpis.interviewsTodayCount}
+              {todaysInterviewsCount}
             </p>
-            <span className="text-[11px] text-text-muted group-hover:text-purple-600 font-semibold transition">
-              Click total →
+            <span className="text-[11px] text-purple-600 font-semibold transition flex items-center gap-1">
+              View Scheduled Students <ChevronRight size={14} />
             </span>
           </div>
 
@@ -348,34 +379,37 @@ const SuperAdminDashboardView = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
+                setInterviewsDrawerFilter("SCHEDULED");
+                setIsInterviewsDrawerOpen(true);
               }}
               className="px-2 py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 font-bold hover:bg-purple-100 transition"
-              title="Filter scheduled student lead interviews"
+              title="Open scheduled interviews drawer"
             >
-              Sch: {kpis.interviewsScheduledCount}
+              Sch: {todaysSchCount}
             </button>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
+                setInterviewsDrawerFilter("COMPLETED");
+                setIsInterviewsDrawerOpen(true);
               }}
               className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
-              title="Filter completed student lead interviews"
+              title="Open completed interviews drawer"
             >
-              Done: {kpis.interviewsCompletedCount}
+              Done: {todaysDoneCount}
             </button>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED`);
+                setInterviewsDrawerFilter("PENDING");
+                setIsInterviewsDrawerOpen(true);
               }}
               className="px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold hover:bg-amber-100 transition"
-              title="Filter pending student lead interviews"
+              title="Open pending interviews drawer"
             >
-              Pend: {kpis.interviewsPendingCount}
+              Pend: {todaysPendCount}
             </button>
           </div>
         </div>
@@ -438,14 +472,14 @@ const SuperAdminDashboardView = () => {
           </p>
         </div>
 
-        {/* 7. AVAILABLE DATA DATASETS CARD */}
+        {/* 7. DATA UPLOADED TODAY CARD */}
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-cyan-400 transition-all duration-200">
           <div
-            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
+            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?date=today`)}
             className="flex items-center justify-between cursor-pointer group"
           >
             <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-              Available Data
+              Data Uploaded Today
             </p>
             <div className="h-9 w-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition">
               <Database size={18} />
@@ -453,11 +487,11 @@ const SuperAdminDashboardView = () => {
           </div>
 
           <div
-            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
+            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?date=today`)}
             className="cursor-pointer group flex items-baseline justify-between"
           >
             <p className="text-3xl font-bold text-cyan-700">
-              {kpis.availableDataCount}
+              {kpis.dataUploadedTodayCount ?? 0}
             </p>
             <span className="text-[11px] text-text-muted group-hover:text-cyan-600 font-semibold transition">
               Data Workspace →
@@ -466,10 +500,10 @@ const SuperAdminDashboardView = () => {
 
           <div className="flex items-center justify-between gap-1 pt-2 border-t border-border text-xs">
             <button
-              onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=EXPIRED`)}
+              onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
               className="px-2 py-1 rounded-md bg-neutral-100 text-text-secondary hover:bg-neutral-200 font-semibold transition"
             >
-              Expired: {kpis.expiredDataCount}
+              Available: {kpis.availableDataCount}
             </button>
             <button
               onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=ACTIVE`)}
@@ -480,17 +514,17 @@ const SuperAdminDashboardView = () => {
           </div>
         </div>
 
-        {/* 8. QUICK LINK TO ALL LEADS PIPELINE CARD */}
+        {/* 8. LEADS TODAY OVERVIEW CARD */}
         <div
-          onClick={() => navigate(`${ROUTES.LEADS}`)}
+          onClick={() => navigate(`${ROUTES.LEADS}?date=today`)}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}`)}
+          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}?date=today`)}
           className="group cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-neutral-50 to-primary-50/30 p-5 shadow-2xs hover:shadow-md hover:border-primary-300 transition-all duration-200 flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-primary-900">
-              All CRM Leads
+              Leads Today Overview
             </p>
             <div className="h-9 w-9 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition">
               <Layers size={18} />
@@ -498,14 +532,14 @@ const SuperAdminDashboardView = () => {
           </div>
           <div className="mt-2">
             <p className="text-sm font-semibold text-text-primary">
-              Full Master Lead Pipeline
+              Today's Lead Pipeline ({kpis.leadsTodayCount})
             </p>
             <p className="text-xs text-text-secondary mt-0.5">
-              Access all student leads, status stages, & filter options
+              Access student leads created or updated today
             </p>
           </div>
           <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary-700 group-hover:translate-x-1 transition-transform">
-            Open Leads Module <ArrowRight size={14} />
+            Open Today's Leads <ArrowRight size={14} />
           </div>
         </div>
       </div>
@@ -726,20 +760,20 @@ const SuperAdminDashboardView = () => {
         </div>
       </div>
 
-      {/* 4. PROGRAM ADVISOR PERFORMANCE SECTION */}
+      {/* 4. TEAM MEMBER CALL PERFORMANCE SECTION */}
       <div className="rounded-2xl border border-border bg-surface shadow-2xs overflow-hidden">
         <div className="border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
               <UserCheck className="text-emerald-600" size={18} />
-              Program Advisor Performance
+              Team Member Call Performance
             </h2>
             <p className="text-xs text-text-secondary mt-0.5">
-              Click advisor name to inspect user profile context. Click individual metrics to view filtered records.
+              Click team member name to inspect user profile context.
             </p>
           </div>
           <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
-            {advisorPerformance.length} Advisor(s)
+            {advisorPerformance.length} Team Member(s)
           </span>
         </div>
 
@@ -749,72 +783,63 @@ const SuperAdminDashboardView = () => {
               <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
                 <th className="px-6 py-3.5">Advisor</th>
                 <th className="px-6 py-3.5">Team</th>
-                <th className="px-6 py-3.5">Assigned Data</th>
-                <th className="px-6 py-3.5">Calls Today</th>
-                <th className="px-6 py-3.5">Leads Today</th>
-                <th className="px-6 py-3.5 text-right">Admissions</th>
+                <th className="px-6 py-3.5 text-right">Assigned Data</th>
+                <th className="px-6 py-3.5 text-right">Calls Today</th>
+                <th className="px-6 py-3.5 text-right">Answered Calls</th>
+                <th className="px-6 py-3.5 text-right">Not Answered</th>
+                <th className="px-6 py-3.5 text-center">Calling Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {advisorPerformance.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted">
-                    No active program advisors found.
+                  <td colSpan={7} className="px-6 py-8 text-center text-text-muted">
+                    No active team members found.
                   </td>
                 </tr>
               ) : (
-                advisorPerformance.map((adv) => (
-                  <tr key={adv.userId} className="hover:bg-neutral-50/80 transition">
-                    <td className="px-6 py-4 font-bold text-text-primary">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.USERS}?search=${encodeURIComponent(adv.advisorName)}`)}
-                        className="hover:text-primary-600 hover:underline text-left"
-                      >
-                        {adv.advisorName}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary font-medium">
-                      {adv.teamName}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?assignedTo=${adv.userId}`)}
-                        className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 font-bold hover:bg-cyan-100 hover:underline transition"
-                      >
+                advisorPerformance.map((adv) => {
+                  const hasCalls = adv.callsCount > 0;
+                  return (
+                    <tr key={adv.userId} className="hover:bg-neutral-50/80 transition">
+                      <td className="px-6 py-4 font-bold text-text-primary">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`${ROUTES.USERS}?search=${encodeURIComponent(adv.advisorName)}`)}
+                          className="hover:text-primary-600 hover:underline text-left"
+                        >
+                          {adv.advisorName}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-text-secondary font-medium">
+                        {adv.teamName}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-text-primary">
                         {adv.assignedDataCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.CALLS}?advisorId=${adv.userId}&date=today`)}
-                        className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold hover:bg-emerald-100 hover:underline transition"
-                      >
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-text-primary">
                         {adv.callsCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.LEADS}?assignedToId=${adv.userId}`)}
-                        className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold hover:bg-blue-100 hover:underline transition"
-                      >
-                        {adv.leadsCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.LEADS}?assignedToId=${adv.userId}&status=ADMISSION_DONE`)}
-                        className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold hover:bg-purple-100 hover:underline transition"
-                      >
-                        {adv.admissionsCount}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-text-primary">
+                        {adv.answeredCallsCount || 0}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-text-primary">
+                        {adv.notAnsweredCallsCount || 0}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {hasCalls ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-semibold">
+                            Active Calling
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 text-[11px] font-semibold">
+                            0 Calls Logged
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -946,42 +971,67 @@ const SuperAdminDashboardView = () => {
               <span className="font-semibold text-text-primary">{recentActivity.length}</span> entries
             </div>
 
-            <div className="flex items-center gap-1.5 self-center sm:self-auto">
+            <div className="flex items-center gap-1 sm:gap-1.5 self-center sm:self-auto flex-wrap justify-center">
               <button
                 type="button"
                 disabled={currentActivityPage <= 1}
                 onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Previous page"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
 
-              {Array.from({ length: totalActivityPages }, (_, idx) => idx + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  onClick={() => setActivityPage(pageNum)}
-                  className={`flex h-8 min-w-[2rem] items-center justify-center px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${pageNum === currentActivityPage
-                      ? "bg-primary-600 text-white shadow-xs"
-                      : "border border-border text-text-secondary hover:bg-surface-hover"
+              {getCompactPageNumbers(currentActivityPage, totalActivityPages).map((page, idx) => {
+                if (page === "...") {
+                  return (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-1 text-xs text-text-muted font-bold select-none"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                const pageNum = page as number;
+                const isActive = pageNum === currentActivityPage;
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setActivityPage(pageNum)}
+                    className={`flex h-7 min-w-[28px] sm:h-7.5 sm:min-w-[30px] px-1.5 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      isActive
+                        ? "bg-primary-600 text-white shadow-xs"
+                        : "border border-border text-text-secondary hover:bg-surface-hover"
                     }`}
-                >
-                  {pageNum}
-                </button>
-              ))}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
 
               <button
                 type="button"
                 disabled={currentActivityPage >= totalActivityPages}
                 onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Next page"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Today's Interviews Right Slide-Over Drawer */}
+      <TodayInterviewsDrawer
+        isOpen={isInterviewsDrawerOpen}
+        onClose={() => setIsInterviewsDrawerOpen(false)}
+        interviews={todaysInterviewsList}
+        initialStatusFilter={interviewsDrawerFilter}
+      />
     </div>
   );
 };

@@ -53,6 +53,18 @@ export interface StudentDataRecord {
     fileName: string;
     uploadedAt: string;
   };
+  callRecords?: Array<{
+    id: string;
+    outcome: string;
+    notes?: string | null;
+    createdAt: string;
+    durationSeconds?: number | null;
+    createdBy?: {
+      id: string;
+      firstName: string;
+      lastName?: string | null;
+    } | null;
+  }>;
 }
 
 export interface FilterStudentDataParams {
@@ -61,6 +73,10 @@ export interface FilterStudentDataParams {
   uploadIds?: string[];
   assignmentStatus?: "AVAILABLE" | "ASSIGNED" | "ALL";
   search?: string;
+  disposition?: string;
+  dispositions?: string[];
+  calledById?: string;
+  notCalledByUserIds?: string[];
   page?: number;
   limit?: number;
 }
@@ -89,6 +105,10 @@ export interface EligibleProgramAdvisor {
   lastName?: string;
   email: string;
   username: string;
+  role?: {
+    id: number;
+    name: string;
+  };
   team?: {
     id: number;
     name: string;
@@ -299,6 +319,17 @@ export async function fetchFilteredStudentData(
   if (params.search) {
     query.set("search", params.search);
   }
+  if (params.dispositions && params.dispositions.length > 0) {
+    query.set("dispositions", params.dispositions.join(","));
+  } else if (params.disposition) {
+    query.set("disposition", params.disposition);
+  }
+  if (params.calledById) {
+    query.set("calledById", params.calledById);
+  }
+  if (params.notCalledByUserIds && params.notCalledByUserIds.length > 0) {
+    query.set("notCalledByUserIds", params.notCalledByUserIds.join(","));
+  }
   if (params.page) {
     query.set("page", String(params.page));
   }
@@ -372,11 +403,85 @@ export async function fetchUnassignedStudentData(
   return Array.isArray(data) ? data : [];
 }
 
+export interface AssigneeSummaryRecord {
+  assignee: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    fullName: string;
+    email: string;
+    roleName: string;
+    teamName?: string | null;
+  };
+  datasetsCount: number;
+  datasetsList: string[];
+  totalAssignedRecords: number;
+  activeRecordsCount: number;
+  earliestAssignedAt: string | null;
+  latestAssignedAt: string | null;
+  firstCallMadeAt: string | null;
+  activeAssignmentsCount: number;
+  totalAssignmentsCount: number;
+}
+
+export interface AssigneeAssignmentItem {
+  id: string;
+  fileName: string;
+  recordsCount: number;
+  assignedAt: string;
+  expiresAt: string;
+  status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "RECLAIMED";
+  reclaimedAt?: string | null;
+  assignedBy: string;
+}
+
+export interface AssigneeDetailsResponse {
+  assignee: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    fullName: string;
+    email: string;
+    roleName: string;
+    teamName?: string | null;
+  };
+  datasetsCount: number;
+  totalAssignedRecords: number;
+  assignments: AssigneeAssignmentItem[];
+}
+
+export async function fetchAssigneeDetails(
+  token: string,
+  assigneeId: string
+): Promise<AssigneeDetailsResponse> {
+  const response = await fetch(
+    `${API_URL}/uploads/data-assignments/assignee/${assigneeId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch assignee details";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
 export async function fetchDataAssignments(
   token: string,
   page: number = 1,
   limit: number = 10
-): Promise<PaginatedResponse<DataAssignmentRecord>> {
+): Promise<PaginatedResponse<AssigneeSummaryRecord>> {
   const response = await fetch(
     `${API_URL}/uploads/data-assignments?page=${page}&limit=${limit}`,
     {
@@ -503,5 +608,95 @@ export async function reclaimAllAdvisorData(token: string) {
 
   return data;
 }
+
+export async function reclaimAssignmentById(token: string, assignmentId: string) {
+  const response = await fetch(`${API_URL}/uploads/reclaim-assignment/${assignmentId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to reclaim assignment";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export interface DatasetCallerItem {
+  id: string;
+  name: string;
+}
+
+export async function fetchDatasetCallers(
+  token: string,
+  uploadId: string
+): Promise<DatasetCallerItem[]> {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/callers`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    return [];
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+export async function exportDatasetResponseHistory(
+  token: string,
+  uploadId: string,
+  fileName: string,
+  disposition?: string,
+  calledById?: string
+): Promise<void> {
+  const queryParams = new URLSearchParams();
+  if (disposition && disposition !== "ALL") queryParams.set("disposition", disposition);
+  if (calledById && calledById !== "ALL") queryParams.set("calledById", calledById);
+  const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/export-response${query}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Failed to export dataset response history.";
+    try {
+      const data = await response.json();
+      errorMsg = Array.isArray(data.message)
+        ? data.message.join(", ")
+        : data.message || errorMsg;
+    } catch (_) {}
+    throw new Error(errorMsg);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const cleanBaseName = fileName.replace(/\.(xlsx|xls|csv)$/i, "");
+  const downloadFileName = `${cleanBaseName} (response).xlsx`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", downloadFileName);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode?.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
 
 

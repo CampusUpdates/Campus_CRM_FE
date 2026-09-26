@@ -88,7 +88,7 @@ const AssignmentReviewModal = ({
                     Assign Selected Data
                   </h3>
                   <p className="text-xs text-text-secondary">
-                    Select Program Advisor & confirm working-hours assignment
+                    Select recipient user & confirm working-hours assignment
                   </p>
                 </div>
               </div>
@@ -174,12 +174,12 @@ const AssignmentReviewModal = ({
                 </div>
               )}
 
-              {/* Advisor Assignment Selection */}
+              {/* User Assignment Selection */}
               <div>
                 <label className="block text-xs font-semibold uppercase text-text-secondary mb-1.5 flex items-center justify-between">
-                  <span>Select Program Advisor Recipient *</span>
+                  <span>Select Recipient User *</span>
                   <span className="text-[11px] font-normal text-text-muted">
-                    {eligibleAdvisors.length} advisors available
+                    {eligibleAdvisors.length} users available
                   </span>
                 </label>
 
@@ -187,7 +187,7 @@ const AssignmentReviewModal = ({
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-center gap-2">
                     <AlertCircle size={16} className="text-amber-600 shrink-0" />
                     <span>
-                      No active Program Advisors found in your managed teams. Please verify team members in Team Management.
+                      No active users found in your managed teams. Please verify team members in Team Management.
                     </span>
                   </div>
                 ) : (
@@ -197,13 +197,13 @@ const AssignmentReviewModal = ({
                     onChange={(e) => setSelectedAdvisorId(e.target.value)}
                     className="w-full h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-text-primary outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 font-medium"
                   >
-                    <option value="">-- Select Program Advisor --</option>
+                    <option value="">-- Select Recipient User --</option>
                     {eligibleAdvisors.map((advisor) => {
                       const nameStr = `${advisor.firstName} ${advisor.lastName || ""}`.trim();
-                      const teamStr = advisor.team?.name || "Admissions Team";
+                      const detailsStr = [advisor.role?.name, advisor.team?.name].filter(Boolean).join(" · ") || "Admissions Team";
                       return (
                         <option key={advisor.id} value={advisor.id}>
-                          {nameStr} ({advisor.email}) — {teamStr}
+                          {nameStr} ({advisor.email}) — {detailsStr}
                         </option>
                       );
                     })}
@@ -222,10 +222,15 @@ const AssignmentReviewModal = ({
                       <p className="font-bold text-emerald-950 dark:text-emerald-200 text-sm">
                         {selectedAdvisor.firstName} {selectedAdvisor.lastName || ""}
                       </p>
-                      <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-[11px] mt-0.5">
+                      <div className="flex flex-wrap items-center gap-3 text-emerald-800 dark:text-emerald-300 text-[11px] mt-0.5">
                         <span className="flex items-center gap-1 font-medium">
                           <Mail size={12} /> {selectedAdvisor.email}
                         </span>
+                        {selectedAdvisor.role?.name && (
+                          <span className="font-semibold text-emerald-900 dark:text-emerald-200">
+                            Role: {selectedAdvisor.role.name}
+                          </span>
+                        )}
                         <span className="font-semibold text-emerald-900 dark:text-emerald-200">
                           Team: {selectedAdvisor.team?.name || "Admissions Team"}
                         </span>
@@ -233,8 +238,8 @@ const AssignmentReviewModal = ({
                     </div>
                   </div>
 
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 px-2.5 py-1 text-xs font-semibold">
-                    <CheckCircle2 size={13} /> Active Advisor
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 px-2.5 py-1 text-xs font-semibold shrink-0">
+                    <CheckCircle2 size={13} /> Active User
                   </span>
                 </div>
               )}

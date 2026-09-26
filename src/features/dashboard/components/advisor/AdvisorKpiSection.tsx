@@ -1,6 +1,7 @@
 import {
   Users,
   CheckCircle2,
+  PhoneCall,
   Clock,
   TrendingUp,
   Building2,
@@ -27,6 +28,13 @@ const AdvisorKpiSection = ({ kpis }: AdvisorKpiSectionProps) => {
       subtext: `${kpis.conversionRate}% Conversion Rate`,
       icon: CheckCircle2,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    },
+    {
+      title: "Calls Today",
+      value: (kpis.callsTodayCount ?? 0).toLocaleString(),
+      subtext: "Daily Telephony Output",
+      icon: PhoneCall,
+      color: "text-cyan-600 bg-cyan-50 border-cyan-200",
     },
     {
       title: "Applications In Progress",
@@ -59,7 +67,7 @@ const AdvisorKpiSection = ({ kpis }: AdvisorKpiSectionProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (

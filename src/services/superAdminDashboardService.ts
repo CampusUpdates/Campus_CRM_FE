@@ -15,6 +15,7 @@ export interface SuperAdminDashboardData {
     selectionLettersTodayCount: number;
     admissionsDueTodayCount: number;
     availableDataCount: number;
+    dataUploadedTodayCount?: number;
     expiredDataCount: number;
     activeAssignmentsCount: number;
   };
@@ -35,23 +36,31 @@ export interface SuperAdminDashboardData {
     manager: string;
     lastActivity: string;
   }>;
-  callsTodayList: Array<{
-    id: string;
-    student: string;
-    leadId: string | null;
-    studentDataId?: string | null;
-    phone: string;
-    advisor: string;
-    advisorId: string;
-    team: string;
-    teamId: number | null;
-    manager: string;
-    callTime: string;
-    duration: string;
-    callOutcome: string;
-    leadStatus: string;
-    notes?: string | null;
-  }>;
+  callsTodayList: {
+    data: Array<{
+      id: string;
+      student: string;
+      leadId: string | null;
+      studentDataId?: string | null;
+      phone: string;
+      advisor: string;
+      advisorId: string;
+      team: string;
+      teamId: number | null;
+      manager: string;
+      callTime: string;
+      duration: string;
+      callOutcome: string;
+      leadStatus: string;
+      notes?: string | null;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
   attendanceList: Array<{
     id: string;
     userId: string;
@@ -69,6 +78,7 @@ export interface SuperAdminDashboardData {
     id: string;
     candidateName: string;
     candidateId: string;
+    phone?: string;
     interviewTime: string;
     college: string;
     course: string;
@@ -126,8 +136,10 @@ export interface SuperAdminDashboardData {
     teamId: number | null;
     assignedDataCount: number;
     callsCount: number;
+    answeredCallsCount: number;
+    notAnsweredCallsCount: number;
     leadsCount: number;
-    admissionsCount: number;
+    admissionsCount?: number;
   }>;
   leadPipeline: Array<{
     id: number;
@@ -159,7 +171,10 @@ export interface SuperAdminDashboardData {
 export async function fetchSuperAdminDashboardStats(
   token?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  page?: number,
+  limit?: number,
+  callTime?: string
 ): Promise<SuperAdminDashboardData> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -171,6 +186,9 @@ export async function fetchSuperAdminDashboardStats(
   const queryParams = new URLSearchParams();
   if (startDate) queryParams.set("startDate", startDate);
   if (endDate) queryParams.set("endDate", endDate);
+  if (page) queryParams.set("page", page.toString());
+  if (limit) queryParams.set("limit", limit.toString());
+  if (callTime && callTime !== "ALL") queryParams.set("callTime", callTime);
 
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
 

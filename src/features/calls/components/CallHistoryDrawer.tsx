@@ -4,13 +4,20 @@ import { useAuth } from "../../../context/AuthContext";
 import {
   fetchCallHistory,
   type CallRecordItem,
-  type MockCallQueueStudentItem,
 } from "../../../services/mockCallService";
 
 interface CallHistoryDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  student: MockCallQueueStudentItem | null;
+  student: {
+    studentDataId: string;
+    firstName?: string;
+    middleName?: string | null;
+    lastName?: string | null;
+    fullName?: string;
+    phone?: string;
+    email?: string | null;
+  } | null;
   refreshKey?: number;
 }
 
@@ -38,6 +45,10 @@ const OUTCOME_LABEL_MAP: Record<string, { label: string; badgeClass: string }> =
   INTERESTED: {
     label: "Interested / Create Lead",
     badgeClass: "border-emerald-500 text-emerald-800 bg-emerald-50 font-bold",
+  },
+  DISCONNECTED: {
+    label: "Disconnected",
+    badgeClass: "border-orange-300 text-orange-700 bg-orange-50",
   },
 };
 
@@ -111,9 +122,7 @@ export const CallHistoryDrawer = ({
   if (!isOpen) return null;
 
   const studentFullName = student
-    ? [student.firstName, student.middleName, student.lastName]
-        .filter(Boolean)
-        .join(" ")
+    ? (student.fullName || [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ") || "Contact History")
     : "Contact History";
 
   return (
@@ -182,7 +191,7 @@ export const CallHistoryDrawer = ({
               <div className="space-y-3.5">
                 {records.map((record) => {
                   const outcomeInfo = OUTCOME_LABEL_MAP[record.outcome] || {
-                    label: record.outcome,
+                    label: record.outcome ? record.outcome.replace(/_/g, " ") : "Call Activity",
                     badgeClass: "border-neutral-300 text-neutral-700 bg-neutral-50",
                   };
 

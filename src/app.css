@@ -222,6 +222,16 @@ select {
   font: inherit;
 }
 
+select option {
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-primary, #1f2937);
+}
+
+.dark select option {
+  background-color: var(--color-surface, #1e293b);
+  color: var(--color-text-primary, #f8fafc);
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);

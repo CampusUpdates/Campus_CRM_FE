@@ -201,3 +201,68 @@ export async function fetchCallHistory(
   }
   return data;
 }
+
+export interface CallLogItem {
+  studentDataId: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName?: string | null;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  uploadFileName: string;
+  totalCalls: number;
+  latestCall?: {
+    id: string;
+    outcome: string;
+    notes?: string | null;
+    startedAt?: string | null;
+    endedAt?: string | null;
+    durationSeconds?: number | null;
+    createdAt: string;
+    createdBy?: {
+      id: string;
+      firstName: string;
+      lastName?: string | null;
+    };
+  } | null;
+  isBookmarked: boolean;
+  bookmarkExpiresAt?: string | null;
+}
+
+export interface CallLogsResponse {
+  data: CallLogItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  bookmarkedCount?: number;
+}
+
+export async function fetchCallLogs(
+  token: string,
+  params: { page?: number; limit?: number; search?: string; bookmarkedOnly?: boolean } = {}
+): Promise<CallLogsResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.bookmarkedOnly) queryParams.append("bookmarkedOnly", "true");
+
+  const response = await fetch(`${API_URL}/calls/logs?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch call logs");
+  }
+  return data;
+}
+

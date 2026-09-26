@@ -8,6 +8,8 @@ interface MockCallPanelProps {
   onInitiateCall: () => void;
   onEndCall: () => void;
   loading: boolean;
+  phonePosition?: number;
+  onPhonePositionChange?: (newPos: number) => void;
 }
 
 const formatTimer = (seconds: number) => {
@@ -22,6 +24,8 @@ const MockCallPanel = ({
   onInitiateCall,
   onEndCall,
   loading,
+  phonePosition = 1,
+  onPhonePositionChange,
 }: MockCallPanelProps) => {
   const [duration, setDuration] = useState(0);
 
@@ -94,7 +98,9 @@ const MockCallPanel = ({
         </div>
 
         <div className="text-center space-y-1">
-          <p className="text-xs font-semibold uppercase text-text-muted tracking-wider">Destination Number</p>
+          <p className="text-xs font-semibold uppercase text-text-muted tracking-wider">
+            Destination Number (Attempt #{phonePosition})
+          </p>
           <p className="text-2xl font-bold font-mono text-text-primary">
             {student ? student.phone : "+91 XXXXX XXXXX"}
           </p>
@@ -102,6 +108,31 @@ const MockCallPanel = ({
             <p className="text-xs text-text-secondary">
               {student.firstName} {student.lastName || ""}
             </p>
+          )}
+
+          {/* Per-record Phone Position controls */}
+          {student && onPhonePositionChange && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => onPhonePositionChange(Math.max(1, phonePosition - 1))}
+                disabled={phonePosition <= 1 || status === "CONNECTED"}
+                className="px-2 py-0.5 rounded border border-border bg-neutral-50 text-[11px] font-semibold text-text-secondary hover:bg-neutral-100 transition disabled:opacity-40 cursor-pointer"
+              >
+                Prev Phone #
+              </button>
+              <span className="text-xs font-mono font-bold text-primary-600 px-1">
+                Number #{phonePosition}
+              </span>
+              <button
+                type="button"
+                onClick={() => onPhonePositionChange(phonePosition + 1)}
+                disabled={status === "CONNECTED"}
+                className="px-2 py-0.5 rounded border border-border bg-neutral-50 text-[11px] font-semibold text-text-secondary hover:bg-neutral-100 transition disabled:opacity-40 cursor-pointer"
+              >
+                Next Phone #
+              </button>
+            </div>
           )}
         </div>
 

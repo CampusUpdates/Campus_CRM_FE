@@ -3,6 +3,7 @@ import { API_URL } from "../config/api";
 export interface AdvisorKPIs {
   totalLeads: number;
   admissionsDone: number;
+  callsTodayCount?: number;
   inProgressApplications: number;
   conversionRate: number;
   pitchesTotal: number;

@@ -27,16 +27,29 @@ import {
   createDataAssignment,
   reclaimAdvisorData,
   reclaimAllAdvisorData,
-  type DataAssignmentRecord,
+  reclaimAssignmentById,
   type StudentDataRecord,
   type EligibleProgramAdvisor,
   type FilterStudentDataParams,
+  type AssigneeSummaryRecord,
 } from "../../../services/dataManagementService";
 import AssignmentReviewModal from "../components/AssignmentReviewModal";
 import PaginationControls from "../components/PaginationControls";
-import { AssignmentDetailsDrawer } from "../components/AssignmentDetailsDrawer";
+import { AssigneeDetailsDrawer } from "../components/AssigneeDetailsDrawer";
 
 const PREDEFINED_QUANTITIES = [20, 50, 100, 200, 500];
+
+const DISPOSITION_OPTIONS: { label: string; value: string }[] = [
+  { label: "Call Disposition: All", value: "ALL" },
+  { label: "No Call Yet", value: "NO_CALL_YET" },
+  { label: "No Answer", value: "NO_ANSWER" },
+  { label: "Follow Up", value: "FOLLOW_UP" },
+  { label: "Interested", value: "INTERESTED" },
+  { label: "Not Interested", value: "NOT_INTERESTED" },
+  { label: "Call Back Later", value: "CALL_BACK_LATER" },
+  { label: "Wrong Number", value: "WRONG_NUMBER" },
+  { label: "Disconnected", value: "DISCONNECTED" },
+];
 
 const DataAssignmentPage = () => {
   const { accessToken } = useAuth();
@@ -46,7 +59,7 @@ const DataAssignmentPage = () => {
   const paramAssignedTo = searchParams.get("assignedTo");
 
   // Data & Server State
-  const [assignments, setAssignments] = useState<DataAssignmentRecord[]>([]);
+  const [assignments, setAssignments] = useState<AssigneeSummaryRecord[]>([]);
   const [allStudents, setAllStudents] = useState<StudentDataRecord[]>([]);
   const [isMixing, setIsMixing] = useState<boolean>(false);
   const [eligibleAdvisors, setEligibleAdvisors] = useState<EligibleProgramAdvisor[]>([]);
@@ -74,17 +87,22 @@ const DataAssignmentPage = () => {
   const [assignmentStatus, setAssignmentStatus] = useState<"AVAILABLE" | "ASSIGNED" | "ALL">(
     paramStatus === "ASSIGNED" || paramStatus === "ACTIVE" ? "ASSIGNED" : paramStatus === "EXPIRED" ? "ALL" : "AVAILABLE"
   );
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
+  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [historyPage, setHistoryPage] = useState<number>(1);
   const [historyTotalPages, setHistoryTotalPages] = useState<number>(1);
   const [historyTotalCount, setHistoryTotalCount] = useState<number>(0);
-  const [selectedAssignmentIdForDrawer, setSelectedAssignmentIdForDrawer] = useState<string | null>(null);
+  const [selectedAssigneeIdForDrawer, setSelectedAssigneeIdForDrawer] = useState<string | null>(null);
 
 
   // Dropdown Open States
   const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const [isUploadDropdownOpen, setIsUploadDropdownOpen] = useState(false);
+  const [isNotCalledByDropdownOpen, setIsNotCalledByDropdownOpen] = useState(false);
+  const [selectedNotCalledByUserIds, setSelectedNotCalledByUserIds] = useState<string[]>([]);
+  const [callerSearchTerm, setCallerSearchTerm] = useState<string>("");
 
   // Selection State
   const [selectionMode, setSelectionMode] = useState<"EXPLICIT" | "ALL_MATCHING">("EXPLICIT");
@@ -101,7 +119,8 @@ const DataAssignmentPage = () => {
   // Reclaim Modal State
   const [reclaimModalState, setReclaimModalState] = useState<{
     isOpen: boolean;
-    type: "SINGLE" | "BULK";
+    type: "SINGLE" | "BULK" | "BY_ID";
+    assignmentId?: string;
     advisorId?: string;
     advisorName?: string;
     recordCount?: number;
@@ -114,10 +133,16 @@ const DataAssignmentPage = () => {
     error: null,
   });
 
-  const handleOpenReclaimSingle = (advisorId: string, advisorName: string, recordCount: number) => {
+  const handleOpenReclaimSingle = (
+    advisorId: string,
+    advisorName: string,
+    recordCount: number,
+    assignmentId?: string
+  ) => {
     setReclaimModalState({
       isOpen: true,
-      type: "SINGLE",
+      type: assignmentId ? "BY_ID" : "SINGLE",
+      assignmentId,
       advisorId,
       advisorName,
       recordCount,
@@ -140,7 +165,10 @@ const DataAssignmentPage = () => {
     setReclaimModalState((prev) => ({ ...prev, submitting: true, error: null }));
 
     try {
-      if (reclaimModalState.type === "SINGLE" && reclaimModalState.advisorId) {
+      if (reclaimModalState.type === "BY_ID" && reclaimModalState.assignmentId) {
+        const res = await reclaimAssignmentById(accessToken, reclaimModalState.assignmentId);
+        setSuccessToast(res.message || "Data assignment successfully reclaimed.");
+      } else if (reclaimModalState.type === "SINGLE" && reclaimModalState.advisorId) {
         const res = await reclaimAdvisorData(accessToken, reclaimModalState.advisorId);
         setSuccessToast(res.message || "Data assignment successfully reclaimed.");
       } else {
@@ -181,6 +209,8 @@ const DataAssignmentPage = () => {
         uploadIds: selectedUploadIds,
         assignmentStatus,
         search: searchTerm,
+        dispositions: selectedDispositions.length > 0 ? selectedDispositions : undefined,
+        notCalledByUserIds: selectedNotCalledByUserIds.length > 0 ? selectedNotCalledByUserIds : undefined,
         page: 1,
         limit: 5000,
       };
@@ -211,6 +241,8 @@ const DataAssignmentPage = () => {
     selectedCities,
     selectedUploadIds,
     assignmentStatus,
+    selectedDispositions,
+    selectedNotCalledByUserIds,
     searchTerm,
     historyPage,
   ]);
@@ -287,17 +319,59 @@ const DataAssignmentPage = () => {
     resetSelectionWithNotice();
   };
 
+  const handleDispositionToggle = (dispValue: string) => {
+    setSelectedDispositions((prev) =>
+      prev.includes(dispValue) ? prev.filter((d) => d !== dispValue) : [...prev, dispValue]
+    );
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
+  const handleSelectAllDispositions = () => {
+    setSelectedDispositions([]);
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
   const handleSearchChange = (term: string) => {
     setSearchTerm(term);
     setPage(1);
     resetSelectionWithNotice();
   };
 
+  const handleNotCalledByUserToggle = (userId: string) => {
+    setSelectedNotCalledByUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
+  const handleSelectAllNotCalledBy = () => {
+    setSelectedNotCalledByUserIds([]);
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
+  const filteredEligibleAdvisors = useMemo(() => {
+    if (!callerSearchTerm.trim()) return eligibleAdvisors;
+    const term = callerSearchTerm.toLowerCase().trim();
+    return eligibleAdvisors.filter((adv) => {
+      const fullName = `${adv.firstName} ${adv.lastName || ""}`.toLowerCase();
+      const email = (adv.email || "").toLowerCase();
+      const username = (adv.username || "").toLowerCase();
+      return fullName.includes(term) || email.includes(term) || username.includes(term);
+    });
+  }, [eligibleAdvisors, callerSearchTerm]);
+
   const handleClearAllFilters = () => {
     setSelectedStates([]);
     setSelectedCities([]);
     setSelectedUploadIds([]);
     setAssignmentStatus("AVAILABLE");
+    setSelectedDispositions([]);
+    setSelectedNotCalledByUserIds([]);
+    setCallerSearchTerm("");
     setSearchTerm("");
     setPage(1);
     resetSelectionWithNotice();
@@ -402,6 +476,8 @@ const DataAssignmentPage = () => {
         uploadIds: selectedUploadIds,
         assignmentStatus,
         search: searchTerm,
+        dispositions: selectedDispositions.length > 0 ? selectedDispositions : undefined,
+        notCalledByUserIds: selectedNotCalledByUserIds.length > 0 ? selectedNotCalledByUserIds : undefined,
       };
 
       let finalMode = selectionMode;
@@ -510,7 +586,7 @@ const DataAssignmentPage = () => {
         </div>
 
         {/* Filter Dropdowns Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
           {/* State Multi-Select Dropdown */}
           <div className="relative">
             <button
@@ -519,6 +595,7 @@ const DataAssignmentPage = () => {
                 setIsStateDropdownOpen(!isStateDropdownOpen);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsNotCalledByDropdownOpen(false);
               }}
               className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
             >
@@ -560,6 +637,7 @@ const DataAssignmentPage = () => {
                 setIsCityDropdownOpen(!isCityDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsNotCalledByDropdownOpen(false);
               }}
               className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
             >
@@ -601,6 +679,7 @@ const DataAssignmentPage = () => {
                 setIsUploadDropdownOpen(!isUploadDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
+                setIsNotCalledByDropdownOpen(false);
               }}
               className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
             >
@@ -646,6 +725,165 @@ const DataAssignmentPage = () => {
               <option value="ALL">Status: All Records</option>
             </select>
           </div>
+
+          {/* Call Disposition Multi-Select Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDispositionDropdownOpen(!isDispositionDropdownOpen);
+                setIsStateDropdownOpen(false);
+                setIsCityDropdownOpen(false);
+                setIsUploadDropdownOpen(false);
+                setIsNotCalledByDropdownOpen(false);
+              }}
+              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+            >
+              <span className="truncate">
+                Disposition: {selectedDispositions.length > 0 ? `${selectedDispositions.length} selected` : "All"}
+              </span>
+              <ChevronDown size={16} className="text-text-muted shrink-0" />
+            </button>
+
+            {isDispositionDropdownOpen && (
+              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+                {/* All Option */}
+                <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    checked={selectedDispositions.length === 0}
+                    onChange={handleSelectAllDispositions}
+                    className="rounded border-border text-primary-600 focus:ring-primary-400"
+                  />
+                  <span>Call Disposition: All</span>
+                </label>
+
+                <div className="h-px bg-border my-1" />
+
+                <div className="overflow-y-auto space-y-1 max-h-52 pr-1">
+                  {DISPOSITION_OPTIONS.filter((opt) => opt.value !== "ALL").map((opt) => {
+                    const isChecked = selectedDispositions.includes(opt.value);
+                    return (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleDispositionToggle(opt.value)}
+                          className="rounded border-border text-primary-600 focus:ring-primary-400"
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 mt-1 border-t border-border flex items-center justify-between text-xs text-text-muted px-1 shrink-0">
+                  <span>{selectedDispositions.length > 0 ? `${selectedDispositions.length} selected` : "All"}</span>
+                  {selectedDispositions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllDispositions}
+                      className="text-primary-600 hover:underline font-medium"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Not Called By Multi-Select Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsNotCalledByDropdownOpen(!isNotCalledByDropdownOpen);
+                setIsStateDropdownOpen(false);
+                setIsCityDropdownOpen(false);
+                setIsUploadDropdownOpen(false);
+              }}
+              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+            >
+              <span className="truncate">
+                Not Called By: {selectedNotCalledByUserIds.length > 0 ? `${selectedNotCalledByUserIds.length} selected` : "All"}
+              </span>
+              <ChevronDown size={16} className="text-text-muted shrink-0" />
+            </button>
+
+            {isNotCalledByDropdownOpen && (
+              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-72 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl">
+                {/* Search Bar */}
+                <div className="relative mb-2 shrink-0">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search callers..."
+                    value={callerSearchTerm}
+                    onChange={(e) => setCallerSearchTerm(e.target.value)}
+                    className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-border bg-neutral-50 text-xs text-text-primary outline-none focus:border-primary-500"
+                  />
+                </div>
+
+                <div className="overflow-y-auto space-y-1 flex-1 pr-1">
+                  {/* All Option */}
+                  <label
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs font-medium text-text-primary"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedNotCalledByUserIds.length === 0}
+                      onChange={handleSelectAllNotCalledBy}
+                      className="rounded border-border text-primary-600 focus:ring-primary-400"
+                    />
+                    <span>All Callers (No Exclusion)</span>
+                  </label>
+
+                  <div className="h-px bg-border my-1" />
+
+                  {/* List of Callers */}
+                  {filteredEligibleAdvisors.length === 0 ? (
+                    <p className="p-2 text-xs text-text-muted text-center">No callers found</p>
+                  ) : (
+                    filteredEligibleAdvisors.map((advisor) => {
+                      const fullName = `${advisor.firstName} ${advisor.lastName || ''}`.trim();
+                      const isChecked = selectedNotCalledByUserIds.includes(advisor.id);
+                      return (
+                        <label
+                          key={advisor.id}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleNotCalledByUserToggle(advisor.id)}
+                            className="rounded border-border text-primary-600 focus:ring-primary-400"
+                          />
+                          <span className="truncate">{fullName}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="pt-2 mt-1 border-t border-border flex items-center justify-between text-xs text-text-muted px-1 shrink-0">
+                  <span>{selectedNotCalledByUserIds.length > 0 ? `${selectedNotCalledByUserIds.length} selected` : "All"}</span>
+                  {selectedNotCalledByUserIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllNotCalledBy}
+                      className="text-primary-600 hover:underline font-medium"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Removable Active Filter Chips */}
@@ -653,6 +891,8 @@ const DataAssignmentPage = () => {
           selectedCities.length > 0 ||
           selectedUploadIds.length > 0 ||
           assignmentStatus !== "AVAILABLE" ||
+          selectedDispositions.length > 0 ||
+          selectedNotCalledByUserIds.length > 0 ||
           searchTerm) && (
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
             <span className="text-xs font-semibold text-text-secondary uppercase flex items-center gap-1">
@@ -717,6 +957,43 @@ const DataAssignmentPage = () => {
                   type="button"
                   onClick={() => handleStatusChange("AVAILABLE")}
                   className="hover:text-text-primary"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {selectedDispositions.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold">
+                Disposition: {
+                  selectedDispositions.length === 1
+                    ? DISPOSITION_OPTIONS.find((o) => o.value === selectedDispositions[0])?.label || selectedDispositions[0]
+                    : `${selectedDispositions.length} selected`
+                }
+                <button
+                  type="button"
+                  onClick={handleSelectAllDispositions}
+                  className="hover:text-emerald-900 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {selectedNotCalledByUserIds.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold">
+                Not Called By: {
+                  selectedNotCalledByUserIds.length === 1
+                    ? (() => {
+                        const adv = eligibleAdvisors.find((a) => a.id === selectedNotCalledByUserIds[0]);
+                        return adv ? `${adv.firstName} ${adv.lastName || ''}`.trim() : "1 caller";
+                      })()
+                    : `${selectedNotCalledByUserIds.length} callers`
+                }
+                <button
+                  type="button"
+                  onClick={handleSelectAllNotCalledBy}
+                  className="hover:text-amber-950 cursor-pointer"
                 >
                   <X size={12} />
                 </button>
@@ -939,6 +1216,9 @@ const DataAssignmentPage = () => {
                     Dataset File
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    Call Disposition
+                  </th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
                     Status
                   </th>
                 </tr>
@@ -951,6 +1231,8 @@ const DataAssignmentPage = () => {
                   const fullName = [student.firstName, student.middleName, student.lastName]
                     .filter(Boolean)
                     .join(" ");
+
+                  const latestCall = student.callRecords?.[0];
 
                   return (
                     <tr
@@ -992,6 +1274,43 @@ const DataAssignmentPage = () => {
 
                       <td className="px-5 py-4 text-xs text-text-muted truncate max-w-[180px]">
                         {student.upload?.fileName || "Dataset"}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {!latestCall ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-text-muted border border-border">
+                            No Call Yet
+                          </span>
+                        ) : (() => {
+                          const cleanOutcome = latestCall.outcome.replace(/_/g, " ");
+                          switch (latestCall.outcome) {
+                            case "INTERESTED":
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800 border border-emerald-300">
+                                  {cleanOutcome}
+                                </span>
+                              );
+                            case "FOLLOW_UP":
+                            case "CALL_BACK_LATER":
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-800 border border-blue-300">
+                                  {cleanOutcome}
+                                </span>
+                              );
+                            case "DISCONNECTED":
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-800 border border-orange-300">
+                                  {cleanOutcome}
+                                </span>
+                              );
+                            default:
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700 border border-neutral-300">
+                                  {cleanOutcome}
+                                </span>
+                              );
+                          }
+                        })()}
                       </td>
 
                       <td className="px-5 py-4">
@@ -1037,22 +1356,25 @@ const DataAssignmentPage = () => {
             <thead>
               <tr className="border-b border-border bg-neutral-50/50">
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                  Assignee Advisor
+                  Assignee
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                  Assigned By
+                  Datasets
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                  Records Count
+                  Total Assigned Records
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
                   Assigned Date
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                  Assignment Window
+                  First Call Made At
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
-                  Status
+                  Latest Assignment
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                  Action
                 </th>
               </tr>
             </thead>
@@ -1060,65 +1382,102 @@ const DataAssignmentPage = () => {
             <tbody>
               {assignments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-xs text-text-muted">
-                    No data assignments created yet.
+                  <td colSpan={7} className="px-5 py-8 text-center text-xs text-text-muted">
+                    No data assignment operations recorded yet.
                   </td>
                 </tr>
               ) : (
-                assignments.map((a) => {
-                  const assigneeName = a.assignedTo
-                    ? `${a.assignedTo.firstName} ${a.assignedTo.lastName || ""}`.trim()
-                    : "Program Advisor";
-                  const assignerName = a.assignedBy
-                    ? `${a.assignedBy.firstName} ${a.assignedBy.lastName || ""}`.trim()
-                    : "Manager";
-                  const itemCount = a._count?.items || 0;
+                assignments.map((item) => {
+                  const assigneeName = item.assignee.fullName || "Program Advisor";
+                  const roleAndTeam = [item.assignee.roleName, item.assignee.teamName]
+                    .filter(Boolean)
+                    .join(" · ");
+
+                  const formattedAssignedDate = item.earliestAssignedAt
+                    ? new Date(item.earliestAssignedAt).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—";
+
+                  const formattedLatestDate = item.latestAssignedAt
+                    ? new Date(item.latestAssignedAt).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—";
+
+                  const formattedFirstCallAt = item.firstCallMadeAt
+                    ? new Date(item.firstCallMadeAt)
+                        .toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .replace(",", " •")
+                    : "—";
 
                   return (
-                    <tr key={a.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
+                    <tr
+                      key={item.assignee.id}
+                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
+                    >
                       <td className="px-5 py-3">
                         <p className="text-xs font-semibold text-text-primary">{assigneeName}</p>
-                        <p className="text-[11px] text-text-muted">{a.assignedTo?.team?.name || a.assignedTo?.email}</p>
+                        <p className="text-[11px] text-text-muted">{roleAndTeam || item.assignee.email}</p>
                       </td>
-                      <td className="px-5 py-3 text-xs text-text-secondary">{assignerName}</td>
+                      <td className="px-5 py-3 text-xs font-semibold text-text-primary">
+                        {item.datasetsCount} dataset{item.datasetsCount === 1 ? "" : "s"}
+                      </td>
                       <td className="px-5 py-3 text-xs font-bold text-text-primary">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedAssignmentIdForDrawer(a.id)}
-                          className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                          title="Click to view assigned student records & recent call updates"
-                        >
-                          {itemCount} records
-                        </button>
+                        {item.totalAssignedRecords.toLocaleString()} records
                       </td>
-                      <td className="px-5 py-3 text-xs text-text-secondary">{new Date(a.assignedAt).toLocaleString()}</td>
-                      <td className="px-5 py-3 text-xs text-text-secondary">Permanent</td>
-                      <td className="px-5 py-3 text-xs font-semibold">
-                        {a.status === "ACTIVE" ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">ACTIVE</span>
+                      <td className="px-5 py-3 text-xs text-text-secondary">
+                        {formattedAssignedDate}
+                      </td>
+                      <td className="px-5 py-3 text-xs font-mono text-text-secondary">
+                        {formattedFirstCallAt}
+                      </td>
+                      <td className="px-5 py-3 text-xs text-text-secondary">
+                        {formattedLatestDate}
+                      </td>
+                      <td className="px-5 py-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAssigneeIdForDrawer(item.assignee.id)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition cursor-pointer"
+                          >
+                            View Details
+                          </button>
+                          {item.activeRecordsCount > 0 && (
                             <button
                               type="button"
-                              onClick={() => handleOpenReclaimSingle(a.assignedTo?.id || a.assignedToId || "", assigneeName, itemCount)}
-                              className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-medium transition flex items-center gap-1"
+                              onClick={() =>
+                                handleOpenReclaimSingle(
+                                  item.assignee.id,
+                                  assigneeName,
+                                  item.totalAssignedRecords
+                                )
+                              }
+                              className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-medium transition flex items-center gap-1 cursor-pointer"
+                              title="Reclaim active assignments for this advisor"
                             >
-                              <RotateCcw size={12} /> Reclaim Data
+                              <RotateCcw size={12} /> Reclaim
                             </button>
-                          </div>
-                        ) : a.status === "RECLAIMED" ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[11px] font-semibold">
-                            <RotateCcw size={10} /> RECLAIMED
-                          </span>
-                        ) : (
-                          <span className="text-text-muted">{a.status}</span>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
                 })
               )}
             </tbody>
-
           </table>
         </div>
 
@@ -1127,7 +1486,7 @@ const DataAssignmentPage = () => {
           totalPages={historyTotalPages}
           totalItems={historyTotalCount}
           onPageChange={setHistoryPage}
-          itemLabel="assignments"
+          itemLabel="assignees"
         />
       </div>
 
@@ -1159,12 +1518,15 @@ const DataAssignmentPage = () => {
         </div>
       )}
 
-      {/* Assignment Details & Recent Call Updates Drawer */}
-      {selectedAssignmentIdForDrawer && accessToken && (
-        <AssignmentDetailsDrawer
-          assignmentId={selectedAssignmentIdForDrawer}
+      {/* Assignee Details Right-Side Drawer */}
+      {selectedAssigneeIdForDrawer && accessToken && (
+        <AssigneeDetailsDrawer
+          assigneeId={selectedAssigneeIdForDrawer}
           token={accessToken}
-          onClose={() => setSelectedAssignmentIdForDrawer(null)}
+          onClose={() => setSelectedAssigneeIdForDrawer(null)}
+          onAssignmentReclaimed={() => {
+            loadFilteredData();
+          }}
         />
       )}
 
@@ -1178,12 +1540,16 @@ const DataAssignmentPage = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-text-primary">
-                  {reclaimModalState.type === "SINGLE"
+                  {reclaimModalState.type === "BY_ID"
+                    ? `Reclaim Data Assignment?`
+                    : reclaimModalState.type === "SINGLE"
                     ? `Reclaim Data for ${reclaimModalState.advisorName}?`
                     : "Reclaim All Advisor Data?"}
                 </h3>
                 <p className="text-xs text-text-muted">
-                  {reclaimModalState.type === "SINGLE"
+                  {reclaimModalState.type === "BY_ID"
+                    ? "Reclaim records from this active assignment"
+                    : reclaimModalState.type === "SINGLE"
                     ? "Remove active data assignment for this Program Advisor"
                     : "Remove active data assignments across all managed Program Advisors"}
                 </p>
@@ -1191,7 +1557,9 @@ const DataAssignmentPage = () => {
             </div>
 
             <p className="text-xs text-text-secondary leading-relaxed bg-neutral-50 p-3.5 rounded-xl border border-border">
-              {reclaimModalState.type === "SINGLE"
+              {reclaimModalState.type === "BY_ID"
+                ? `This will reclaim data access for this active assignment. The affected records will immediately become available for re-assignment. Assignment history will be preserved.`
+                : reclaimModalState.type === "SINGLE"
                 ? `This will reclaim active data access from ${reclaimModalState.advisorName} (${reclaimModalState.recordCount || "active"} records). The affected records will immediately become available for re-assignment. Assignment history will be preserved.`
                 : "This will remove the current active data assignments from all Program Advisors under your management scope. All reclaimed records will immediately become available for re-assignment. Assignment history will be preserved."}
             </p>

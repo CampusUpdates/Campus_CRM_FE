@@ -19,6 +19,7 @@ interface AssignmentDetailsDrawerProps {
   assignmentId: string;
   token: string;
   onClose: () => void;
+  onReclaim?: (assignmentId: string) => void;
 }
 
 const OUTCOME_LABEL_MAP: Record<string, string> = {
@@ -28,6 +29,7 @@ const OUTCOME_LABEL_MAP: Record<string, string> = {
   FOLLOW_UP: "Follow Up Required",
   CALL_BACK_LATER: "Call Back Later",
   INTERESTED: "Interested / Create Lead",
+  DISCONNECTED: "Disconnected",
 };
 
 const OUTCOME_STYLE_MAP: Record<string, { bg: string; text: string; border: string }> = {
@@ -37,6 +39,7 @@ const OUTCOME_STYLE_MAP: Record<string, { bg: string; text: string; border: stri
   FOLLOW_UP: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" },
   CALL_BACK_LATER: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" },
   INTERESTED: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
+  DISCONNECTED: { bg: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/20" },
 };
 
 function formatCallDateTime(dateStr?: string | null): string {
@@ -66,6 +69,7 @@ export const AssignmentDetailsDrawer: React.FC<AssignmentDetailsDrawerProps> = (
   assignmentId,
   token,
   onClose,
+  onReclaim,
 }) => {
   const [data, setData] = useState<DataAssignmentDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,14 +150,27 @@ export const AssignmentDetailsDrawer: React.FC<AssignmentDetailsDrawerProps> = (
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Close Drawer"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {data && data.status === "ACTIVE" && onReclaim && (
+              <button
+                type="button"
+                onClick={() => onReclaim(data.id)}
+                className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                title="Reclaim this data assignment"
+              >
+                <RotateCcw size={12} /> Reclaim Data
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title="Close Drawer"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Total Records Counter Bar */}

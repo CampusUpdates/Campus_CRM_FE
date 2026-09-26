@@ -339,12 +339,12 @@ const Tpc = () => {
               onChange={(e) => setDateFilter(e.target.value as DateFilterType)}
               className="bg-transparent text-xs font-medium text-text-primary focus:outline-none pr-1 py-1 cursor-pointer"
             >
-              <option value="ALL">All Time</option>
-              <option value="TODAY">Today</option>
-              <option value="YESTERDAY">Yesterday</option>
-              <option value="LAST_7_DAYS">Last 7 Days</option>
-              <option value="LAST_30_DAYS">Last 30 Days</option>
-              <option value="CUSTOM">Custom Date</option>
+              <option value="ALL" className="bg-surface text-text-primary">All Time</option>
+              <option value="TODAY" className="bg-surface text-text-primary">Today</option>
+              <option value="YESTERDAY" className="bg-surface text-text-primary">Yesterday</option>
+              <option value="LAST_7_DAYS" className="bg-surface text-text-primary">Last 7 Days</option>
+              <option value="LAST_30_DAYS" className="bg-surface text-text-primary">Last 30 Days</option>
+              <option value="CUSTOM" className="bg-surface text-text-primary">Custom Date</option>
             </select>
 
             {dateFilter === "CUSTOM" && (
