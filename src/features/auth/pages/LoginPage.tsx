@@ -4,17 +4,46 @@ import login from "../../../services/authService";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { useNavigate } from "react-router-dom";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState({ username: false, password: false });
+  const [errors, setErrors] = useState<{ username?: string | null; password?: string | null }>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { login: setAuth } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+
+  const validateUsername = (val: string) => (!val.trim() ? "Username is required" : null);
+  const validatePassword = (val: string) => (!val ? "Password is required" : null);
+
+  const handleBlur = (field: "username" | "password") => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    if (field === "username") {
+      setErrors((prev) => ({ ...prev, username: validateUsername(username) }));
+    } else {
+      setErrors((prev) => ({ ...prev, password: validatePassword(password) }));
+    }
+  };
+
+  const handleUsernameChange = (val: string) => {
+    setUsername(val);
+    if (touched.username) {
+      setErrors((prev) => ({ ...prev, username: validateUsername(val) }));
+    }
+  };
+
+  const handlePasswordChange = (val: string) => {
+    setPassword(val);
+    if (touched.password) {
+      setErrors((prev) => ({ ...prev, password: validatePassword(val) }));
+    }
+  };
 
   const requestCoordinates = (): Promise<{ lat?: number; lon?: number }> => {
     return new Promise((resolve) => {
@@ -59,17 +88,21 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) return;
+    setTouched({ username: true, password: true });
+
+    const uErr = validateUsername(username);
+    const pErr = validatePassword(password);
+    setErrors({ username: uErr, password: pErr });
+
+    if (uErr || pErr) return;
 
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // 1. Initial attempt: Submit username & password directly without GPS
       const data = await login(username.trim(), password);
       handleLoginSuccess(data);
     } catch (err: any) {
-      // 2. If backend specifically responds that location is required for this user:
       if (err.locationRequired) {
         try {
           const coords = await requestCoordinates();
@@ -80,7 +113,6 @@ const LoginPage = () => {
             return;
           }
 
-          // Retry with coordinates
           const retryData = await login(
             username.trim(),
             password,
@@ -102,6 +134,18 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+
+  const usernameInputClass = getFieldValidationClass(
+    touched.username,
+    errors.username,
+    "w-full h-10 sm:h-11 pl-10 pr-4 rounded-md border bg-surface outline-none transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+  );
+
+  const passwordInputClass = getFieldValidationClass(
+    touched.password,
+    errors.password,
+    "w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border bg-surface outline-none transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+  );
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-6 md:p-8">
@@ -129,11 +173,11 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form className="mt-5 sm:mt-6 space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+            <form className="mt-5 sm:mt-6 space-y-4 sm:space-y-5" onSubmit={handleSubmit} noValidate>
               {/* Username */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5 sm:mb-2">
-                  Username
+                  Username <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -146,17 +190,20 @@ const LoginPage = () => {
                     type="text"
                     placeholder="Enter your username"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    className="w-full h-10 sm:h-11 pl-10 pr-4 rounded-md border border-border bg-surface outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+                    onChange={(e) => handleUsernameChange(e.target.value)}
+                    onBlur={() => handleBlur("username")}
+                    className={usernameInputClass}
                   />
                 </div>
+                {touched.username && errors.username && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.username}</p>
+                )}
               </div>
 
               {/* Password */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5 sm:mb-2">
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -169,9 +216,9 @@ const LoginPage = () => {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border border-border bg-surface outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    onBlur={() => handleBlur("password")}
+                    className={passwordInputClass}
                   />
 
                   <button
@@ -188,6 +235,9 @@ const LoginPage = () => {
                     )}
                   </button>
                 </div>
+                {touched.password && errors.password && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.password}</p>
+                )}
               </div>
 
               {/* Login Submit Button */}

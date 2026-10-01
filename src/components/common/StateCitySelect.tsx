@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { INDIAN_STATES_AND_CITIES, getCitiesByState } from "../../data/indianStatesCities";
+import { getFieldValidationClass } from "../../utils/formValidation";
 
 export interface StateCitySelectProps {
   /** Selected State value */
@@ -26,6 +27,14 @@ export interface StateCitySelectProps {
   stateError?: string;
   /** Error message for city */
   cityError?: string;
+  /** Touched state for state input */
+  stateTouched?: boolean;
+  /** Touched state for city input */
+  cityTouched?: boolean;
+  /** OnBlur handler for state */
+  onStateBlur?: (e: React.FocusEvent<HTMLSelectElement>) => void;
+  /** OnBlur handler for city */
+  onCityBlur?: (e: React.FocusEvent<HTMLSelectElement | HTMLInputElement>) => void;
   /** Placeholder text for state select */
   statePlaceholder?: string;
   /** Placeholder text for city select */
@@ -55,6 +64,10 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
   layout = "row",
   stateError,
   cityError,
+  stateTouched,
+  cityTouched,
+  onStateBlur,
+  onCityBlur,
   statePlaceholder = "Select State",
   cityPlaceholder = "Select City",
   allowAllOption = false,
@@ -109,25 +122,34 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
   const gridLayout =
     layout === "row" ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : "space-y-4";
 
+  const stateInputClass = getFieldValidationClass(
+    stateTouched,
+    stateError,
+    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer"
+  );
+
+  const cityInputClass = getFieldValidationClass(
+    cityTouched,
+    cityError,
+    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer"
+  );
+
   return (
     <div className={`${gridLayout} ${className}`}>
       {/* State Field */}
       <div>
         {stateLabel && (
-          <label className="mb-1.5 block text-sm font-medium text-text-primary">
-            {stateLabel} {required && <span className="text-danger-500">*</span>}
+          <label className="mb-1.5 block text-xs font-semibold text-text-secondary dark:text-neutral-300">
+            {stateLabel} {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <div className="relative">
           <select
             value={stateValue}
             onChange={handleStateSelect}
+            onBlur={onStateBlur}
             disabled={disabled}
-            className={`w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition focus:ring-2 focus:ring-primary-100 disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer ${
-              stateError
-                ? "border-danger-500 focus:border-danger-500"
-                : "border-border focus:border-primary-500"
-            }`}
+            className={stateInputClass}
           >
             {allowAllOption ? (
               <option value="">{allStatesLabel}</option>
@@ -143,14 +165,16 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
             ))}
           </select>
         </div>
-        {stateError && <p className="mt-1 text-xs text-danger-500">{stateError}</p>}
+        {stateTouched && stateError && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{stateError}</p>
+        )}
       </div>
 
       {/* City Field */}
       <div>
         {cityLabel && (
-          <label className="mb-1.5 block text-sm font-medium text-text-primary">
-            {cityLabel} {required && <span className="text-danger-500">*</span>}
+          <label className="mb-1.5 block text-xs font-semibold text-text-secondary dark:text-neutral-300">
+            {cityLabel} {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <div className="relative">
@@ -160,13 +184,10 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
                 type="text"
                 value={cityValue}
                 onChange={handleCustomCityInput}
+                onBlur={onCityBlur}
                 placeholder="Enter city name"
                 disabled={disabled}
-                className={`w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition focus:ring-2 focus:ring-primary-100 disabled:opacity-50 ${
-                  cityError
-                    ? "border-danger-500 focus:border-danger-500"
-                    : "border-border focus:border-primary-500"
-                }`}
+                className={cityInputClass}
               />
               <button
                 type="button"
@@ -183,12 +204,9 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
             <select
               value={cityValue}
               onChange={handleCitySelect}
+              onBlur={onCityBlur}
               disabled={disabled || (!stateValue && !allowAllOption)}
-              className={`w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition focus:ring-2 focus:ring-primary-100 disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer ${
-                cityError
-                  ? "border-danger-500 focus:border-danger-500"
-                  : "border-border focus:border-primary-500"
-              }`}
+              className={cityInputClass}
             >
               {allowAllOption ? (
                 <option value="">{allCitiesLabel}</option>
@@ -208,7 +226,9 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
             </select>
           )}
         </div>
-        {cityError && <p className="mt-1 text-xs text-danger-500">{cityError}</p>}
+        {cityTouched && cityError && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{cityError}</p>
+        )}
       </div>
     </div>
   );

@@ -1435,7 +1435,7 @@ const DataAssignmentPage = () => {
                         {item.datasetsCount} dataset{item.datasetsCount === 1 ? "" : "s"}
                       </td>
                       <td className="px-5 py-3 text-xs font-bold text-text-primary">
-                        {item.totalAssignedRecords.toLocaleString()} records
+                        {item.activeRecordsCount.toLocaleString()} records
                       </td>
                       <td className="px-5 py-3 text-xs text-text-secondary">
                         {formattedAssignedDate}
@@ -1458,13 +1458,13 @@ const DataAssignmentPage = () => {
                           {item.activeRecordsCount > 0 && (
                             <button
                               type="button"
-                              onClick={() =>
-                                handleOpenReclaimSingle(
-                                  item.assignee.id,
-                                  assigneeName,
-                                  item.totalAssignedRecords
-                                )
-                              }
+                                onClick={() =>
+                                  handleOpenReclaimSingle(
+                                    item.assignee.id,
+                                    assigneeName,
+                                    item.activeRecordsCount
+                                  )
+                                }
                               className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-medium transition flex items-center gap-1 cursor-pointer"
                               title="Reclaim active assignments for this advisor"
                             >

@@ -74,6 +74,7 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
           fetchTpcUsers(accessToken),
           selectedLead ? fetchTpcsForLead(accessToken, selectedLead.id) : Promise.resolve(null),
         ]);
+        console.log("DEBUG_TPC_USERS:", userData);
         setUsers(userData);
         if (tpcData?.assignments) {
           setExistingAssignments(tpcData.assignments);

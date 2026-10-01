@@ -77,6 +77,7 @@ const CreateTeamModal = ({
     managerId?: string;
   }
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Dropdowns & Search state
@@ -454,27 +455,36 @@ const CreateTeamModal = ({
                   onChange={(e) => {
                     const val = e.target.value;
                     setName(val);
-                    if (hasAttemptedSubmit) {
+                    if (hasAttemptedSubmit || touchedFields.name) {
                       setValidationErrors((prev) => ({
                         ...prev,
                         name: !val.trim() ? "Team name is required." : undefined,
                       }));
                     }
                   }}
+                  onBlur={() => {
+                    setTouchedFields((prev) => ({ ...prev, name: true }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      name: !name.trim() ? "Team name is required." : undefined,
+                    }));
+                  }}
                   disabled={isSubmitting}
                   className={`
                     w-full h-10 rounded-lg border bg-slate-800/90 px-3.5 text-sm text-slate-100 placeholder:text-slate-500
                     outline-none transition focus:ring-2 disabled:opacity-50
                     ${
-                      validationErrors.name
+                      !(hasAttemptedSubmit || touchedFields.name)
+                        ? "border-slate-700 focus:border-primary-500 focus:ring-primary-500/20"
+                        : validationErrors.name || !name.trim()
                         ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20"
-                        : "border-slate-700 focus:border-emerald-500 focus:ring-emerald-500/20"
+                        : "border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                     }
                   `}
                 />
-                {validationErrors.name && (
+                {(hasAttemptedSubmit || touchedFields.name) && (validationErrors.name || !name.trim()) && (
                   <p className="mt-1 text-[11px] font-medium text-rose-400">
-                    {validationErrors.name}
+                    {validationErrors.name || "Team name is required."}
                   </p>
                 )}
               </div>
@@ -522,21 +532,30 @@ const CreateTeamModal = ({
                     onChange={(e) => {
                       const val = e.target.value;
                       setManagerId(val);
-                      if (hasAttemptedSubmit) {
+                      if (hasAttemptedSubmit || touchedFields.managerId) {
                         setValidationErrors((prev) => ({
                           ...prev,
                           managerId: !val ? "Manager is required." : undefined,
                         }));
                       }
                     }}
+                    onBlur={() => {
+                      setTouchedFields((prev) => ({ ...prev, managerId: true }));
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        managerId: !managerId ? "Manager is required." : undefined,
+                      }));
+                    }}
                     disabled={isSubmitting}
                     className={`
                       w-full h-10 rounded-lg border bg-slate-800/90 px-3.5 text-sm text-slate-100
                       outline-none transition focus:ring-2 disabled:opacity-50
                       ${
-                        validationErrors.managerId
+                        !(hasAttemptedSubmit || touchedFields.managerId)
+                          ? "border-slate-700 focus:border-primary-500 focus:ring-primary-500/20"
+                          : validationErrors.managerId || !managerId
                           ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20"
-                          : "border-slate-700 focus:border-emerald-500 focus:ring-emerald-500/20"
+                          : "border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                       }
                     `}
                   >

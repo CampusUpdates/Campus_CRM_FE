@@ -780,12 +780,12 @@ const LeadPage = () => {
                               lead.negativeColleges.map((neg) => (
                                 <span
                                   key={neg.id}
-                                  className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50/80 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 text-[11px] font-medium max-w-full"
-                                  title={`Negative: ${neg.college?.name || "College"}`}
+                                  className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-gray-50/80 dark:border-gray-700/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 px-2.5 py-0.5 text-[11px] font-medium max-w-full"
+                                  title={`Negative: ${neg.collegeName}`}
                                 >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
                                   <span className="truncate">
-                                    [Not Interested] {neg.college?.name || "College"}
+                                    {neg.collegeName}
                                   </span>
                                 </span>
                               ))

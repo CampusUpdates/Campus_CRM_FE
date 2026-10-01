@@ -160,7 +160,12 @@ export async function fetchTpcsForLead(token: string, leadId: string): Promise<T
     return null;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  return JSON.parse(text);
 }
 
 export async function updateTpcAssignmentStatus(

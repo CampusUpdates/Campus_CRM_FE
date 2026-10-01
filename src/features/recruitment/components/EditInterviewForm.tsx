@@ -9,6 +9,7 @@ import {
   type UpdateInterviewPayload,
 } from "../../../services/interviewService";
 import { fetchUsers, type UserItem } from "../../../services/userService";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 type EditInterviewFormProps = {
   interview: Interview;
@@ -22,7 +23,6 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
   const [interviewers, setInterviewers] = useState<UserItem[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
-  // Format existing scheduledAt date for datetime-local input
   const initialDate = interview.scheduledAt
     ? new Date(
         new Date(interview.scheduledAt).getTime() -
@@ -39,6 +39,9 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
     result: interview.result || "PENDING",
     feedback: interview.feedback || "",
   });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -59,24 +62,57 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
     loadInterviewers();
   }, [accessToken]);
 
+  const validateEditInterviewField = (name: string, value: any): string | null => {
+    if (name === "interviewerId" && !value) {
+      return "Please select an assigned interviewer.";
+    }
+    if (name === "scheduledAt" && !value) {
+      return "Please select scheduled date and time.";
+    }
+    return null;
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const err = validateEditInterviewField(name, (formData as any)[name]);
+    setErrors((prev) => ({ ...prev, [name]: err }));
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextData = { ...formData, [name]: value };
+    setFormData(nextData);
+
+    if (touched[name]) {
+      const err = validateEditInterviewField(name, value);
+      setErrors((prev) => ({ ...prev, [name]: err }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!formData.interviewerId) {
-      setErrorMsg("Please select an assigned interviewer.");
-      return;
-    }
+    const allFields = ["interviewerId", "scheduledAt", "status", "result", "feedback"];
+    const newTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string | null> = {};
+    let hasError = false;
 
-    if (!formData.scheduledAt) {
-      setErrorMsg("Please select scheduled date and time.");
+    allFields.forEach((f) => {
+      newTouched[f] = true;
+      const err = validateEditInterviewField(f, (formData as any)[f]);
+      newErrors[f] = err;
+      if (err) hasError = true;
+    });
+
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (hasError) {
+      const firstErr = Object.values(newErrors).find(Boolean);
+      if (firstErr) setErrorMsg(firstErr);
       return;
     }
 
@@ -85,7 +121,7 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
     try {
       const payload: UpdateInterviewPayload = {
         interviewerId: formData.interviewerId,
-        scheduledAt: new Date(formData.scheduledAt).toISOString(),
+        scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : new Date().toISOString(),
         status: (formData.status as InterviewStatusType) || "SCHEDULED",
         result: (formData.result as InterviewResultType) || "PENDING",
         feedback: formData.feedback?.trim() || undefined,
@@ -113,7 +149,7 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
     : "Applicant";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5">
       {errorMsg && (
         <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">
           {errorMsg}
@@ -134,7 +170,7 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
 
       {/* Interviewer Dropdown */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Assigned Interviewer <span className="text-red-500">*</span>
         </label>
         {loadingOptions ? (
@@ -142,13 +178,10 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
         ) : (
           <select
             name="interviewerId"
-            required
             value={formData.interviewerId}
             onChange={handleChange}
-            className="
-              w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-              text-sm text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            "
+            onBlur={() => handleBlur("interviewerId")}
+            className={getFieldValidationClass(touched.interviewerId, errors.interviewerId, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary outline-none transition")}
           >
             <option value="" disabled>
               Select Interviewer
@@ -160,40 +193,41 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
             ))}
           </select>
         )}
+        {touched.interviewerId && errors.interviewerId && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.interviewerId}</p>
+        )}
       </div>
 
       {/* Scheduled Date & Time */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Scheduled Date & Time <span className="text-red-500">*</span>
         </label>
         <input
           type="datetime-local"
           name="scheduledAt"
-          required
           value={formData.scheduledAt}
           onChange={handleChange}
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          onBlur={() => handleBlur("scheduledAt")}
+          className={getFieldValidationClass(touched.scheduledAt, errors.scheduledAt, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary outline-none transition")}
         />
+        {touched.scheduledAt && errors.scheduledAt && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.scheduledAt}</p>
+        )}
       </div>
 
       {/* Status & Result Selectors */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">
             Interview Status
           </label>
           <select
             name="status"
             value={formData.status}
             onChange={handleChange}
-            className="
-              w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-              text-sm text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            "
+            onBlur={() => handleBlur("status")}
+            className={getFieldValidationClass(touched.status, errors.status, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary outline-none transition")}
           >
             <option value="SCHEDULED">Scheduled</option>
             <option value="COMPLETED">Completed</option>
@@ -202,17 +236,15 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">
             Interview Result
           </label>
           <select
             name="result"
             value={formData.result}
             onChange={handleChange}
-            className="
-              w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-              text-sm text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            "
+            onBlur={() => handleBlur("result")}
+            className={getFieldValidationClass(touched.result, errors.result, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary outline-none transition")}
           >
             <option value="PENDING">Pending</option>
             <option value="PASSED">Passed (Selection)</option>
@@ -224,7 +256,7 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
 
       {/* Feedback / Evaluation Notes */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Feedback / Evaluation Notes
         </label>
         <textarea
@@ -232,12 +264,9 @@ const EditInterviewForm = ({ interview, onSuccess }: EditInterviewFormProps) => 
           rows={4}
           value={formData.feedback || ""}
           onChange={handleChange}
+          onBlur={() => handleBlur("feedback")}
           placeholder="Record candidate strengths, technical assessment, soft skills, or interview score..."
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary placeholder:text-text-muted
-            focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          className={getFieldValidationClass(touched.feedback, errors.feedback, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition")}
         />
       </div>
 

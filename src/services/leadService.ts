@@ -16,10 +16,32 @@ export interface CreateLeadPayload {
   graduationCourse?: string;
   graduationSpecialization?: string;
   courseInterested?: string;
+  courseInterestedOther?: string;
   specializationInterested?: string;
   passingYear?: number;
+  // Extended fields
+  fatherName?: string;
+  fatherOccupation?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  motherPhone?: string;
+  physicalAddress?: string;
+  aadharNumber?: string;
+  tenthSchoolName?: string;
+  tenthBoard?: string;
+  tenthPassoutYear?: number;
+  twelfthSchoolName?: string;
+  twelfthBoard?: string;
+  twelfthPassoutYear?: number;
+  graduationCollegeName?: string;
+  graduationUniversity?: string;
+  graduationPassoutYear?: number;
+  bestTimeToCall?: string;
+  notes?: string;
+  sourceOther?: string;
   collegeIds: string[];
-  negativeCollegeIds?: string[];
+  negativeColleges?: string[];
   source: string;
   statusId?: number;
 }
@@ -27,13 +49,7 @@ export interface CreateLeadPayload {
 export interface LeadNegativeCollegeItem {
   id: string;
   leadId?: string;
-  collegeId: string;
-  college?: {
-    id: string;
-    name: string;
-    city?: string;
-    state?: string;
-  };
+  collegeName: string;
 }
 
 export interface LeadCollegeApplication {
@@ -114,9 +130,31 @@ export interface LeadItem {
   graduationCourse?: string;
   graduationSpecialization?: string;
   courseInterested?: string;
+  courseInterestedOther?: string;
   specializationInterested?: string;
   passingYear?: number;
+  // Extended fields
+  fatherName?: string;
+  fatherOccupation?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  motherPhone?: string;
+  physicalAddress?: string;
+  aadharNumber?: string;
+  tenthSchoolName?: string;
+  tenthBoard?: string;
+  tenthPassoutYear?: number;
+  twelfthSchoolName?: string;
+  twelfthBoard?: string;
+  twelfthPassoutYear?: number;
+  graduationCollegeName?: string;
+  graduationUniversity?: string;
+  graduationPassoutYear?: number;
+  bestTimeToCall?: string;
+  notes?: string;
   source?: string;
+  sourceOther?: string;
   createdAt: string;
   statusId?: number;
   status?: {

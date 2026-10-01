@@ -348,31 +348,28 @@ const Todo = () => {
           <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg">
             <button
               onClick={() => setStatusFilter("ALL")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${
-                statusFilter === "ALL"
+              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "ALL"
                   ? "bg-surface text-text-primary font-semibold shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
-              }`}
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setStatusFilter("PENDING")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${
-                statusFilter === "PENDING"
+              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "PENDING"
                   ? "bg-surface text-blue-700 font-semibold shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
-              }`}
+                }`}
             >
               Pending
             </button>
             <button
               onClick={() => setStatusFilter("COMPLETED")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${
-                statusFilter === "COMPLETED"
+              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "COMPLETED"
                   ? "bg-surface text-emerald-700 font-semibold shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
-              }`}
+                }`}
             >
               Completed
             </button>
@@ -432,9 +429,8 @@ const Todo = () => {
             <h3 className="text-base font-bold text-text-primary">No Todo Tasks Found</h3>
             <p className="text-xs text-text-secondary mt-1 max-w-sm">
               {todos.length === 0
-                ? `You don't have any todo items scheduled for ${
-                    isTodaySelected ? "Today" : selectedDate
-                  }. Click the button below to add your first task.`
+                ? `You don't have any todo items scheduled for ${isTodaySelected ? "Today" : selectedDate
+                }. Click the button below to add your first task.`
                 : "No todo tasks match your selected search or status filters."}
             </p>
             {todos.length === 0 && (
@@ -457,10 +453,9 @@ const Todo = () => {
                   key={todo.id}
                   className={`
                     group relative flex flex-col justify-between p-4 rounded-xl border transition-all duration-200
-                    ${
-                      todo.isCompleted
-                        ? "bg-neutral-50/70 border-border opacity-70"
-                        : isHigh
+                    ${todo.isCompleted
+                      ? "bg-neutral-50/70 border-border opacity-70"
+                      : isHigh
                         ? "bg-red-50/20 border-red-200 hover:border-red-300 shadow-2xs"
                         : "bg-surface border-border hover:border-primary-300 shadow-2xs"
                     }
@@ -483,11 +478,10 @@ const Todo = () => {
 
                         <div className="min-w-0 flex-1">
                           <h3
-                            className={`text-sm font-semibold leading-snug ${
-                              todo.isCompleted
+                            className={`text-sm font-semibold leading-snug ${todo.isCompleted
                                 ? "line-through text-text-muted"
                                 : "text-text-primary"
-                            }`}
+                              }`}
                           >
                             {todo.title}
                           </h3>
@@ -510,10 +504,9 @@ const Todo = () => {
                       <span
                         className={`
                           shrink-0 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider
-                          ${
-                            isHigh
-                              ? "bg-red-100 text-red-800 border border-red-300"
-                              : isLow
+                          ${isHigh
+                            ? "bg-red-100 text-red-800 border border-red-300"
+                            : isLow
                               ? "bg-blue-100 text-blue-800 border border-blue-300"
                               : "bg-amber-100 text-amber-800 border border-amber-300"
                           }
@@ -526,9 +519,8 @@ const Todo = () => {
                     {/* Description Notes */}
                     {todo.description && (
                       <p
-                        className={`text-xs mt-3 pt-2 border-t border-border/50 whitespace-pre-wrap leading-relaxed ${
-                          todo.isCompleted ? "line-through text-text-muted" : "text-text-secondary"
-                        }`}
+                        className={`text-xs mt-3 pt-2 border-t border-border/50 whitespace-pre-wrap leading-relaxed ${todo.isCompleted ? "line-through text-text-muted" : "text-text-secondary"
+                          }`}
                       >
                         {todo.description}
                       </p>
@@ -658,10 +650,9 @@ const Todo = () => {
                       onClick={() => setFormPriority("LOW")}
                       className={`
                         px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
-                        ${
-                          formPriority === "LOW"
-                            ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs"
-                            : "border-border text-text-secondary hover:bg-neutral-50"
+                        ${formPriority === "LOW"
+                          ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs"
+                          : "border-border text-text-secondary hover:bg-neutral-50"
                         }
                       `}
                     >
@@ -672,10 +663,9 @@ const Todo = () => {
                       onClick={() => setFormPriority("MEDIUM")}
                       className={`
                         px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
-                        ${
-                          formPriority === "MEDIUM"
-                            ? "bg-amber-50 border-amber-500 text-amber-800 shadow-2xs"
-                            : "border-border text-text-secondary hover:bg-neutral-50"
+                        ${formPriority === "MEDIUM"
+                          ? "bg-amber-50 border-amber-500 text-amber-800 shadow-2xs"
+                          : "border-border text-text-secondary hover:bg-neutral-50"
                         }
                       `}
                     >
@@ -686,10 +676,9 @@ const Todo = () => {
                       onClick={() => setFormPriority("HIGH")}
                       className={`
                         px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
-                        ${
-                          formPriority === "HIGH"
-                            ? "bg-red-50 border-red-500 text-red-700 shadow-2xs"
-                            : "border-border text-text-secondary hover:bg-neutral-50"
+                        ${formPriority === "HIGH"
+                          ? "bg-red-50 border-red-500 text-red-700 shadow-2xs"
+                          : "border-border text-text-secondary hover:bg-neutral-50"
                         }
                       `}
                     >

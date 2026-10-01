@@ -4,6 +4,7 @@ import { Eye, EyeOff, LockKeyhole, ShieldAlert, CheckCircle2 } from "lucide-reac
 import { changePassword, login } from "../../../services/authService";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 const UpdatePasswordPage = () => {
   const location = useLocation();
@@ -19,12 +20,90 @@ const UpdatePasswordPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const validateUpdateField = (name: string, _val: string, currentOld = oldPassword, currentNew = newPassword, currentConfirm = confirmPassword): string | null => {
+    if (name === "oldPassword" && !currentOld) {
+      return "Please enter your temporary password";
+    }
+    if (name === "newPassword") {
+      if (!currentNew || currentNew.length < 6) {
+        return "New password must be at least 6 characters long";
+      }
+      if (currentNew === currentOld) {
+        return "New password must be different from temporary password";
+      }
+    }
+    if (name === "confirmPassword") {
+      if (!currentConfirm) {
+        return "Please confirm your new password";
+      }
+      if (currentConfirm !== currentNew) {
+        return "New password and confirmation do not match";
+      }
+    }
+    return null;
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const err = validateUpdateField(name, (name === "oldPassword" ? oldPassword : name === "newPassword" ? newPassword : confirmPassword));
+    setErrors((prev) => ({ ...prev, [name]: err }));
+  };
+
+  const handleOldPasswordChange = (val: string) => {
+    setOldPassword(val);
+    if (touched.oldPassword) {
+      setErrors((prev) => ({ ...prev, oldPassword: validateUpdateField("oldPassword", val, val, newPassword, confirmPassword) }));
+    }
+  };
+
+  const handleNewPasswordChange = (val: string) => {
+    setNewPassword(val);
+    if (touched.newPassword) {
+      setErrors((prev) => ({ ...prev, newPassword: validateUpdateField("newPassword", val, oldPassword, val, confirmPassword) }));
+    }
+    if (touched.confirmPassword) {
+      setErrors((prev) => ({ ...prev, confirmPassword: validateUpdateField("confirmPassword", confirmPassword, oldPassword, val, confirmPassword) }));
+    }
+  };
+
+  const handleConfirmPasswordChange = (val: string) => {
+    setConfirmPassword(val);
+    if (touched.confirmPassword) {
+      setErrors((prev) => ({ ...prev, confirmPassword: validateUpdateField("confirmPassword", val, oldPassword, newPassword, val) }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    const allFields = ["oldPassword", "newPassword", "confirmPassword"];
+    const newTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string | null> = {};
+    let hasError = false;
+
+    allFields.forEach((f) => {
+      newTouched[f] = true;
+      const err = validateUpdateField(f, (f === "oldPassword" ? oldPassword : f === "newPassword" ? newPassword : confirmPassword));
+      newErrors[f] = err;
+      if (err) hasError = true;
+    });
+
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (hasError) {
+      const firstErr = Object.values(newErrors).find(Boolean);
+      if (firstErr) setErrorMsg(firstErr);
+      return;
+    }
 
     if (!passwordChangeToken) {
       const msg = "Invalid or expired session. Please log in again.";
@@ -34,43 +113,12 @@ const UpdatePasswordPage = () => {
       return;
     }
 
-    if (!oldPassword) {
-      const msg = "Please enter your temporary password";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
-
-    if (!newPassword || newPassword.length < 6) {
-      const msg = "New password must be at least 6 characters long";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
-
-    if (newPassword === oldPassword) {
-      const msg = "New password must be different from temporary password";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      const msg = "New password and confirmation do not match";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // 1. Submit password change to backend
       await changePassword(passwordChangeToken, oldPassword, newPassword);
-
       toast.success("Password updated successfully!");
 
-      // 2. Automatically log user in with new credentials to acquire access_token
       if (username) {
         const loginResult = await login(username, newPassword);
         if (loginResult.access_token) {
@@ -81,7 +129,6 @@ const UpdatePasswordPage = () => {
         }
       }
 
-      // Fallback redirect to login
       navigate("/login");
     } catch (err: any) {
       const msg = err.message || "Failed to update password";
@@ -91,6 +138,24 @@ const UpdatePasswordPage = () => {
       setLoading(false);
     }
   };
+
+  const oldPasswordInputClass = getFieldValidationClass(
+    touched.oldPassword,
+    errors.oldPassword,
+    "w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border bg-surface outline-none transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+  );
+
+  const newPasswordInputClass = getFieldValidationClass(
+    touched.newPassword,
+    errors.newPassword,
+    "w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border bg-surface outline-none transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+  );
+
+  const confirmPasswordInputClass = getFieldValidationClass(
+    touched.confirmPassword,
+    errors.confirmPassword,
+    "w-full h-10 sm:h-11 pl-10 pr-4 rounded-md border bg-surface outline-none transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+  );
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-6 md:p-8">
@@ -120,12 +185,12 @@ const UpdatePasswordPage = () => {
               </div>
             )}
 
-            <form className="mt-5 sm:mt-6 space-y-4" onSubmit={handleSubmit}>
+            <form className="mt-5 sm:mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
 
               {/* Temporary / Old Password */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5">
-                  Temporary / Current Password
+                  Temporary / Current Password <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -138,9 +203,9 @@ const UpdatePasswordPage = () => {
                     type={showOldPassword ? "text" : "password"}
                     placeholder="Enter temporary password"
                     value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    required
-                    className="w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border border-border bg-surface outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+                    onChange={(e) => handleOldPasswordChange(e.target.value)}
+                    onBlur={() => handleBlur("oldPassword")}
+                    className={oldPasswordInputClass}
                   />
 
                   <button
@@ -153,12 +218,15 @@ const UpdatePasswordPage = () => {
                     {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {touched.oldPassword && errors.oldPassword && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.oldPassword}</p>
+                )}
               </div>
 
               {/* New Password */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5">
-                  New Password
+                  New Password <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -171,9 +239,9 @@ const UpdatePasswordPage = () => {
                     type={showNewPassword ? "text" : "password"}
                     placeholder="Minimum 6 characters"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    className="w-full h-10 sm:h-11 pl-10 pr-11 rounded-md border border-border bg-surface outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+                    onChange={(e) => handleNewPasswordChange(e.target.value)}
+                    onBlur={() => handleBlur("newPassword")}
+                    className={newPasswordInputClass}
                   />
 
                   <button
@@ -186,12 +254,15 @@ const UpdatePasswordPage = () => {
                     {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {touched.newPassword && errors.newPassword && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.newPassword}</p>
+                )}
               </div>
 
               {/* Confirm Password */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5">
-                  Confirm New Password
+                  Confirm New Password <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -204,11 +275,14 @@ const UpdatePasswordPage = () => {
                     type="password"
                     placeholder="Re-enter new password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full h-10 sm:h-11 pl-10 pr-4 rounded-md border border-border bg-surface outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition text-xs sm:text-sm text-text-primary placeholder:text-text-muted"
+                    onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+                    onBlur={() => handleBlur("confirmPassword")}
+                    className={confirmPasswordInputClass}
                   />
                 </div>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.confirmPassword}</p>
+                )}
               </div>
 
               {/* Submit Button */}

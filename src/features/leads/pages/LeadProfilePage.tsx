@@ -738,17 +738,17 @@ export default function LeadProfilePage() {
 
       {/* 7.5 NEGATIVE COLLEGES */}
       {lead.negativeColleges && lead.negativeColleges.length > 0 && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/30 dark:bg-rose-950/20 p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/20 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-rose-900 dark:text-rose-300 flex items-center gap-2">
-                <Building2 size={20} className="text-rose-600" /> Negative Colleges
+              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <Building2 size={20} className="text-gray-500" /> Negative Colleges
               </h2>
-              <p className="text-xs text-rose-700 dark:text-rose-400 mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 Colleges the lead is negative for / not interested in pursuing.
               </p>
             </div>
-            <span className="rounded-full bg-rose-600 px-3 py-0.5 text-xs font-bold text-white shadow-2xs">
+            <span className="rounded-full bg-gray-600 px-3 py-0.5 text-xs font-bold text-white shadow-2xs">
               {lead.negativeColleges.length} College(s)
             </span>
           </div>
@@ -757,21 +757,16 @@ export default function LeadProfilePage() {
             {lead.negativeColleges.map((neg: any) => (
               <div
                 key={neg.id}
-                className="flex items-start gap-3 rounded-xl border border-rose-200 bg-surface p-3.5 shadow-2xs"
+                className="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-surface p-3.5 shadow-2xs"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-800 font-bold text-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold text-sm">
                   <Building2 size={18} />
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-sm font-bold text-text-primary truncate">
-                    {neg.college?.name || "College"}
+                    {neg.collegeName}
                   </h4>
-                  {(neg.college?.city || neg.college?.state) && (
-                    <p className="text-xs text-text-muted mt-0.5 truncate">
-                      {[neg.college?.city, neg.college?.state].filter(Boolean).join(", ")}
-                    </p>
-                  )}
-                  <span className="inline-block mt-1.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-semibold px-2 py-0.5">
+                  <span className="inline-block mt-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-semibold px-2 py-0.5">
                     Not Interested
                   </span>
                 </div>
