@@ -31,7 +31,8 @@ export type CallOutcomeType =
   | "FOLLOW_UP"
   | "CALL_BACK_LATER"
   | "INTERESTED"
-  | "DISCONNECTED";
+  | "DISCONNECTED"
+  | "OTHER";
 
 interface CallOutcomePanelProps {
   student: MockCallQueueStudentItem | null;
@@ -39,17 +40,50 @@ interface CallOutcomePanelProps {
   onOutcomeComplete: () => void;
 }
 
-const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; color: string }[] = [
-  { label: "No Answer", value: "NO_ANSWER", color: "border-neutral-300 text-neutral-700 bg-neutral-50 hover:bg-neutral-100" },
-  { label: "Wrong Number", value: "WRONG_NUMBER", color: "border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100" },
-  { label: "Not Interested", value: "NOT_INTERESTED", color: "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100" },
-  { label: "Follow Up Required", value: "FOLLOW_UP", color: "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100" },
-  { label: "Call Back Later", value: "CALL_BACK_LATER", color: "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100" },
-  { label: "Interested / Create Lead", value: "INTERESTED", color: "border-emerald-500 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold" },
-  { label: "Disconnected", value: "DISCONNECTED", color: "border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100" },
+const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; defaultClass: string }[] = [
+  {
+    label: "No Answer",
+    value: "NO_ANSWER",
+    defaultClass: "border-slate-700/80 bg-slate-900/80 text-slate-300 hover:border-slate-500 hover:bg-slate-800",
+  },
+  {
+    label: "Wrong Number",
+    value: "WRONG_NUMBER",
+    defaultClass: "border-rose-900/60 bg-rose-950/30 text-rose-300 hover:border-rose-700 hover:bg-rose-950/60",
+  },
+  {
+    label: "Not Interested",
+    value: "NOT_INTERESTED",
+    defaultClass: "border-amber-900/60 bg-amber-950/30 text-amber-300 hover:border-amber-700 hover:bg-amber-950/60",
+  },
+  {
+    label: "Follow Up Required",
+    value: "FOLLOW_UP",
+    defaultClass: "border-blue-900/60 bg-blue-950/30 text-blue-300 hover:border-blue-700 hover:bg-blue-950/60",
+  },
+  {
+    label: "Call Back Later",
+    value: "CALL_BACK_LATER",
+    defaultClass: "border-purple-900/60 bg-purple-950/30 text-purple-300 hover:border-purple-700 hover:bg-purple-950/60",
+  },
+  {
+    label: "Interested / Create Lead",
+    value: "INTERESTED",
+    defaultClass: "border-emerald-800/80 bg-emerald-950/40 text-emerald-300 hover:border-emerald-600 hover:bg-emerald-950/70 font-semibold",
+  },
+  {
+    label: "Disconnected",
+    value: "DISCONNECTED",
+    defaultClass: "border-orange-900/60 bg-orange-950/30 text-orange-300 hover:border-orange-700 hover:bg-orange-950/60",
+  },
+  {
+    label: "Other",
+    value: "OTHER",
+    defaultClass: "border-cyan-900/60 bg-cyan-950/30 text-cyan-300 hover:border-cyan-700 hover:bg-cyan-950/60",
+  },
 ];
 
-const CallOutcomePanel = ({
+export const CallOutcomePanel = ({
   student,
   callSession,
   onOutcomeComplete,
@@ -94,7 +128,7 @@ const CallOutcomePanel = ({
     }
   }, [selectedOutcome, checkExistingLead]);
 
-  // Only display Call Outcome & Disposition panel after current call has been ended/disconnected
+  // Only display active Call Outcome & Disposition form after current call has been ended/disconnected
   const isCallEnded =
     callSession &&
     (callSession.status === "ENDED" ||
@@ -102,7 +136,17 @@ const CallOutcomePanel = ({
       (callSession.status as string) === "DISCONNECTED");
 
   if (!isCallEnded) {
-    return null;
+    return (
+      <div className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 shadow-xs flex flex-col items-center justify-center min-h-[120px] text-center space-y-1.5 w-full min-w-0">
+        <div className="w-8 h-8 rounded-full bg-background border border-border/60 flex items-center justify-center text-text-muted">
+          <FileText size={16} />
+        </div>
+        <h4 className="text-xs font-bold text-text-primary">Call Outcome & Disposition</h4>
+        <p className="text-[11px] text-text-muted max-w-xs leading-relaxed">
+          Disposition controls will appear here once the call is completed.
+        </p>
+      </div>
+    );
   }
 
   const handleSaveNonLeadOutcome = async () => {
@@ -219,19 +263,24 @@ const CallOutcomePanel = ({
   const isProtectedAssignment = Boolean(leadSearchResult?.activeAssignment);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-xs space-y-5 animate-in fade-in duration-200">
-      <div className="border-b border-border pb-3">
-        <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
-          <FileText size={18} className="text-primary-600" />
-          Call Outcome & Disposition
+    <div className="rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4.5 shadow-xs space-y-3 animate-in fade-in duration-200 w-full min-w-0">
+      {/* Header */}
+      <div className="border-b border-border/60 pb-2 min-w-0">
+        <h3 className="text-xs sm:text-sm font-bold text-text-primary flex items-center gap-1.5">
+          <FileText size={15} className="text-emerald-500 shrink-0" />
+          <span className="truncate">Call Outcome & Disposition</span>
         </h3>
-        <p className="text-xs text-text-muted">Record outcome details for assigned contact</p>
+        <p className="text-[11px] text-text-muted mt-0.5 truncate">
+          Record outcome details for assigned contact
+        </p>
       </div>
 
-      {/* Outcome Buttons */}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-text-secondary uppercase">Select Outcome</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {/* Outcome Buttons: 3-Column Equal-Width Responsive Grid */}
+      <div className="space-y-1 w-full min-w-0">
+        <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
+          Select Outcome
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full min-w-0">
           {OUTCOME_OPTIONS.map((opt) => {
             const isSelected = selectedOutcome === opt.value;
             return (
@@ -239,123 +288,131 @@ const CallOutcomePanel = ({
                 key={opt.value}
                 type="button"
                 onClick={() => setSelectedOutcome(opt.value)}
-                className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition text-left flex items-center justify-between ${
-                  isSelected ? "border-primary-600 bg-primary-50 text-primary-900 ring-2 ring-primary-200" : opt.color
+                className={`min-h-[38px] px-2 sm:px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium transition text-left flex items-center justify-between gap-1 cursor-pointer w-full min-w-0 ${
+                  isSelected
+                    ? "border-emerald-500 bg-emerald-950/80 text-emerald-200 ring-1 ring-emerald-500/70 shadow-xs"
+                    : opt.defaultClass
                 }`}
               >
-                <span>{opt.label}</span>
-                {isSelected && <CheckCircle2 size={14} className="text-primary-600 shrink-0" />}
+                <span className="leading-tight break-words flex-1 min-w-0 text-left">
+                  {opt.label}
+                </span>
+                {isSelected && (
+                  <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Notes Textarea */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-text-secondary uppercase">Call Notes</label>
+      {/* Notes Textarea (Compact, Deep Dark Background) */}
+      <div className="space-y-1 w-full min-w-0">
+        <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
+          Call Notes
+        </label>
         <textarea
-          rows={3}
+          rows={2}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Enter relevant call discussion notes or student responses..."
-          className="w-full rounded-xl border border-border bg-neutral-50/50 p-3 text-xs outline-none focus:border-primary-500 transition"
+          placeholder="Enter call discussion notes or student responses..."
+          className="w-full rounded-lg border border-border/80 bg-background p-2 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition resize-y min-h-[46px]"
         />
       </div>
 
       {/* Non-Interested / Follow-up Outcomes Action */}
       {selectedOutcome && selectedOutcome !== "INTERESTED" && (
-        <div className="pt-2 border-t border-border flex justify-end">
+        <div className="pt-1 border-t border-border/60 flex justify-end">
           <button
             type="button"
             onClick={handleSaveNonLeadOutcome}
-            className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-primary-700 transition shadow-xs"
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-xs cursor-pointer"
           >
-            Save Outcome & Next Contact
+            <span>Save Outcome & Next Contact</span>
           </button>
         </div>
       )}
 
       {/* INTERESTED Lead Handling Section */}
       {selectedOutcome === "INTERESTED" && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-4 pt-4 border-t">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase text-emerald-900 flex items-center gap-1.5">
-              <Building2 size={16} className="text-emerald-600" />
-              Lead Discovery & Creation Workflow
+        <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/30 p-3 space-y-3 pt-3 border-t w-full min-w-0">
+          <div className="flex items-center justify-between min-w-0">
+            <span className="text-xs font-bold uppercase text-emerald-300 flex items-center gap-1.5 truncate">
+              <Building2 size={15} className="text-emerald-400 shrink-0" />
+              <span>Lead Discovery & Creation</span>
             </span>
-            {searchingLead && <Loader2 size={16} className="animate-spin text-emerald-700" />}
+            {searchingLead && <Loader2 size={13} className="animate-spin text-emerald-400 shrink-0" />}
           </div>
 
           {searchingLead ? (
-            <div className="text-xs text-emerald-800 flex items-center gap-2 py-2">
-              <Search size={14} className="animate-bounce text-emerald-600" />
-              Searching existing CRM leads for phone {student?.phone}...
+            <div className="text-xs text-emerald-300 flex items-center gap-2 py-1">
+              <Search size={13} className="animate-bounce text-emerald-400 shrink-0" />
+              <span className="truncate">Searching existing CRM leads for phone {student?.phone}...</span>
             </div>
           ) : leadSearchResult?.exists ? (
-            <div className="rounded-xl border border-amber-300 bg-surface p-3.5 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+            <div className="rounded-xl border border-amber-800/60 bg-background/90 p-3 space-y-2.5 w-full min-w-0">
+              <div className="flex items-start justify-between min-w-0">
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950/70 border border-amber-800/60 px-2 py-0.5 rounded">
                     Existing Lead Found
                   </span>
-                  <h4 className="text-sm font-bold text-text-primary mt-1">
+                  <h4 className="text-xs font-bold text-text-primary mt-1 truncate">
                     {leadSearchResult.firstName} {leadSearchResult.lastName || ""}
                   </h4>
-                  <p className="text-xs text-text-muted">Status: {leadSearchResult.status?.name || "LEAD"}</p>
+                  <p className="text-[11px] text-text-muted">Status: {leadSearchResult.status?.name || "LEAD"}</p>
                 </div>
               </div>
 
               {/* CASE 3: Unclaimable lead protection reason */}
               {isAdmissionDone ? (
-                <div className="flex items-center gap-1.5 text-xs text-rose-800 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-                  <AlertCircle size={15} className="shrink-0 text-rose-600" />
-                  <span>
-                    <strong>Protected Status (ADMISSION_DONE):</strong> Admission is complete for this contact. Reassignment or duplicate lead creation is restricted by business rules.
+                <div className="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-950/40 p-2 rounded-lg border border-rose-900/60">
+                  <AlertCircle size={14} className="shrink-0 text-rose-400" />
+                  <span className="text-[11px]">
+                    <strong>Protected Status (ADMISSION_DONE):</strong> Admission is complete for this contact.
                   </span>
                 </div>
               ) : isProtectedAssignment ? (
-                <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                  <AlertCircle size={15} className="shrink-0 text-amber-600" />
-                  <span>
-                    <strong>Active Assignment:</strong> Currently assigned to{" "}
+                <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/40 p-2 rounded-lg border border-amber-900/60">
+                  <AlertCircle size={14} className="shrink-0 text-amber-400" />
+                  <span className="text-[11px]">
+                    <strong>Active Assignment:</strong> Assigned to{" "}
                     <strong>
                       {leadSearchResult.activeAssignment?.user?.firstName}{" "}
                       {leadSearchResult.activeAssignment?.user?.lastName || ""}
                     </strong>{" "}
-                    within active 4-day window.
+                    (4-day window).
                   </span>
                 </div>
               ) : null}
 
               {/* CASE 2: Claimable existing lead */}
               {!isAdmissionDone && !isProtectedAssignment ? (
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-0.5">
                   <button
                     type="button"
                     onClick={handleClaimExistingLead}
                     disabled={claiming}
-                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                   >
-                    {claiming ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                    Claim Existing Lead
+                    {claiming ? <Loader2 size={12} className="animate-spin" /> : <UserCheck size={12} />}
+                    <span>Claim Existing Lead</span>
                   </button>
                 </div>
               ) : null}
             </div>
           ) : (
             /* CASE 1: No existing lead found */
-            <div className="space-y-3">
-              <p className="text-xs text-emerald-900">
-                No existing lead record found for phone <strong>{student?.phone}</strong>. Click below to open the prefilled lead creation modal.
+            <div className="space-y-2.5 w-full min-w-0">
+              <p className="text-xs text-text-secondary leading-relaxed">
+                No existing lead found for <strong className="text-text-primary">{student?.phone}</strong>. Open the prefilled lead creation modal:
               </p>
               <button
                 type="button"
                 onClick={() => setIsCreateLeadModalOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-xs"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-bold transition shadow-xs cursor-pointer"
               >
-                <Plus size={16} />
-                Create Lead
+                <Plus size={14} />
+                <span>Create Lead</span>
               </button>
             </div>
           )}
@@ -373,7 +430,5 @@ const CallOutcomePanel = ({
     </div>
   );
 };
-
-
 
 export default CallOutcomePanel;

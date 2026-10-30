@@ -3,7 +3,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Loader2,
   User,
   Phone,
@@ -19,6 +18,11 @@ import {
   processClaimRequest,
   type ClaimRequestItem,
 } from "../../../services/leadService";
+import {
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const ClaimRequestsPage = () => {
   const { accessToken } = useAuth();
@@ -150,13 +154,6 @@ const ClaimRequestsPage = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">
-          <AlertCircle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
-
       {/* Claim Requests Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
         <div className="overflow-x-auto">
@@ -182,20 +179,26 @@ const ClaimRequestsPage = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-text-secondary">
-                    <div className="flex items-center justify-center gap-2 text-sm">
-                      <Loader2 className="animate-spin text-primary-600" size={20} />
-                      Loading claim requests...
-                    </div>
-                  </td>
-                </tr>
+                <SectionLoadingState
+                  isTableRow
+                  colSpan={5}
+                  message="Loading claim requests..."
+                />
+              ) : error ? (
+                <PageErrorState
+                  isTableRow
+                  colSpan={5}
+                  title="Failed to load claim requests"
+                  message={error}
+                  onRetry={loadRequests}
+                />
               ) : requests.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-text-muted text-sm">
-                    No claim requests found for filter "{statusFilter}".
-                  </td>
-                </tr>
+                <PageEmptyState
+                  isTableRow
+                  colSpan={5}
+                  title="No claim requests found"
+                  message={`No claim requests found for filter "${statusFilter.toLowerCase()}".`}
+                />
               ) : (
                 requests.map((item) => {
                   const reqDateFormatted = new Date(item.requestedAt).toLocaleString("en-IN", {

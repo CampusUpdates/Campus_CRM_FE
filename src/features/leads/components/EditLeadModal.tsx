@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Pencil, RefreshCw } from "lucide-react";
 import CreateLeadForm from "./CreateLeadForm";
 import { fetchLeadById, type LeadItem } from "../../../services/leadService";
+import { fetchCounsellingByLead } from "../../../services/counsellingService";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -22,8 +23,23 @@ const EditLeadModal = ({ lead, onClose, onSuccess }: EditLeadModalProps) => {
   useEffect(() => {
     if (accessToken && lead.id) {
       setLoading(true);
-      fetchLeadById(accessToken, lead.id)
-        .then((data) => setFreshLead(data))
+      Promise.all([
+        fetchLeadById(accessToken, lead.id),
+        fetchCounsellingByLead(accessToken, lead.id).catch((err) => {
+          console.warn("Failed to load counselling requests for lead:", err);
+          return [];
+        }),
+      ])
+        .then(([data, counselling]) => {
+          const combinedRequests =
+            data.counsellingRequests && data.counsellingRequests.length > 0
+              ? data.counsellingRequests
+              : counselling;
+          setFreshLead({
+            ...data,
+            counsellingRequests: combinedRequests,
+          });
+        })
         .catch((err) => {
           console.error("Failed to fetch current lead details:", err);
           toast.error("Could not load latest lead data");

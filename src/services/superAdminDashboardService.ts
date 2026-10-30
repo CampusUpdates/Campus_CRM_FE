@@ -174,7 +174,9 @@ export async function fetchSuperAdminDashboardStats(
   endDate?: string,
   page?: number,
   limit?: number,
-  callTime?: string
+  callTime?: string,
+  callTiming?: string,
+  signal?: AbortSignal
 ): Promise<SuperAdminDashboardData> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -189,12 +191,14 @@ export async function fetchSuperAdminDashboardStats(
   if (page) queryParams.set("page", page.toString());
   if (limit) queryParams.set("limit", limit.toString());
   if (callTime && callTime !== "ALL") queryParams.set("callTime", callTime);
+  if (callTiming && callTiming !== "ALL") queryParams.set("callTiming", callTiming);
 
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
 
   const response = await fetch(`${API_URL}/dashboard/super-admin${queryString}`, {
     method: "GET",
     headers,
+    signal,
   });
 
   if (!response.ok) {

@@ -197,6 +197,16 @@ const LeadPipelineDrawer = ({
     }
   };
 
+  const currentYear = new Date().getFullYear();
+  const minPaymentDate = `${currentYear}-01-01`;
+  const maxPaymentDate = `${currentYear}-12-31`;
+
+  const isPaymentDateValid = () => {
+    if (!paymentDate) return true; // defaults to current date if left empty
+    const year = parseInt(paymentDate.split("-")[0], 10);
+    return year === currentYear;
+  };
+
   // Basic frontend validation for enabling primary submit button
   const isValid = () => {
     if (!selectedCollegeId) return false;
@@ -211,7 +221,7 @@ const LeadPipelineDrawer = ({
       case "LETTER_OUT":
         return letterIssuedDate.length > 0 && admissionLastDate.length > 0;
       case "ADMISSION_DONE":
-        return Boolean(admissionAmount) && Number(admissionAmount) > 0;
+        return Boolean(admissionAmount) && Number(admissionAmount) > 0 && isPaymentDateValid();
       case "CANCELLED":
         return cancellationReason.trim().length > 0;
       default:
@@ -292,14 +302,14 @@ const LeadPipelineDrawer = ({
     } catch (err: any) {
       let message = err.message || "Failed to update pipeline status";
       const isDuplicateAppError = message.includes("already exists for this lead") || message.includes("409");
-      
+
       if (isDuplicateAppError) {
         message = "This lead already has an application for this college.";
       } else {
         // Only set inline error for other types of errors
         setErrorMsg(message);
       }
-      
+
       toast.showToast(message, "error");
     } finally {
       setLoading(false);
@@ -695,10 +705,21 @@ const LeadPipelineDrawer = ({
                       </label>
                       <input
                         type="date"
+                        min={minPaymentDate}
+                        max={maxPaymentDate}
                         value={paymentDate}
                         onChange={(e) => setPaymentDate(e.target.value)}
-                        className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                        className={`h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none focus:ring-2 transition ${
+                          !isPaymentDateValid()
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950"
+                            : "border-border focus:border-amber-500 focus:ring-amber-100"
+                        }`}
                       />
+                      {!isPaymentDateValid() && (
+                        <p className="mt-1 text-xs text-rose-500 font-medium">
+                          Payment date must be within the current year ({currentYear}).
+                        </p>
+                      )}
                     </div>
 
                     <div>

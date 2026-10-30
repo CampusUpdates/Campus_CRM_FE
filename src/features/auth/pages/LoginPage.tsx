@@ -202,9 +202,21 @@ const LoginPage = () => {
 
               {/* Password */}
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-text-primary mb-1.5 sm:mb-2">
-                  Password <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-text-primary">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <a
+                    href="/forgot-password"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate("/forgot-password");
+                    }}
+                    className="text-xs font-medium text-primary-500 hover:text-primary-600 transition cursor-pointer"
+                  >
+                    Forgot Password?
+                  </a>
+                </div>
 
                 <div className="relative">
                   <LockKeyhole

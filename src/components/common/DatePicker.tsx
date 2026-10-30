@@ -49,7 +49,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const selectedDate = value ? parseDateString(value) : null;
   const initialViewDate = selectedDate || new Date();
-  
+
   const [currentMonth, setCurrentMonth] = useState(initialViewDate.getMonth());
   const [currentYear, setCurrentYear] = useState(initialViewDate.getFullYear());
 
@@ -109,7 +109,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const todayStr = formatDateString(new Date());
-  
+
   const minDateObj = minDate ? parseDateString(minDate) : null;
   const maxDateObj = maxDate ? parseDateString(maxDate) : null;
 
@@ -122,7 +122,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(currentYear, currentMonth, d);
       const dateStr = formatDateString(dateObj);
-      
+
       let isSelectable = true;
       if (minDateObj && dateObj < minDateObj) isSelectable = false;
       if (maxDateObj && dateObj > maxDateObj) isSelectable = false;
@@ -162,26 +162,26 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const content = (
     <div className="relative" ref={containerRef}>
-      <div 
+      <div
         className={inputClass}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {value ? (
-           (() => {
-             const d = parseDateString(value);
-             return d ? `${d.getDate()} ${monthNames[d.getMonth()].slice(0, 3)} ${d.getFullYear()}` : value;
-           })()
+          (() => {
+            const d = parseDateString(value);
+            return d ? `${d.getDate()} ${monthNames[d.getMonth()].slice(0, 3)} ${d.getFullYear()}` : value;
+          })()
         ) : (
           <span className="text-text-muted">{placeholder}</span>
         )}
         <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
       </div>
-      
+
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 z-50 p-3 bg-surface border border-border shadow-xl rounded-xl w-64">
           <div className="flex items-center justify-between mb-3">
-            <button 
-              onClick={handlePrevMonth} 
+            <button
+              onClick={handlePrevMonth}
               className="p-1 rounded hover:bg-surface-hover text-text-secondary transition-colors"
               type="button"
             >
@@ -190,8 +190,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             <div className="text-sm font-medium text-text-primary">
               {monthNames[currentMonth]} {currentYear}
             </div>
-            <button 
-              onClick={handleNextMonth} 
+            <button
+              onClick={handleNextMonth}
               className="p-1 rounded hover:bg-surface-hover text-text-secondary transition-colors"
               type="button"
             >

@@ -47,6 +47,8 @@ export interface StateCitySelectProps {
   allCitiesLabel?: string;
   /** Allow entering a custom city if not listed */
   allowCustomCity?: boolean;
+  /** Allow clearing state and city (renders un-disabled placeholder option) */
+  allowClear?: boolean;
   /** Custom wrapper CSS class */
   className?: string;
 }
@@ -74,6 +76,7 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
   allStatesLabel = "All States",
   allCitiesLabel = "All Cities",
   allowCustomCity = true,
+  allowClear = false,
   className = "",
 }) => {
   // Available cities based on selected state
@@ -125,13 +128,13 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
   const stateInputClass = getFieldValidationClass(
     stateTouched,
     stateError,
-    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer"
+    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 dark:disabled:bg-slate-800 cursor-pointer"
   );
 
   const cityInputClass = getFieldValidationClass(
     cityTouched,
     cityError,
-    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 cursor-pointer"
+    "w-full h-10 px-3 py-2 rounded-xl border bg-surface text-sm text-text-primary outline-none transition disabled:opacity-50 disabled:bg-neutral-100 dark:disabled:bg-slate-800 cursor-pointer"
   );
 
   return (
@@ -152,14 +155,16 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
             className={stateInputClass}
           >
             {allowAllOption ? (
-              <option value="">{allStatesLabel}</option>
+              <option value="" className="bg-surface text-text-primary">{allStatesLabel}</option>
+            ) : allowClear ? (
+              <option value="" className="bg-surface text-text-primary">{statePlaceholder}</option>
             ) : (
-              <option value="" disabled>
+              <option value="" disabled className="bg-surface text-text-primary">
                 {statePlaceholder}
               </option>
             )}
             {INDIAN_STATES_AND_CITIES.map((item) => (
-              <option key={item.state} value={item.state}>
+              <option key={item.state} value={item.state} className="bg-surface text-text-primary">
                 {item.state}
               </option>
             ))}
@@ -185,6 +190,25 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
                 value={cityValue}
                 onChange={handleCustomCityInput}
                 onBlur={onCityBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const form = e.currentTarget.form;
+                    if (form) {
+                      const focusables = Array.from(
+                        form.querySelectorAll<HTMLElement>(
+                          'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
+                        )
+                      ).filter((el) => el.offsetParent !== null && el.tabIndex !== -1);
+                      const idx = focusables.indexOf(e.currentTarget);
+                      if (idx !== -1 && idx < focusables.length - 1) {
+                        focusables[idx + 1].focus();
+                      } else {
+                        e.currentTarget.blur();
+                      }
+                    }
+                  }
+                }}
                 placeholder="Enter city name"
                 disabled={disabled}
                 className={cityInputClass}
@@ -209,19 +233,23 @@ export const StateCitySelect: React.FC<StateCitySelectProps> = ({
               className={cityInputClass}
             >
               {allowAllOption ? (
-                <option value="">{allCitiesLabel}</option>
+                <option value="" className="bg-surface text-text-primary">{allCitiesLabel}</option>
+              ) : allowClear ? (
+                <option value="" className="bg-surface text-text-primary">
+                  {!stateValue ? "Select state first" : cityPlaceholder}
+                </option>
               ) : (
-                <option value="" disabled>
+                <option value="" disabled className="bg-surface text-text-primary">
                   {!stateValue ? "Select state first" : cityPlaceholder}
                 </option>
               )}
               {availableCities.map((city) => (
-                <option key={city} value={city}>
+                <option key={city} value={city} className="bg-surface text-text-primary">
                   {city}
                 </option>
               ))}
               {allowCustomCity && stateValue && (
-                <option value="__OTHER__">+ Enter Other City</option>
+                <option value="__OTHER__" className="bg-surface text-text-primary">+ Enter Other City</option>
               )}
             </select>
           )}

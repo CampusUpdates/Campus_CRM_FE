@@ -30,6 +30,7 @@ const OUTCOME_LABEL_MAP: Record<string, string> = {
   CALL_BACK_LATER: "Call Back Later",
   INTERESTED: "Interested / Create Lead",
   DISCONNECTED: "Disconnected",
+  OTHER: "Other",
 };
 
 const OUTCOME_STYLE_MAP: Record<string, { bg: string; text: string; border: string }> = {
@@ -40,6 +41,7 @@ const OUTCOME_STYLE_MAP: Record<string, { bg: string; text: string; border: stri
   CALL_BACK_LATER: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" },
   INTERESTED: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
   DISCONNECTED: { bg: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/20" },
+  OTHER: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/20" },
 };
 
 function formatCallDateTime(dateStr?: string | null): string {
@@ -229,26 +231,6 @@ export const AssignmentDetailsDrawer: React.FC<AssignmentDetailsDrawerProps> = (
               const location = [item.city, item.state].filter(Boolean).join(", ");
               const recentCall = item.recentCall;
 
-              const outcomeLabel = recentCall
-                ? OUTCOME_LABEL_MAP[recentCall.outcome] || recentCall.outcome
-                : null;
-
-              const outcomeStyle = recentCall
-                ? OUTCOME_STYLE_MAP[recentCall.outcome] || {
-                    bg: "bg-slate-800",
-                    text: "text-slate-300",
-                    border: "border-slate-700",
-                  }
-                : null;
-
-              const advisorName = recentCall?.createdBy
-                ? `${recentCall.createdBy.firstName} ${recentCall.createdBy.lastName || ""}`.trim()
-                : null;
-
-              const durationStr = recentCall
-                ? formatDuration(recentCall.durationSeconds)
-                : null;
-
               return (
                 <div
                   key={item.id}
@@ -287,51 +269,83 @@ export const AssignmentDetailsDrawer: React.FC<AssignmentDetailsDrawerProps> = (
                     </div>
                   </div>
 
-                  {/* Recent Call Update Box */}
-                  <div className="rounded-lg bg-slate-950/60 border border-slate-800/80 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <PhoneCall size={11} className="text-indigo-400" />
-                        Recent Call Update
+                  {/* Complete Call & Remark History */}
+                  <div className="rounded-lg bg-slate-950/60 border border-slate-800/80 p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <PhoneCall size={12} className="text-indigo-400" />
+                        Complete Remark History ({item.remarks && item.remarks.length > 0 ? item.remarks.length : (recentCall ? 1 : 0)})
                       </span>
                     </div>
 
-                    {recentCall ? (
-                      <div className="space-y-2 pt-0.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold border ${outcomeStyle?.bg} ${outcomeStyle?.text} ${outcomeStyle?.border}`}
-                          >
-                            {outcomeLabel}
-                          </span>
-                          <span className="text-[11px] font-medium text-slate-400">
-                            {formatCallDateTime(recentCall.startedAt || recentCall.createdAt)}
-                          </span>
-                        </div>
+                    {((item.remarks && item.remarks.length > 0) || recentCall) ? (
+                      <div className="space-y-3">
+                        {/* Render all chronological remarks (oldest first, newest last) */}
+                        {(item.remarks && item.remarks.length > 0
+                          ? item.remarks
+                          : (recentCall ? [recentCall] : [])
+                        ).map((call, callIdx) => {
+                          const callOutcomeLabel = OUTCOME_LABEL_MAP[call.outcome] || call.outcome;
+                          const callOutcomeStyle = OUTCOME_STYLE_MAP[call.outcome] || {
+                            bg: "bg-slate-500/10",
+                            text: "text-slate-400",
+                            border: "border-slate-500/20",
+                          };
+                          const callAdvisorName = call.createdBy
+                            ? [call.createdBy.firstName, call.createdBy.lastName].filter(Boolean).join(" ")
+                            : ((call as any).author || null);
 
-                        <div className="flex flex-wrap items-center justify-between text-xs text-slate-300 pt-1 border-t border-slate-800/40">
-                          {advisorName && (
-                            <span>
-                              Advisor: <strong className="text-white font-semibold">{advisorName}</strong>
-                            </span>
-                          )}
-                          {durationStr && (
-                            <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                              <Clock size={11} />
-                              <span>Duration: {durationStr}</span>
-                            </span>
-                          )}
-                        </div>
+                          return (
+                            <div
+                              key={call.id || callIdx}
+                              className="rounded-md bg-slate-900/80 p-2.5 border border-slate-800/70 space-y-2 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                    #{callIdx + 1}
+                                  </span>
+                                  <span
+                                    className={`inline-block rounded px-2 py-0.5 text-[11px] font-bold border ${callOutcomeStyle.bg} ${callOutcomeStyle.text} ${callOutcomeStyle.border}`}
+                                  >
+                                    {callOutcomeLabel}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-medium text-slate-400">
+                                  {formatCallDateTime(call.startedAt || call.createdAt)}
+                                </span>
+                              </div>
 
-                        {recentCall.notes && (
-                          <div className="mt-1.5 rounded-md bg-slate-900/90 p-2 text-xs text-slate-300 italic border border-slate-800">
-                            "{recentCall.notes}"
-                          </div>
-                        )}
+                              <div className="flex flex-wrap items-center justify-between text-xs text-slate-300 pt-1 border-t border-slate-800/50">
+                                {callAdvisorName ? (
+                                  <span>
+                                    Added by: <strong className="text-white font-semibold">{callAdvisorName}</strong>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500">Author: System / Unknown</span>
+                                )}
+                                {call.durationSeconds && call.durationSeconds > 0 ? (
+                                  <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                                    <Clock size={11} />
+                                    <span>Duration: {formatDuration(call.durationSeconds)}</span>
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              {call.notes ? (
+                                <div className="rounded bg-slate-950/70 p-2 text-xs text-slate-300 italic border border-slate-800/80">
+                                  "{call.notes}"
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-slate-500 italic">No notes recorded for this call.</p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-slate-500 italic py-1">
-                        No call updates yet.
+                        No call updates or remarks recorded yet.
                       </p>
                     )}
                   </div>

@@ -1,9 +1,21 @@
+import { useEffect } from "react";
 import SidebarHeader from "./SidebarHeader";
 import SidebarMenu from "./SidebarMenu";
 import { useSidebar } from "../../context/SidebarContext";
 
 const Sidebar = () => {
   const { isSidebarOpen, closeSidebar } = useSidebar();
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    const isLg = window.matchMedia("(min-width: 1024px)").matches;
+    if (!isLg) {
+      document.body.style.overflow = isSidebarOpen ? "hidden" : "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSidebarOpen]);
 
   return (
     <>
@@ -19,8 +31,9 @@ const Sidebar = () => {
       {/* Responsive Sidebar Container */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex h-full w-80 max-w-[85vw] shrink-0 flex-col border-r border-border bg-sidebar shadow-2xl transition-transform duration-300 ease-in-out
-          lg:static lg:z-auto lg:h-screen lg:w-80 lg:max-w-none lg:shadow-none lg:translate-x-0
+          fixed inset-y-0 left-0 z-50 flex h-full w-[min(280px,85vw)] shrink-0 flex-col overflow-hidden
+          border-r border-border bg-sidebar shadow-2xl transition-transform duration-300 ease-in-out
+          lg:static lg:z-auto lg:h-screen lg:w-72 lg:max-w-none lg:shadow-none lg:translate-x-0
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >

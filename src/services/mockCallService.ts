@@ -11,6 +11,10 @@ export interface MockCallQueueStudentItem {
   state?: string;
   createdAt: string;
   isCompleted?: boolean;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
   upload?: {
     id: string;
     fileName: string;
@@ -181,6 +185,20 @@ export interface CallRecordItem {
     firstName: string;
     lastName?: string | null;
   };
+  studentData?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    phone: string;
+    category?: {
+      id: string;
+      name: string;
+    } | null;
+    upload?: {
+      id: string;
+      fileName: string;
+    } | null;
+  } | null;
 }
 
 export async function fetchCallHistory(
@@ -265,4 +283,3 @@ export async function fetchCallLogs(
   }
   return data;
 }
-

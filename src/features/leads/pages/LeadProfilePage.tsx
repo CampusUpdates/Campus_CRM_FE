@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,7 +13,6 @@ import {
   FileText,
   CreditCard,
   Award,
-  AlertCircle,
   PhoneCall,
   User,
   History,
@@ -23,11 +22,24 @@ import {
   ExternalLink,
   FileSpreadsheet,
   Check,
+  CheckCircle2,
+  Compass,
+  IndianRupee,
+  Tag,
 } from "lucide-react";
 
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { fetchLead360Profile } from "../../../services/leadService";
+import {
+  fetchCounsellingByLead,
+  type CollegeCounsellingItem,
+} from "../../../services/counsellingService";
+import CollegeCounsellingDrawer from "../components/CollegeCounsellingDrawer";
+import {
+  PageLoadingState,
+  PageErrorState,
+} from "../../../components/common";
 
 // Helpers for human readable formatting
 function formatDate(dateStr?: string | Date | null): string {
@@ -39,6 +51,47 @@ function formatDate(dateStr?: string | Date | null): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatPreferredDate(dateStr?: string | Date | null): string {
+  if (!dateStr) return "—";
+  try {
+    const str = typeof dateStr === "string" ? dateStr : dateStr.toISOString();
+    const clean = str.includes("T") ? str.split("T")[0] : str;
+    const parts = clean.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      return d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    }
+    const d = new Date(str);
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return String(dateStr);
+  }
+}
+
+function formatPreferredTime(timeStr?: string | null): string | null {
+  if (!timeStr) return null;
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+  }
+  return timeStr;
 }
 
 function formatTime(dateStr?: string | Date | null): string {
@@ -80,12 +133,25 @@ export default function LeadProfilePage() {
   const [timelineFilter, setTimelineFilter] = useState<string>("ALL");
   const [expandedCollegeHistories, setExpandedCollegeHistories] = useState<Record<string, boolean>>({});
 
+  // College Counselling State
+  const [counsellingRequests, setCounsellingRequests] = useState<CollegeCounsellingItem[]>([]);
+  const [selectedCounsellingItem, setSelectedCounsellingItem] = useState<CollegeCounsellingItem | null>(null);
+  const [isCounsellingDrawerOpen, setIsCounsellingDrawerOpen] = useState(false);
+
   const isAuthorized =
     user?.roleCode === "SUPER_ADMIN" ||
+    user?.roleCode === "ADMIN" ||
     user?.roleCode === "MANAGER" ||
+    user?.roleCode === "TEAM_LEAD" ||
     user?.roleCode === "PROGRAM_ADVISOR";
 
-  useEffect(() => {
+  const canCompleteCounselling =
+    user?.roleCode === "SUPER_ADMIN" ||
+    user?.roleCode === "ADMIN" ||
+    user?.roleCode === "MANAGER" ||
+    user?.roleCode === "TEAM_LEAD";
+
+  const loadProfile = useCallback(() => {
     if (!isAuthorized) {
       setError("Access denied: You do not have permission to view the Lead Profile.");
       setLoading(false);
@@ -97,9 +163,16 @@ export default function LeadProfilePage() {
     setLoading(true);
     setError(null);
 
-    fetchLead360Profile(accessToken, leadId)
-      .then((data) => {
-        setProfileData(data);
+    Promise.all([
+      fetchLead360Profile(accessToken, leadId),
+      fetchCounsellingByLead(accessToken, leadId).catch((err) => {
+        console.error("Failed to load counselling requests:", err);
+        return [];
+      }),
+    ])
+      .then(([profile, counselling]) => {
+        setProfileData(profile);
+        setCounsellingRequests(counselling);
       })
       .catch((err: any) => {
         const msg = err.message || "Failed to load Lead Profile";
@@ -109,7 +182,59 @@ export default function LeadProfilePage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [leadId, accessToken, isAuthorized]);
+  }, [leadId, accessToken, isAuthorized, toast]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const refreshCounselling = useCallback(async () => {
+    if (!leadId || !accessToken) return;
+    try {
+      const data = await fetchCounsellingByLead(accessToken, leadId);
+      setCounsellingRequests(data);
+    } catch (err) {
+      console.error("Failed to refresh counselling requests:", err);
+    }
+  }, [leadId, accessToken]);
+
+  useEffect(() => {
+    if (!leadId || !accessToken) return;
+
+    let isSubscribed = true;
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel("crm_counselling_sync");
+      channel.onmessage = () => {
+        if (isSubscribed) refreshCounselling();
+      };
+    } catch {}
+
+    const handleCustomEvent = () => {
+      if (isSubscribed) refreshCounselling();
+    };
+    window.addEventListener("crm:counselling-updated", handleCustomEvent);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "crm_counselling_last_update" && isSubscribed) {
+        refreshCounselling();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    const handleFocus = () => {
+      if (isSubscribed) refreshCounselling();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isSubscribed = false;
+      if (channel) channel.close();
+      window.removeEventListener("crm:counselling-updated", handleCustomEvent);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [leadId, accessToken, refreshCounselling]);
 
   const toggleCollegeHistory = (collegeId: string) => {
     setExpandedCollegeHistories((prev) => ({
@@ -120,25 +245,33 @@ export default function LeadProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-96 flex-col items-center justify-center space-y-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
-        <p className="text-sm font-medium text-text-secondary">Loading Lead 360 Profile...</p>
+      <div className="max-w-7xl mx-auto py-8">
+        <PageLoadingState
+          message="Loading Lead 360 Profile..."
+          description="Gathering student timeline, calls, applications, and counsel history"
+          minHeight="min-h-[420px]"
+        />
       </div>
     );
   }
 
   if (error || !profileData) {
     return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-border bg-surface p-8 text-center shadow-xs">
-        <AlertCircle size={48} className="mx-auto text-danger-500 mb-4" />
-        <h2 className="text-xl font-bold text-text-primary">Access Denied / Error</h2>
-        <p className="mt-2 text-sm text-text-secondary">{error || "Lead 360 profile could not be loaded."}</p>
-        <button
-          onClick={() => navigate("/leads")}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-medium text-white shadow-xs hover:bg-primary-600 transition"
-        >
-          <ArrowLeft size={16} /> Back to Leads
-        </button>
+      <div className="max-w-2xl mx-auto py-8 space-y-4">
+        <PageErrorState
+          title="Unable to load Lead 360 Profile"
+          message={error || "Lead 360 profile could not be loaded."}
+          onRetry={loadProfile}
+          minHeight="min-h-[300px]"
+        />
+        <div className="text-center">
+          <button
+            onClick={() => navigate("/leads")}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
+          >
+            <ArrowLeft size={14} /> Back to Leads
+          </button>
+        </div>
       </div>
     );
   }
@@ -217,9 +350,31 @@ export default function LeadProfilePage() {
                   </div>
                 )}
                 {(lead.city || lead.state) && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title="Residential Location">
                     <MapPin size={15} className="text-primary-500 shrink-0" />
-                    <span>{[lead.city, lead.state].filter(Boolean).join(", ")}</span>
+                    <span><span className="text-text-muted">Residence:</span> {[lead.city, lead.state].filter(Boolean).join(", ")}</span>
+                  </div>
+                )}
+                {(lead.preferredCity || lead.preferredState) && (
+                  <div className="flex items-center gap-2" title="Preferred Study Location">
+                    <Compass size={15} className="text-primary-500 shrink-0" />
+                    <span><span className="text-text-muted">Preferred Study:</span> {[lead.preferredCity, lead.preferredState].filter(Boolean).join(", ")}</span>
+                  </div>
+                )}
+                {lead.preferredBudget != null && (
+                  <div className="flex items-center gap-2" title="Preferred Budget">
+                    <IndianRupee size={15} className="text-primary-500 shrink-0" />
+                    <span><span className="text-text-muted">Budget:</span> ₹{Number(lead.preferredBudget).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {lead.source && (
+                  <div className="flex items-center gap-2" title="Lead Source">
+                    <Tag size={15} className="text-primary-500 shrink-0" />
+                    <span>
+                      <span className="text-text-muted">Source:</span>{" "}
+                      {lead.source === "REFERENCE" ? "Reference" : lead.source}
+                      {lead.source === "REFERENCE" && lead.referredBy ? ` (by ${lead.referredBy})` : ""}
+                    </span>
                   </div>
                 )}
                 {lead.courseInterested && (
@@ -400,6 +555,49 @@ export default function LeadProfilePage() {
               Direct Creation / No CSV upload origin recorded.
             </div>
           )}
+
+          {/* Lead Source & Study Preferences Summary */}
+          <div className="space-y-2 rounded-xl border border-border bg-neutral-50/50 p-4 text-xs">
+            <h4 className="font-semibold text-text-primary uppercase tracking-wider text-[11px] mb-1">
+              Preferences & Referral
+            </h4>
+            <div className="flex justify-between">
+              <span className="text-text-muted">Lead Source:</span>
+              <span className="font-semibold text-text-primary">
+                {lead.source === "REFERENCE" ? "Reference" : (lead.source || "Direct")}
+              </span>
+            </div>
+            {lead.source === "REFERENCE" && lead.referredBy && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">Referred By:</span>
+                <span className="font-semibold text-text-primary">{lead.referredBy}</span>
+              </div>
+            )}
+            {(lead.city || lead.state) && (
+              <div className="flex justify-between border-t border-border pt-1.5">
+                <span className="text-text-muted">Residential Location:</span>
+                <span className="font-semibold text-text-primary">
+                  {[lead.city, lead.state].filter(Boolean).join(", ")}
+                </span>
+              </div>
+            )}
+            {(lead.preferredCity || lead.preferredState) && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">Preferred Study Location:</span>
+                <span className="font-semibold text-text-primary">
+                  {[lead.preferredCity, lead.preferredState].filter(Boolean).join(", ")}
+                </span>
+              </div>
+            )}
+            {lead.preferredBudget != null && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">Preferred Budget:</span>
+                <span className="font-semibold text-text-primary">
+                  ₹{Number(lead.preferredBudget).toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 5. TPC JOURNEY */}
@@ -458,6 +656,160 @@ export default function LeadProfilePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* COLLEGE COUNSELLING SECTION (DIRECTLY ABOVE INDEPENDENT COLLEGE JOURNEYS) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-text-primary">
+            College Counselling
+          </h2>
+          {counsellingRequests.length > 0 && (
+            <span className="text-xs text-text-muted">
+              {counsellingRequests.length} {counsellingRequests.length === 1 ? "request" : "requests"}
+            </span>
+          )}
+        </div>
+
+        {counsellingRequests.length > 0 ? (
+          <div className="divide-y divide-border border-y border-border">
+            {counsellingRequests.map((req) => {
+              const isDone = String(req.status || "").toUpperCase() === "COMPLETED";
+              const isScheduled = String(req.status || "").toUpperCase() === "SCHEDULED";
+              const colLocation = [req.college?.city, req.college?.state].filter(Boolean).join(", ");
+              const requesterName = [req.requestedBy?.firstName, req.requestedBy?.lastName].filter(Boolean).join(" ") || "Program Advisor";
+              const scheduledByName = [req.scheduledBy?.firstName, req.scheduledBy?.lastName].filter(Boolean).join(" ") || "Manager / Super Admin";
+              const completedByName = [req.completedBy?.firstName, req.completedBy?.lastName].filter(Boolean).join(" ") || "Manager / Team Lead";
+
+              return (
+                <div key={req.id} className="py-3.5 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-text-primary">
+                        {req.college?.name || "College"}
+                      </span>
+                      {colLocation && (
+                        <span className="text-xs text-text-muted">
+                          ({colLocation})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          isDone
+                            ? "bg-emerald-100 text-emerald-800"
+                            : isScheduled
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {isDone ? (
+                          <CheckCircle2 size={12} />
+                        ) : isScheduled ? (
+                          <Calendar size={12} />
+                        ) : (
+                          <Clock size={12} />
+                        )}
+                        {isDone ? "Completed" : isScheduled ? "Scheduled" : "Pending"}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCounsellingItem(req);
+                          setIsCounsellingDrawerOpen(true);
+                        }}
+                        className={`rounded-md px-3.5 py-1.5 text-xs font-medium transition cursor-pointer shadow-sm ${
+                          !isDone && canCompleteCounselling
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                            : "border border-border text-text-secondary hover:bg-neutral-100"
+                        }`}
+                      >
+                        {!isDone && canCompleteCounselling ? "Mark as Done" : "View Details"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Request metadata row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs text-text-secondary">
+                    <div>
+                      <span className="text-text-muted">Requested by: </span>
+                      <span className="font-medium text-text-primary">{requesterName}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Date: </span>
+                      <span>{formatDate(req.requestedAt || req.createdAt)}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Preferred schedule: </span>
+                      <span className="text-text-primary">
+                        {(req.preferredDate || req.preferredTime)
+                          ? [req.preferredDate, req.preferredTime].filter(Boolean).join(" at ")
+                          : req.preferredTiming || "Not specified"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Purpose: </span>
+                      <span className="text-text-primary">{req.purpose || "General guidance"}</span>
+                    </div>
+                  </div>
+
+                  {/* Scheduled info if scheduled */}
+                  {isScheduled && (
+                    <div className="text-xs text-text-secondary pt-1 space-y-1 border-t border-border/40">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-text-muted">
+                        <span>
+                          Scheduled by: <strong className="text-text-primary font-medium">{scheduledByName}</strong>
+                        </span>
+                        {(req.scheduledDate || req.counsellingDate) && (
+                          <span className="text-blue-700 font-medium">
+                            Scheduled for: {[formatPreferredDate(req.scheduledDate || req.counsellingDate), formatPreferredTime(req.scheduledTime)].filter(Boolean).join(" at ")}
+                          </span>
+                        )}
+                        {req.scheduledAt && <span>Scheduled on: {formatDate(req.scheduledAt)}</span>}
+                      </div>
+                      {(req.counsellingNotes || req.completionRemark) && (
+                        <p className="text-text-primary">
+                          <span className="text-text-muted font-medium">Notes: </span>
+                          <span className="italic">{req.counsellingNotes || req.completionRemark}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Completed info if completed */}
+                  {isDone && (
+                    <div className="text-xs text-text-secondary pt-1 space-y-1 border-t border-border/40">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-text-muted">
+                        <span>
+                          Completed by: <strong className="text-text-primary font-medium">{completedByName}</strong>
+                        </span>
+                        <span>Completed on: {formatDate(req.completedAt)}</span>
+                        {req.counsellingDate && (
+                          <span className="text-emerald-700 font-medium">
+                            Lead Valid Till: {formatPreferredDate(req.counsellingDate)}
+                          </span>
+                        )}
+                      </div>
+                      {req.completionRemark && (
+                        <p className="text-text-primary">
+                          <span className="text-text-muted font-medium">Revert: </span>
+                          <span className="italic">{req.completionRemark}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-text-muted py-2">
+            No college counselling requested for this lead.
+          </p>
+        )}
       </div>
 
       {/* 6. INDEPENDENT COLLEGE JOURNEYS (MOST IMPORTANT SECTION) */}
@@ -887,6 +1239,39 @@ export default function LeadProfilePage() {
           </div>
         )}
       </div>
+
+      {/* College Counselling Drawer */}
+      {isCounsellingDrawerOpen && selectedCounsellingItem && (
+        <CollegeCounsellingDrawer
+          request={selectedCounsellingItem}
+          student={{
+            id: leadId || "",
+            firstName: lead.firstName || "",
+            lastName: lead.lastName,
+            phone: lead.phone,
+            email: lead.email,
+            city: lead.city,
+            state: lead.state,
+            courseInterested: lead.courseInterested,
+            courseInterestedOther: lead.courseInterestedOther,
+          }}
+          canComplete={canCompleteCounselling}
+          onClose={() => {
+            setIsCounsellingDrawerOpen(false);
+            setSelectedCounsellingItem(null);
+          }}
+          onSuccess={(updated) => {
+            setCounsellingRequests((prev) =>
+              prev.map((item) =>
+                item.id === updated.id ? { ...item, ...updated, status: "COMPLETED" } : item
+              )
+            );
+            setSelectedCounsellingItem(null);
+            setIsCounsellingDrawerOpen(false);
+            refreshCounselling();
+          }}
+        />
+      )}
     </div>
   );
 }

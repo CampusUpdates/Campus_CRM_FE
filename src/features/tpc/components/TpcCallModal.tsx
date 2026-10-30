@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { updateTpcAssignmentStatus, type TPCStatus } from "../../../services/tpcService";
+import { updateTpcAssignmentStatus, type TPCCall } from "../../../services/tpcService";
 import { createInteraction } from "../../../services/interactionService";
 
 interface TpcCallModalProps {
@@ -22,18 +22,20 @@ interface TpcCallModalProps {
   leadId: string;
   leadName: string;
   leadPhone?: string;
+  calls?: TPCCall[];
   onClose: () => void;
   onSuccess: () => void;
 }
 
 type CallStep = "CALLING" | "LOG_NOTE";
-type CallResultType = "CONNECTED" | "NO_REPLY" | "NOT_INTERESTED";
+type CallResultType = "NO_ANSWER" | "NOT_INTERESTED";
 
 const TpcCallModal = ({
   assignmentId,
   leadId,
   leadName,
   leadPhone,
+  calls = [],
   onClose,
   onSuccess,
 }: TpcCallModalProps) => {
@@ -46,11 +48,11 @@ const TpcCallModal = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
 
-  const [callResult, setCallResult] = useState<CallResultType>("CONNECTED");
-  const [markCompleted, setMarkCompleted] = useState(true);
+  const [callResult, setCallResult] = useState<CallResultType | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [localCalls, setLocalCalls] = useState<TPCCall[]>(calls);
 
   const handleSelectOutcome = (outcome: CallResultType) => {
     setCallResult(outcome);
@@ -103,17 +105,12 @@ const TpcCallModal = ({
     e.preventDefault();
     if (!accessToken) return;
 
+    if (!callResult) return;
     setLoading(true);
     try {
-      let status: TPCStatus = markCompleted
-        ? "COMPLETED"
-        : callResult === "NO_REPLY"
-          ? "NO_REPLY"
-          : "NOT_INTERESTED";
+      let statusLabel = callResult === "NO_ANSWER" ? "No Response" : "Not Interested";
 
-      let statusLabel = callResult === "NO_REPLY" ? "No Response" : "Not Interested";
-
-      await updateTpcAssignmentStatus(accessToken, assignmentId, status);
+      const updatedAssignment = await updateTpcAssignmentStatus(accessToken, assignmentId, undefined, notes, callResult);
 
       const interactionDescription = notes.trim()
         ? `Result: ${statusLabel} | Duration: ${formatDuration(callDuration)}\nNotes: ${notes.trim()}`
@@ -125,15 +122,27 @@ const TpcCallModal = ({
         description: interactionDescription,
       });
 
-      toast.showToast(
-        markCompleted
-          ? "TPC marked as Completed and call logged!"
-          : `Call logged as ${statusLabel}`,
-        "success"
-      );
-      onSuccess();
+      setLocalCalls(updatedAssignment.calls || []);
+      setNotes("");
+      setCallResult(null);
+
+      toast.showToast(`Call logged as ${statusLabel}`, "success");
     } catch (err: any) {
       toast.showToast(err.message || "Failed to save call details", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    try {
+      await updateTpcAssignmentStatus(accessToken, assignmentId, "COMPLETED");
+      toast.showToast("TPC marked as Completed!", "success");
+      onSuccess();
+    } catch (err: any) {
+      toast.showToast(err.message || "Failed to complete TPC", "error");
     } finally {
       setLoading(false);
     }
@@ -154,7 +163,7 @@ const TpcCallModal = ({
       <div
         onAnimationEnd={handleAnimationEnd}
         className={`
-          fixed right-0 top-0 h-[100dvh] w-full max-w-md bg-surface shadow-2xl border-l border-border flex flex-col z-50
+          fixed right-0 top-0 h-[100dvh] w-full sm:w-[480px] md:max-w-md max-w-full bg-surface shadow-2xl border-l border-border flex flex-col z-50
           ${isClosing ? "animate-slide-out-right" : "animate-slide-in-right"}
         `}
       >
@@ -257,29 +266,84 @@ const TpcCallModal = ({
 
         {/* STEP 2: CALL OUTCOME & LOG NOTES FORM */}
         {step === "LOG_NOTE" && (
-          <form onSubmit={handleSave} className="p-4 space-y-4 overflow-y-auto flex-1 flex flex-col justify-between">
-            <div className="space-y-4">
-              {/* Call Summary Card */}
-              <div className="rounded-lg bg-neutral-50 p-3 border border-border flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-text-muted">Lead: <span className="font-semibold text-text-primary">{leadName}</span></p>
-                  <p className="text-xs text-text-secondary mt-0.5">Call Duration: <span className="font-mono font-semibold text-emerald-700">{formatDuration(callDuration)}</span></p>
-                </div>
+          <div className="p-4 space-y-6 overflow-y-auto flex-1 flex flex-col">
+
+            {/* Call Summary Card */}
+            <div className="rounded-lg bg-neutral-50 p-3 border border-border flex items-center justify-between shrink-0">
+              <div>
+                <p className="text-xs text-text-muted">Lead: <span className="font-semibold text-text-primary">{leadName}</span></p>
+                <p className="text-xs text-text-secondary mt-0.5">Call Duration: <span className="font-mono font-semibold text-emerald-700">{formatDuration(callDuration)}</span></p>
+              </div>
+              <div className="flex flex-col items-end gap-1 text-right">
                 <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
                   Call Ended
                 </span>
+                <span className="text-[11px] text-text-secondary font-medium">
+                  Call attempts: {localCalls.length} / 3
+                </span>
+                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                  Status: Pending
+                </span>
               </div>
+            </div>
+
+            {/* Previous Calls / Call History */}
+            {localCalls.length === 0 ? (
+              <div className="border-t border-border pt-4 shrink-0">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
+                  Previous Calls
+                </h4>
+                <p className="text-xs text-text-secondary">No previous calls recorded.</p>
+              </div>
+            ) : (
+              <div className="border-t border-border pt-4 shrink-0">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
+                  Previous Calls
+                </h4>
+                <div className="space-y-3">
+                  {localCalls.map((call, idx) => (
+                    <div key={call.id} className="rounded-lg border border-border bg-neutral-50 p-3">
+                      <div className="flex justify-between items-start mb-1.5">
+                        <span className="text-xs font-bold text-text-primary uppercase tracking-wider">
+                          Call {localCalls.length - idx}
+                        </span>
+                        <span className="text-[10px] text-text-secondary">
+                          {new Date(call.createdAt).toLocaleString('en-US', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: 'numeric', minute: '2-digit', hour12: true
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-secondary mb-1">
+                        Outcome: <span className="font-semibold text-text-primary">{call.outcome === "NO_ANSWER" ? "No Response" : (call.outcome === "NOT_INTERESTED" ? "Not Interested" : call.outcome)}</span>
+                      </p>
+                      {call.notes && (
+                        <p className="text-xs text-text-secondary whitespace-pre-wrap break-words">
+                          Notes: <span className="text-text-primary">{call.notes}</span>
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current Call Form */}
+            <form onSubmit={handleSave} className="border-t border-border pt-4 space-y-4 shrink-0">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Current Call
+              </h4>
 
               {/* Outcome Selection */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
                   Select Call Outcome
                 </label>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleSelectOutcome("NOT_INTERESTED")}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${callResult === "NOT_INTERESTED"
+                    className={`flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:p-3 rounded-lg border text-xs font-medium transition ${callResult === "NOT_INTERESTED"
                         ? "border-red-500 bg-red-50 text-red-700 ring-2 ring-red-200 font-semibold"
                         : "border-border text-text-secondary hover:bg-neutral-50"
                       }`}
@@ -290,8 +354,8 @@ const TpcCallModal = ({
 
                   <button
                     type="button"
-                    onClick={() => handleSelectOutcome("NO_REPLY")}
-                    className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-medium transition ${callResult === "NO_REPLY"
+                    onClick={() => handleSelectOutcome("NO_ANSWER")}
+                    className={`flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:p-3 rounded-lg border text-xs font-medium transition ${callResult === "NO_ANSWER"
                         ? "border-amber-500 bg-amber-50 text-amber-700 ring-2 ring-amber-200 font-semibold"
                         : "border-border text-text-secondary hover:bg-neutral-50"
                       }`}
@@ -319,50 +383,53 @@ const TpcCallModal = ({
                 />
               </div>
 
-              {/* Mark as Completed Checkbox */}
-              <div className="rounded-lg bg-emerald-50/60 p-3 border border-emerald-200 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="markCallCompleted"
-                    checked={markCompleted}
-                    onChange={(e) => setMarkCompleted(e.target.checked)}
-                    className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <label htmlFor="markCallCompleted" className="text-xs font-semibold text-emerald-900 cursor-pointer">
-                    Mark TPC as Completed
-                  </label>
-                </div>
-                <span className="text-[11px] text-emerald-700 font-medium">
-                  Moves to Completed section
-                </span>
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3">
+                <button
+                  type="submit"
+                  disabled={loading || !callResult}
+                  className="
+                    w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-xs font-medium text-white
+                    shadow-sm hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed
+                  "
+                >
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  <CheckCircle2 size={15} />
+                  Save Call Log
+                </button>
               </div>
-            </div>
+            </form>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border mt-auto">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={loading}
-                className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="
-                  inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-xs font-medium text-white
-                  shadow-sm hover:bg-emerald-700 transition disabled:opacity-50
-                "
-              >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                <CheckCircle2 size={15} />
-                {markCompleted ? "Save & Mark Completed" : "Save Call Log"}
-              </button>
-            </div>
-          </form>
+            {/* Mark as Completed Action Section */}
+            {(() => {
+              const callCount = localCalls.length;
+              const canComplete = callCount >= 3;
+              return (
+                <div className="rounded-lg p-3 border flex flex-col gap-2 bg-neutral-50 border-border shrink-0 mt-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold text-text-primary">
+                        Completion Eligibility
+                      </span>
+                      {!canComplete && (
+                        <span className="text-[10px] text-text-muted">Requires 3 persisted calls</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleMarkCompleted}
+                      disabled={!canComplete || loading}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold shadow-xs hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading && canComplete && <Loader2 size={12} className="animate-spin" />}
+                      <CheckCircle2 size={13} />
+                      Mark TPC as Completed
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         )}
       </div>
     </div>

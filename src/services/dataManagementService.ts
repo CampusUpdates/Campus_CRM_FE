@@ -10,12 +10,18 @@ export interface StudentDataItemPayload {
   state?: string;
 }
 
+export interface DataCategory {
+  id: string;
+  name: string;
+}
+
 export interface DataUploadItem {
   id: string;
   fileName: string;
   fileUrl?: string;
   totalRecords: number;
   status: "PROCESSING" | "COMPLETED" | "FAILED";
+  failureReason?: string | null;
   uploadedAt: string;
   uploadedBy?: {
     id: string;
@@ -77,6 +83,9 @@ export interface FilterStudentDataParams {
   dispositions?: string[];
   calledById?: string;
   notCalledByUserIds?: string[];
+  time?: string;
+  fromDate?: string;
+  toDate?: string;
   page?: number;
   limit?: number;
 }
@@ -95,6 +104,7 @@ export interface FilteredStudentDataResponse {
   filterOptions: {
     states: string[];
     cities: string[];
+    cityOptionsWithState?: { city: string; state: string | null }[];
     uploads: { id: string; fileName: string }[];
   };
 }
@@ -179,6 +189,7 @@ export interface DataAssignmentItemDetail {
   state?: string | null;
   createdAt: string;
   recentCall?: RecentCallRecord | null;
+  remarks?: (RecentCallRecord & { author?: string })[];
 }
 
 export interface DataAssignmentDetailsResponse {
@@ -251,9 +262,82 @@ export async function fetchDataUploads(
   return data;
 }
 
-export async function createDataUpload(token: string, file: File) {
+export async function fetchDataCategories(token: string): Promise<DataCategory[]> {
+  const response = await fetch(`${API_URL}/uploads/categories`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to fetch categories";
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
+export async function createDataCategory(token: string, name: string): Promise<DataCategory> {
+  const response = await fetch(`${API_URL}/uploads/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to create category";
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
+export async function softDeleteUpload(token: string, uploadId: string) {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/soft`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to soft delete dataset.");
+  return data;
+}
+
+export async function previewHardDeleteUpload(token: string, uploadId: string) {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/hard-delete-preview`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to preview hard delete.");
+  return data;
+}
+
+export async function hardDeleteUploadRecords(token: string, uploadId: string) {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/hard`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to hard delete records.");
+  return data;
+}
+
+export async function createDataUpload(token: string, file: File, categoryId: string) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("categoryId", categoryId);
 
   const response = await fetch(`${API_URL}/uploads`, {
     method: "POST",
@@ -269,6 +353,49 @@ export async function createDataUpload(token: string, file: File) {
     const errorMsg = Array.isArray(data.message)
       ? data.message.join(", ")
       : data.message || "Failed to upload student dataset file.";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export async function confirmDataImport(token: string, uploadId: string, actions: Record<string, string>) {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/confirm-import`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ actions }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to confirm student data import.";
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export async function cancelDataImport(token: string, uploadId: string) {
+  const response = await fetch(`${API_URL}/uploads/${uploadId}/cancel-import`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || "Failed to cancel import review.";
     throw new Error(errorMsg);
   }
 
@@ -329,6 +456,15 @@ export async function fetchFilteredStudentData(
   }
   if (params.notCalledByUserIds && params.notCalledByUserIds.length > 0) {
     query.set("notCalledByUserIds", params.notCalledByUserIds.join(","));
+  }
+  if (params.time) {
+    query.set("time", params.time);
+  }
+  if (params.fromDate) {
+    query.set("fromDate", params.fromDate);
+  }
+  if (params.toDate) {
+    query.set("toDate", params.toDate);
   }
   if (params.page) {
     query.set("page", String(params.page));
@@ -428,6 +564,7 @@ export interface AssigneeAssignmentItem {
   id: string;
   fileName: string;
   recordsCount: number;
+  contactedRecords: number;
   assignedAt: string;
   expiresAt: string;
   status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "RECLAIMED";
@@ -659,11 +796,17 @@ export async function exportDatasetResponseHistory(
   uploadId: string,
   fileName: string,
   disposition?: string,
-  calledById?: string
+  calledById?: string,
+  time?: string,
+  fromDate?: string,
+  toDate?: string
 ): Promise<void> {
   const queryParams = new URLSearchParams();
   if (disposition && disposition !== "ALL") queryParams.set("disposition", disposition);
   if (calledById && calledById !== "ALL") queryParams.set("calledById", calledById);
+  if (time && time !== "ALL") queryParams.set("time", time);
+  if (fromDate) queryParams.set("fromDate", fromDate);
+  if (toDate) queryParams.set("toDate", toDate);
   const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
 
   const response = await fetch(`${API_URL}/uploads/${uploadId}/export-response${query}`, {

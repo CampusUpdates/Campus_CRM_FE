@@ -28,6 +28,8 @@ interface AssignmentReviewModalProps {
   }) => Promise<void>;
   submitting: boolean;
   error: string | null;
+  title?: string;
+  subtitle?: string;
 }
 
 const AssignmentReviewModal = ({
@@ -41,6 +43,8 @@ const AssignmentReviewModal = ({
   onConfirm,
   submitting,
   error,
+  title = "Assign Selected Data",
+  subtitle = "Select recipient user & confirm working-hours assignment",
 }: AssignmentReviewModalProps) => {
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
 
@@ -85,10 +89,10 @@ const AssignmentReviewModal = ({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-text-primary">
-                    Assign Selected Data
+                    {title}
                   </h3>
                   <p className="text-xs text-text-secondary">
-                    Select recipient user & confirm working-hours assignment
+                    {subtitle}
                   </p>
                 </div>
               </div>
@@ -155,24 +159,24 @@ const AssignmentReviewModal = ({
               {((activeFilters.states && activeFilters.states.length > 0) ||
                 (activeFilters.cities && activeFilters.cities.length > 0) ||
                 activeFilters.search) && (
-                <div className="rounded-xl border border-border bg-neutral-50/30 dark:bg-neutral-900/20 p-3 text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-semibold text-text-secondary">
-                    <Filter size={12} />
-                    <span>Filters Applied:</span>
+                  <div className="rounded-xl border border-border bg-neutral-50/30 dark:bg-neutral-900/20 p-3 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-text-secondary">
+                      <Filter size={12} />
+                      <span>Filters Applied:</span>
+                    </div>
+                    <div className="text-text-muted space-x-2">
+                      {activeFilters.states && activeFilters.states.length > 0 && (
+                        <span>State: <strong className="text-text-primary">{activeFilters.states.join(", ")}</strong></span>
+                      )}
+                      {activeFilters.cities && activeFilters.cities.length > 0 && (
+                        <span>City: <strong className="text-text-primary">{activeFilters.cities.join(", ")}</strong></span>
+                      )}
+                      {activeFilters.search && (
+                        <span>Search: <strong className="text-text-primary">"{activeFilters.search}"</strong></span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-text-muted space-x-2">
-                    {activeFilters.states && activeFilters.states.length > 0 && (
-                      <span>State: <strong className="text-text-primary">{activeFilters.states.join(", ")}</strong></span>
-                    )}
-                    {activeFilters.cities && activeFilters.cities.length > 0 && (
-                      <span>City: <strong className="text-text-primary">{activeFilters.cities.join(", ")}</strong></span>
-                    )}
-                    {activeFilters.search && (
-                      <span>Search: <strong className="text-text-primary">"{activeFilters.search}"</strong></span>
-                    )}
-                  </div>
-                </div>
-              )}
+                )}
 
               {/* User Assignment Selection */}
               <div>

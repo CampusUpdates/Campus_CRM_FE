@@ -115,9 +115,8 @@ const ChangeStatusModal = ({ lead, onClose, onSuccess }: ChangeStatusModalProps)
       {/* Backdrop */}
       <div
         onClick={handleClose}
-        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 ${
-          isClosing ? "opacity-0" : "opacity-100"
-        }`}
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 ${isClosing ? "opacity-0" : "opacity-100"
+          }`}
       />
 
       {/* Right-Side Drawer */}
@@ -179,39 +178,41 @@ const ChangeStatusModal = ({ lead, onClose, onSuccess }: ChangeStatusModalProps)
                   <RefreshCw size={18} className="animate-spin mr-2" /> Loading pipeline statuses...
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="flex flex-col gap-4">
                   {statuses.map((st) => {
                     const isSelected = Number(selectedStatusId) === st.id;
-                    const badgeClass = getStatusBadgeStyle(st.name, st.color);
+                    const rawColor = st.color || "#3b82f6";
 
                     return (
                       <div
                         key={st.id}
                         onClick={() => setSelectedStatusId(st.id)}
-                        className={`
-                          flex items-center justify-between p-4 rounded-xl border cursor-pointer transition
-                          ${
-                            isSelected
-                              ? "border-amber-500 bg-amber-50/70 text-amber-900 shadow-xs"
-                              : "border-border bg-surface text-text-primary hover:bg-neutral-50"
-                          }
-                        `}
+                        className="group flex flex-col items-start gap-1.5 cursor-pointer"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
-                              {st.name}
-                            </span>
-                          </div>
-                          {st.description && (
-                            <p className="text-xs text-text-secondary pl-0.5">{st.description}</p>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium max-w-full transition-all ${isSelected ? "ring-2 ring-offset-2" : "opacity-80 group-hover:opacity-100"
+                              }`}
+                            style={{
+                              backgroundColor: `color-mix(in srgb, ${rawColor} 12%, transparent)`,
+                              borderColor: `color-mix(in srgb, ${rawColor} 30%, transparent)`,
+                              color: `color-mix(in srgb, ${rawColor} 90%, #ffffff)`,
+                              ...(isSelected ? { '--tw-ring-color': rawColor } as React.CSSProperties : {})
+                            }}
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: rawColor }}
+                            />
+                            <span className="truncate">{st.name}</span>
+                          </button>
+                          {isSelected && <Check size={16} style={{ color: rawColor }} className="shrink-0" />}
                         </div>
-
-                        {isSelected && (
-                          <div className="h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                            <Check size={14} />
-                          </div>
+                        {st.description && (
+                          <p className={`text-[13px] pl-1 transition-colors ${isSelected ? "text-text-primary font-medium" : "text-text-secondary group-hover:text-text-primary"}`}>
+                            {st.description}
+                          </p>
                         )}
                       </div>
                     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { X, RotateCcw, Loader2, AlertCircle, Database, CheckCircle2 } from "lucide-react";
 import {
   fetchAssigneeDetails,
@@ -41,7 +41,10 @@ export const AssigneeDetailsDrawer: React.FC<AssigneeDetailsDrawerProps> = ({
   const [reclaimingId, setReclaimingId] = useState<string | null>(null);
   const [reclaimSuccessMsg, setReclaimSuccessMsg] = useState<string | null>(null);
 
-  const loadAssigneeDetails = async () => {
+  // Track whether a call was made while drawer was open (via hidden state)
+  const wasHiddenRef = useRef(false);
+
+  const loadAssigneeDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -52,11 +55,46 @@ export const AssigneeDetailsDrawer: React.FC<AssigneeDetailsDrawerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, assigneeId]);
 
+  // Initial load
   useEffect(() => {
     loadAssigneeDetails();
-  }, [assigneeId, token]);
+  }, [loadAssigneeDetails]);
+
+  // Silently refresh contacted counts when the user returns to the page
+  // (e.g. after making calls in the calls module). This is NOT polling —
+  // it only fires on focus/visibility-restore events.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wasHiddenRef.current = true;
+      } else if (wasHiddenRef.current) {
+        // Page became visible again after being hidden — silently refresh
+        wasHiddenRef.current = false;
+        fetchAssigneeDetails(token, assigneeId)
+          .then((res) => setData(res))
+          .catch(() => {/* silent — don't disrupt UI on background refresh failure */});
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if (wasHiddenRef.current) {
+        wasHiddenRef.current = false;
+        fetchAssigneeDetails(token, assigneeId)
+          .then((res) => setData(res))
+          .catch(() => {/* silent */});
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [token, assigneeId]);
 
   const handleReclaimAssignment = async (assignmentId: string) => {
     setReclaimingId(assignmentId);
@@ -167,8 +205,10 @@ export const AssigneeDetailsDrawer: React.FC<AssigneeDetailsDrawerProps> = ({
                       <Database size={14} className="text-indigo-400 shrink-0" />
                       {assignment.fileName}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-300 font-semibold">
-                      {assignment.recordsCount} records
+                    <p className="mt-1 text-xs text-slate-300 font-semibold flex items-center gap-2">
+                      <span>{assignment.recordsCount} records</span>
+                      <span className="text-slate-500">•</span>
+                      <span>{assignment.contactedRecords} contacted</span>
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-400">
                       Assigned: {formatDateFormatted(assignment.assignedAt)}

@@ -9,7 +9,6 @@ import {
   Edit3,
   RefreshCw,
   Users,
-  AlertTriangle,
   Filter,
 } from "lucide-react";
 
@@ -24,6 +23,12 @@ import {
 } from "../../../services/userService";
 import CreateUserModal from "../components/CreateUserModal";
 import AssignTeamModal from "../components/AssignTeamModal";
+import DeactivateUserDrawer from "../components/DeactivateUserDrawer";
+import {
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const UsersPage = () => {
   const { accessToken, hasRole } = useAuth();
@@ -34,6 +39,7 @@ const UsersPage = () => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [teams, setTeams] = useState<UserTeam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(paramSearch || "");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [teamFilter, setTeamFilter] = useState<string>("ALL");
@@ -51,12 +57,15 @@ const UsersPage = () => {
   const loadUsers = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchUsers(accessToken);
       setUsers(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load users:", err);
-      toast.error("Failed to load system users.");
+      const errMsg = err.message || "Failed to load system users.";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -101,6 +110,16 @@ const UsersPage = () => {
 
   const handleConfirmDeactivate = async () => {
     if (!accessToken || !deactivatingUser) return;
+    const isSuperAdminUser =
+      deactivatingUser.role?.name?.toUpperCase() === "SUPER_ADMIN" ||
+      deactivatingUser.roleId === 1;
+
+    if (isSuperAdminUser) {
+      toast.error("Super Admin accounts cannot be deactivated.");
+      setDeactivatingUser(null);
+      return;
+    }
+
     setStatusUpdating(true);
     try {
       const updated = await updateUserStatus(
@@ -168,25 +187,25 @@ const UsersPage = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">
             User Management
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-1 text-xs sm:text-sm text-text-secondary">
             Manage system users, employee profiles, roles, teams, and account access.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
           <button
             onClick={loadUsers}
             title="Refresh users"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition"
+            className="p-2 sm:p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
           </button>
 
           {canAddUser && (
@@ -196,14 +215,15 @@ const UsersPage = () => {
                 flex items-center gap-2
                 rounded-lg
                 bg-primary-500
-                px-4 py-2.5
-                text-sm font-medium
+                px-3.5 py-2 sm:px-4 sm:py-2.5
+                text-xs sm:text-sm font-medium
                 text-white
                 transition
                 hover:bg-primary-600
+                cursor-pointer shadow-2xs
               "
             >
-              <Plus size={18} />
+              <Plus size={17} />
               Add User
             </button>
           )}
@@ -211,12 +231,12 @@ const UsersPage = () => {
       </div>
 
       {/* Filters: Search, Status, Team */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            size={17}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             type="text"
@@ -224,15 +244,15 @@ const UsersPage = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="
-              h-11
+              h-10 sm:h-11
               w-full
               rounded-lg
               border
               border-border
               bg-surface
-              pl-11
+              pl-10
               pr-4
-              text-sm
+              text-xs sm:text-sm
               outline-none
               transition
               focus:border-primary-500
@@ -242,176 +262,191 @@ const UsersPage = () => {
           />
         </div>
 
-        {/* Status Filter */}
-        <div className="relative flex items-center gap-2 sm:w-44">
-          <Filter size={16} className="text-text-muted shrink-0" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="
-              h-11
-              w-full
-              rounded-lg
-              border border-border
-              bg-surface
-              px-3
-              text-sm text-text-primary
-              outline-none
-              transition
-              focus:border-primary-500
-              focus:ring-2
-              focus:ring-primary-100
-            "
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
-        </div>
+        {/* Dropdowns Row on Mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:w-auto shrink-0">
+          {/* Status Filter */}
+          <div className="relative flex items-center gap-2 sm:w-44">
+            <Filter size={16} className="text-text-muted shrink-0" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="
+                h-10 sm:h-11
+                w-full
+                rounded-lg
+                border border-border
+                bg-surface
+                px-3
+                text-xs sm:text-sm text-text-primary
+                outline-none
+                transition
+                focus:border-primary-500
+                focus:ring-2
+                focus:ring-primary-100
+                cursor-pointer
+              "
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="SUSPENDED">Suspended</option>
+            </select>
+          </div>
 
-        {/* Team Filter */}
-        <div className="relative flex items-center gap-2 sm:w-48">
-          <Users size={16} className="text-text-muted shrink-0" />
-          <select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="
-              h-11
-              w-full
-              rounded-lg
-              border border-border
-              bg-surface
-              px-3
-              text-sm text-text-primary
-              outline-none
-              transition
-              focus:border-primary-500
-              focus:ring-2
-              focus:ring-primary-100
-            "
-          >
-            <option value="ALL">All Teams</option>
-            <option value="UNASSIGNED">Unassigned</option>
-            {teams.map((t) => (
-              <option key={t.id} value={String(t.id)}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          {/* Team Filter */}
+          <div className="relative flex items-center gap-2 sm:w-48">
+            <Users size={16} className="text-text-muted shrink-0" />
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="
+                h-10 sm:h-11
+                w-full
+                rounded-lg
+                border border-border
+                bg-surface
+                px-3
+                text-xs sm:text-sm text-text-primary
+                outline-none
+                transition
+                focus:border-primary-500
+                focus:ring-2
+                focus:ring-primary-100
+                cursor-pointer
+              "
+            >
+              <option value="ALL">All Teams</option>
+              <option value="UNASSIGNED">Unassigned</option>
+              {teams.map((t) => (
+                <option key={t.id} value={String(t.id)}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        {loading ? (
-          <div className="flex items-center justify-center p-12 text-sm text-text-secondary">
-            <RefreshCw className="animate-spin mr-2" size={18} />
-            Loading system users...
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
-              <Users size={24} />
-            </div>
-            <h3 className="text-base font-semibold text-text-primary">
-              No users found
-            </h3>
-            <p className="text-sm text-text-secondary mt-1 max-w-sm">
-              {searchTerm || statusFilter !== "ALL" || teamFilter !== "ALL"
-                ? "No users matched your filter criteria."
-                : "No users exist in the system yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    User Details
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Contact
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Role / Team
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                    Status
-                  </th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => {
+      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-2xs">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full min-w-[760px] text-left">
+            <thead>
+              <tr className="border-b border-border bg-neutral-50 dark:bg-neutral-800/50">
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  User Details
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  Contact
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  Role / Team
+                </th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  Status
+                </th>
+                <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <SectionLoadingState
+                  isTableRow
+                  colSpan={5}
+                  message="Loading system users..."
+                />
+              ) : error ? (
+                <PageErrorState
+                  isTableRow
+                  colSpan={5}
+                  title="Failed to load users"
+                  message={error}
+                  onRetry={loadUsers}
+                />
+              ) : filteredUsers.length === 0 ? (
+                <PageEmptyState
+                  isTableRow
+                  colSpan={5}
+                  icon={Users}
+                  title="No users found"
+                  message={
+                    searchTerm || statusFilter !== "ALL" || teamFilter !== "ALL"
+                      ? "No users matched your filter criteria."
+                      : "No users exist in the system yet."
+                  }
+                />
+              ) : (
+                filteredUsers.map((user) => {
                   const fullName = `${user.firstName} ${user.lastName || ""}`.trim();
                   const initials = `${user.firstName[0] || ""}${
                     user.lastName ? user.lastName[0] : ""
                   }`.toUpperCase();
 
                   const isActive = user.status === "ACTIVE";
+                  const isSuperAdminRole =
+                    user.role?.name?.toUpperCase() === "SUPER_ADMIN" ||
+                    user.roleId === 1;
 
                   return (
                     <tr
                       key={user.id}
-                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
+                      className="hover:bg-neutral-50/60 dark:hover:bg-neutral-800/30 transition"
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-semibold text-xs shrink-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 font-semibold text-xs shrink-0">
                             {initials || "U"}
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-text-primary truncate">
                               {fullName}
                             </p>
-                            <p className="text-xs text-text-muted">
+                            <p className="text-xs text-text-muted truncate">
                               @{user.username}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        <div>
-                          <p>{user.email}</p>
+                      <td className="px-5 py-3.5 text-sm text-text-secondary">
+                        <div className="space-y-0.5">
+                          <p className="truncate text-xs sm:text-sm text-text-primary">{user.email}</p>
                           <p className="text-xs text-text-muted">{user.phone}</p>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-5 py-3.5 text-sm text-text-secondary">
                         <div className="flex flex-col gap-1 items-start">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-xs font-medium text-purple-700">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">
                             <UserCheck size={13} />
                             {user.role?.name || `Role ${user.roleId}`}
                           </span>
                           {user.team ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                            <span className="inline-flex items-center gap-1 text-xs text-text-muted truncate">
                               Team: <strong className="text-text-primary">{user.team.name}</strong>
                             </span>
                           ) : user.teamId ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                            <span className="inline-flex items-center gap-1 text-xs text-text-muted truncate">
                               Team: <strong className="text-text-primary">Team #{user.teamId}</strong>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-md bg-neutral-100 border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+                            <span className="inline-flex items-center rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-400">
                               Unassigned
                             </span>
                           )}
                         </div>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
                             isActive
-                              ? "bg-emerald-100 text-emerald-700"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
                               : user.status === "SUSPENDED"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-rose-100 text-rose-700"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                              : "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
                           }`}
                         >
                           <span
@@ -427,15 +462,15 @@ const UsersPage = () => {
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           {/* Edit User Button (Icon) */}
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(user)}
                             title="Edit user"
                             aria-label="Edit user"
-                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 hover:text-primary-600 transition"
+                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-primary-600 transition cursor-pointer"
                           >
                             <Edit3 size={17} />
                           </button>
@@ -446,44 +481,49 @@ const UsersPage = () => {
                             onClick={() => setAssigningTeamUser(user)}
                             title="Assign team"
                             aria-label="Assign team"
-                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 hover:text-purple-600 transition"
+                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-purple-600 transition cursor-pointer"
                           >
                             <UserPlus size={17} />
                           </button>
 
-                          {/* Account Access Deactivate / Reactivate Control */}
-                          {isActive ? (
-                            <button
-                              type="button"
-                              disabled={statusUpdating}
-                              onClick={() => setDeactivatingUser(user)}
-                              title="Deactivate employee account"
-                              aria-label="Deactivate employee account"
-                              className="p-2 rounded-lg text-text-secondary hover:bg-rose-50 hover:text-rose-600 transition disabled:opacity-50"
-                            >
-                              <UserX size={17} />
-                            </button>
+                          {/* Account Access Deactivate / Reactivate Control: Hidden for Super Admin */}
+                          {!isSuperAdminRole ? (
+                            isActive ? (
+                              <button
+                                type="button"
+                                disabled={statusUpdating}
+                                onClick={() => setDeactivatingUser(user)}
+                                title="Deactivate employee account"
+                                aria-label="Deactivate employee account"
+                                className="p-2 rounded-lg text-text-secondary hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 transition disabled:opacity-50 cursor-pointer"
+                              >
+                                <UserX size={17} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={statusUpdating}
+                                onClick={() => handleActivateUser(user)}
+                                title="Activate employee account"
+                                aria-label="Activate employee account"
+                                className="p-2 rounded-lg text-text-secondary hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition disabled:opacity-50 cursor-pointer"
+                              >
+                                <UserCheck size={17} />
+                              </button>
+                            )
                           ) : (
-                            <button
-                              type="button"
-                              disabled={statusUpdating}
-                              onClick={() => handleActivateUser(user)}
-                              title="Activate employee account"
-                              aria-label="Activate employee account"
-                              className="p-2 rounded-lg text-text-secondary hover:bg-emerald-50 hover:text-emerald-600 transition disabled:opacity-50"
-                            >
-                              <UserCheck size={17} />
-                            </button>
+                            /* Super Admin is protected: placeholder keeps alignment uniform without any deactivation trigger */
+                            <div className="w-8 h-8" aria-hidden="true" />
                           )}
                         </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Edit / Create Modal */}
@@ -504,45 +544,14 @@ const UsersPage = () => {
         />
       )}
 
-      {/* Deactivation Confirmation Modal */}
+      {/* Deactivation Confirmation Drawer */}
       {deactivatingUser && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl border border-border space-y-4">
-            <div className="flex items-center gap-3 text-amber-600">
-              <AlertTriangle size={24} className="shrink-0" />
-              <h3 className="text-lg font-semibold text-text-primary">
-                Deactivate Employee?
-              </h3>
-            </div>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              <strong>{`${deactivatingUser.firstName} ${deactivatingUser.lastName || ""}`.trim()}</strong> will no longer be able to log in to Campus CRM.
-              <br />
-              <br />
-              Their existing leads, assignments, activity, and historical records will remain intact.
-            </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                disabled={statusUpdating}
-                onClick={() => setDeactivatingUser(null)}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={statusUpdating}
-                onClick={handleConfirmDeactivate}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition disabled:opacity-50 flex items-center gap-2"
-              >
-                {statusUpdating && (
-                  <RefreshCw size={14} className="animate-spin" />
-                )}
-                Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeactivateUserDrawer
+          user={deactivatingUser}
+          onClose={() => setDeactivatingUser(null)}
+          onConfirm={handleConfirmDeactivate}
+          isSubmitting={statusUpdating}
+        />
       )}
     </div>
   );

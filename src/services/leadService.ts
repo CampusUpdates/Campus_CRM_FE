@@ -1,4 +1,5 @@
 import { API_URL } from "../config/api";
+import type { CollegeCounsellingItem } from "./counsellingService";
 
 export interface CreateLeadPayload {
   firstName: string;
@@ -9,6 +10,10 @@ export interface CreateLeadPayload {
   gender?: string;
   city: string;
   state: string;
+  preferredState?: string | null;
+  preferredCity?: string | null;
+  preferredBudget?: number | string | null;
+  referredBy?: string | null;
   dateOfBirth?: string;
   tenthPercentage?: number;
   twelfthPercentage?: number;
@@ -42,6 +47,13 @@ export interface CreateLeadPayload {
   sourceOther?: string;
   collegeIds: string[];
   negativeColleges?: string[];
+  counsellingRequests?: Array<{
+    collegeId: string;
+    preferredDate?: string;
+    preferredTime?: string;
+    preferredTiming?: string;
+    purpose?: string;
+  }>;
   source: string;
   statusId?: number;
 }
@@ -105,11 +117,52 @@ export interface LeadAssignmentItem {
   assignedAt: string;
   expiresAt: string;
   status: string;
+  userId?: string;
   user?: {
     id: string;
     firstName?: string;
     lastName?: string;
     username?: string;
+    phone?: string;
+  };
+}
+
+export interface LeadAcknowledgementItem {
+  id: string;
+  leadId: string;
+  recipientId: string;
+  collegeId?: string | null;
+  status?: string;
+  college?: {
+    id: string;
+    name: string;
+  };
+  acknowledgedById?: string | null;
+  acknowledgedAt?: string | null;
+  sharedById?: string | null;
+  sharedAt?: string | null;
+  channel?: string | null;
+  context?: string | null;
+  createdAt?: string;
+  sharedBy?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+  };
+  acknowledgedBy?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+    role?: { id?: number; name?: string } | string;
+    teamLeads?: Array<{ teamId: number }>;
+    teamsManaged?: Array<{ id: number }>;
+  };
+  recipient?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
   };
 }
 
@@ -123,6 +176,10 @@ export interface LeadItem {
   gender?: string;
   city?: string;
   state?: string;
+  preferredState?: string | null;
+  preferredCity?: string | null;
+  preferredBudget?: number | string | null;
+  referredBy?: string | null;
   dateOfBirth?: string;
   tenthPercentage?: number;
   twelfthPercentage?: number;
@@ -170,7 +227,20 @@ export interface LeadItem {
   };
   assignments?: LeadAssignmentItem[];
   collegeApplications?: LeadCollegeApplication[];
+  finalCollege?: {
+    id: string;
+    name: string;
+    city?: string;
+    state?: string;
+  };
   negativeColleges?: LeadNegativeCollegeItem[];
+  updatedAt?: string;
+  team?: {
+    id: number;
+    name: string;
+  };
+  acknowledgements?: LeadAcknowledgementItem[];
+  counsellingRequests?: CollegeCounsellingItem[];
 }
 
 
@@ -244,6 +314,8 @@ export interface FetchLeadsParams {
   admissionOverdue?: string;
   page?: number;
   limit?: number;
+  colleges?: string[];
+  ownerId?: string[];
 }
 
 export interface FetchLeadsResponse {
@@ -263,13 +335,18 @@ export interface FetchLeadsResponse {
 
 export async function fetchLeads(
   token: string,
-  params?: FetchLeadsParams
+  params?: FetchLeadsParams,
+  signal?: AbortSignal
 ): Promise<FetchLeadsResponse> {
   const query = new URLSearchParams();
   if (params) {
     Object.entries(params).forEach(([key, val]) => {
       if (val !== undefined && val !== null && val !== "") {
-        query.append(key, String(val));
+        if (Array.isArray(val)) {
+           val.forEach(v => query.append(key, String(v)));
+        } else {
+           query.append(key, String(val));
+        }
       }
     });
   }
@@ -280,6 +357,7 @@ export async function fetchLeads(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    signal,
   });
 
   if (!response.ok) {
@@ -305,6 +383,47 @@ export async function fetchLeads(
   }
   return res;
 }
+
+export async function exportLeadsExcel(
+  token: string,
+  params?: FetchLeadsParams
+): Promise<void> {
+  const query = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== "" && key !== "page" && key !== "limit") {
+        if (Array.isArray(val)) {
+           val.forEach(v => query.append(key, String(v)));
+        } else {
+           query.append(key, String(val));
+        }
+      }
+    });
+  }
+
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+  const response = await fetch(`${API_URL}/leads/export${queryString}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to export leads");
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = "leads_export.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
 
 export async function fetchLeadById(token: string, leadId: string): Promise<LeadItem> {
   const response = await fetch(`${API_URL}/leads/${leadId}`, {
@@ -629,6 +748,181 @@ export async function processClaimRequest(
     throw new Error(errorMsg);
   }
 
+  return data;
+}
+
+export async function fetchLeadsForReallocation(token: string, searchParams?: URLSearchParams) {
+  const query = searchParams ? `?${searchParams.toString()}` : "";
+  const response = await fetch(`${API_URL}/leads/reallocation${query}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to fetch leads for reallocation");
+  }
+  return response.json();
+}
+
+export interface LeadRemark {
+  id: string;
+  notes: string;
+  outcome: string;
+  createdAt: string;
+  startedAt?: string | null;
+  author: string;
+  authorDetails?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    email?: string | null;
+  } | null;
+}
+
+export interface LeadReallocationRecord {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  phone: string;
+  email?: string | null;
+  courseInterested?: string | null;
+  status?: {
+    id: number;
+    name: string;
+    color?: string;
+  } | null;
+  createdAt: string;
+  latestAssignment?: {
+    id: number;
+    assignedAt: string;
+    expiresAt: string;
+    status: string;
+    user?: {
+      id: string;
+      firstName: string;
+      lastName?: string | null;
+    };
+  } | null;
+  computedAssignmentStatus: "ACTIVE" | "EXPIRED" | "UNASSIGNED";
+  computedCurrentOwner?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+  } | null;
+  finalCollege?: {
+    id: string;
+    name: string;
+    city?: string;
+    state?: string;
+  } | null;
+  collegeApplications?: LeadCollegeApplication[];
+  remarks: LeadRemark[];
+}
+
+export interface BulkReallocateResponse {
+  message: string;
+  totalRequested: number;
+  successCount: number;
+  failedCount: number;
+  successLeadIds: string[];
+  failedLeads: { leadId: string; reason: string }[];
+}
+
+export async function reallocateLead(leadId: string, targetUserId: string, token: string) {
+  const response = await fetch(`${API_URL}/leads/${leadId}/reallocate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ targetUserId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to reallocate lead");
+  }
+  return response.json();
+}
+
+export async function bulkReallocateLeads(
+  leadIds: string[],
+  targetUserId: string,
+  token: string,
+): Promise<BulkReallocateResponse> {
+  const response = await fetch(`${API_URL}/leads/bulk-reallocate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ leadIds, targetUserId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to bulk reallocate leads");
+  }
+  return response.json();
+}
+
+export async function acknowledgeLead(token: string, leadId: string, shareId?: string) {
+  const response = await fetch(`${API_URL}/leads/${leadId}/acknowledge`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(shareId ? { shareId } : {}),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to acknowledge lead receipt");
+  }
+  return data;
+}
+
+export async function shareLead(
+  token: string,
+  leadId: string,
+  channel: string = "WHATSAPP",
+  context?: string,
+  recipientId?: string,
+  collegeId?: string,
+) {
+  const response = await fetch(`${API_URL}/leads/${leadId}/share`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ channel, context, recipientId, collegeId }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to record lead share");
+  }
+  return data;
+}
+
+export async function fetchLeadShares(token: string, leadId: string): Promise<LeadAcknowledgementItem[]> {
+  const response = await fetch(`${API_URL}/leads/${leadId}/shares`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch lead shares");
+  }
   return data;
 }
 

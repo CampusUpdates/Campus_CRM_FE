@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Search,
   Filter,
-  AlertCircle,
   CheckCircle2,
   Clock,
   ArrowUpDown,
@@ -26,9 +25,10 @@ import {
 import { CallHistoryDrawer } from "./CallHistoryDrawer";
 import type { MockCallQueueStudentItem } from "../../../services/mockCallService";
 import { getCompactPageNumbers } from "../../../utils/paginationUtils";
+import { DashboardDropdown, PageLoadingState, PageErrorState, PageEmptyState } from "../../../components/common";
 
 type SortField = "advisorName" | "assignedDataCount" | "callsCount" | "answeredCallsCount" | "notAnsweredCallsCount";
-type DatePeriod = "today" | "yesterday" | "7days" | "30days" | "all";
+type DatePeriod = "today" | "yesterday" | "7days" | "30days" | "all" | "custom";
 
 function getDateRangeForPeriod(period: DatePeriod): { startDate?: string; endDate?: string } {
   const now = new Date();
@@ -71,6 +71,12 @@ export const SuperAdminCallReportView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [datePeriod, setDatePeriod] = useState<DatePeriod>(initialDateParam);
 
+  // Custom date range state
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [appliedCustomStartDate, setAppliedCustomStartDate] = useState("");
+  const [appliedCustomEndDate, setAppliedCustomEndDate] = useState("");
+
   // Call history drawer state
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<MockCallQueueStudentItem | null>(null);
 
@@ -78,6 +84,9 @@ export const SuperAdminCallReportView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState<string>("ALL");
   const [callingFilter, setCallingFilter] = useState<"ALL" | "CALLED" | "ZERO_CALLS">("ALL");
+  const [callTimingFilter, setCallTimingFilter] = useState<string>(
+    searchParams.get("callTiming") || "ALL"
+  );
   const [callTimeFilter, setCallTimeFilter] = useState<string>("ALL");
 
   // Sorting for Advisor table
@@ -88,24 +97,67 @@ export const SuperAdminCallReportView: React.FC = () => {
   const CALLS_PER_PAGE = 10;
   const [callLogsPage, setCallLogsPage] = useState(1);
 
-  const loadReport = useCallback(async (targetPage = callLogsPage, isSilent = false) => {
+  const loadReport = useCallback(async (targetPage = callLogsPage, isSilent = false, signal?: AbortSignal) => {
     if (!accessToken) return;
+
+    let startDate, endDate;
+    if (datePeriod === "custom") {
+      if (!appliedCustomStartDate || !appliedCustomEndDate) {
+        return; // wait until custom dates are applied
+      }
+      startDate = appliedCustomStartDate;
+      endDate = appliedCustomEndDate;
+    } else {
+      const range = getDateRangeForPeriod(datePeriod);
+      startDate = range.startDate;
+      endDate = range.endDate;
+    }
+
     if (!isSilent) setLoading(true);
     setError(null);
     try {
-      const { startDate, endDate } = getDateRangeForPeriod(datePeriod);
-      const res = await fetchSuperAdminDashboardStats(accessToken, startDate, endDate, targetPage, CALLS_PER_PAGE, callTimeFilter);
+      const res = await fetchSuperAdminDashboardStats(
+        accessToken,
+        startDate,
+        endDate,
+        targetPage,
+        CALLS_PER_PAGE,
+        callTimeFilter,
+        callTimingFilter,
+        signal
+      );
+      if (signal?.aborted) return;
       setData(res);
     } catch (err: any) {
+      if (signal?.aborted || err.name === "AbortError") return;
       console.error("Failed to load Super Admin Call Report:", err);
       if (!isSilent) setError(err.message || "Failed to load call monitoring metrics.");
     } finally {
-      if (!isSilent) setLoading(false);
+      if (!isSilent && !signal?.aborted) setLoading(false);
     }
-  }, [accessToken, datePeriod, callLogsPage, callTimeFilter]);
+  }, [accessToken, datePeriod, callLogsPage, callTimeFilter, callTimingFilter, appliedCustomStartDate, appliedCustomEndDate]);
+
+  // Handle Call Timing change (All Day / Pre-Lunch / Post-Lunch)
+  const handleCallTimingChange = (newTiming: string) => {
+    setCallTimingFilter(newTiming);
+    setCallTimeFilter("ALL");
+    setCallLogsPage(1);
+    setSearchParams((prev) => {
+      if (newTiming === "ALL") {
+        prev.delete("callTiming");
+      } else {
+        prev.set("callTiming", newTiming);
+      }
+      return prev;
+    });
+  };
 
   // Handle period change
   const handlePeriodChange = (period: DatePeriod) => {
+    if (period === datePeriod) return;
+    if (period !== "custom") {
+      setLoading(true);
+    }
     setDatePeriod(period);
     setCallLogsPage(1);
     setSearchParams((prev) => {
@@ -122,12 +174,37 @@ export const SuperAdminCallReportView: React.FC = () => {
 
   // Initial load & real-time background polling every 5 seconds
   useEffect(() => {
-    loadReport(callLogsPage, false);
-    const timer = setInterval(() => {
-      loadReport(callLogsPage, true);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [loadReport, callLogsPage, callTimeFilter]);
+    let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const abortController = new AbortController();
+
+    const pollData = async () => {
+      if (!isMounted) return;
+
+      try {
+        await loadReport(callLogsPage, true, abortController.signal);
+      } catch (e) {
+        // Handle gracefully, retry on next poll if not aborted
+      }
+
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 5000);
+      }
+    };
+
+    // Initial load
+    loadReport(callLogsPage, false, abortController.signal).then(() => {
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 5000);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [loadReport, callLogsPage, callTimeFilter, callTimingFilter]);
 
 
   const handleSort = (field: SortField) => {
@@ -141,31 +218,25 @@ export const SuperAdminCallReportView: React.FC = () => {
 
   if (loading && !data) {
     return (
-      <div className="space-y-6 animate-pulse p-2">
-        <div className="h-24 w-full bg-surface rounded-2xl border border-border" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-surface rounded-2xl border border-border" />
-          ))}
-        </div>
-        <div className="h-80 bg-surface rounded-2xl border border-border" />
+      <div className="w-full max-w-full space-y-6 pb-12">
+        <PageLoadingState
+          message="Loading Team Member Call Performance..."
+          description="Aggregating calling metrics, response times, and team performance data"
+          minHeight="min-h-[420px]"
+        />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 rounded-2xl border border-rose-500/20 bg-rose-500/10 text-center">
-        <AlertCircle size={36} className="text-rose-500 mb-3" />
-        <h3 className="text-base font-bold text-text-primary">Failed to Load Team Member Call Performance Report</h3>
-        <p className="text-xs text-text-secondary mt-1 max-w-md">{error}</p>
-        <button
-          type="button"
-          onClick={() => loadReport()}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-700 transition cursor-pointer"
-        >
-          <RefreshCw size={14} /> Retry Loading
-        </button>
+      <div className="w-full max-w-full space-y-6 pb-12">
+        <PageErrorState
+          title="Failed to Load Team Member Call Performance Report"
+          message={error}
+          onRetry={() => loadReport(1, false)}
+          minHeight="min-h-[380px]"
+        />
       </div>
     );
   }
@@ -235,7 +306,10 @@ export const SuperAdminCallReportView: React.FC = () => {
   // Total metrics calculations from existing data
   const totalAssignedData = advisorPerformance.reduce((acc, a) => acc + (a.assignedDataCount || 0), 0);
   const totalCallsLogged = kpis.callsTodayCount || totalCallsCount;
-  const zeroCallCount = attentionRequired.zeroCallAdvisorsCount || advisorPerformance.filter((a) => a.callsCount === 0).length;
+  const zeroCallCount =
+    attentionRequired.zeroCallAdvisorsCount !== undefined
+      ? attentionRequired.zeroCallAdvisorsCount
+      : advisorPerformance.filter((a) => a.callsCount === 0).length;
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-6 pb-12">
@@ -253,29 +327,71 @@ export const SuperAdminCallReportView: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Date Period Filter Selector */}
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-surface p-1 text-xs shadow-xs">
-            {(
-              [
-                { id: "today", label: "Today" },
-                { id: "yesterday", label: "Yesterday" },
-                { id: "7days", label: "Last 7 Days" },
-                { id: "30days", label: "Last 30 Days" },
-                { id: "all", label: "All Time" },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handlePeriodChange(tab.id)}
-                className={`rounded-lg px-3 py-1.5 font-semibold transition cursor-pointer ${
-                  datePeriod === tab.id
-                    ? "bg-primary-600 text-white shadow-xs"
-                    : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <DashboardDropdown
+              value={datePeriod}
+              onChange={(val) => handlePeriodChange(val as DatePeriod)}
+              options={[
+                { value: "today", label: "Today" },
+                { value: "yesterday", label: "Yesterday" },
+                { value: "7days", label: "Last 7 Days" },
+                { value: "30days", label: "Last 30 Days" },
+                { value: "all", label: "All Time" },
+                { value: "custom", label: "Custom Date Range" },
+              ]}
+              minWidth="150px"
+            />
+
+            {datePeriod === "custom" && (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-1 shadow-xs text-xs">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  max={customEndDate || undefined}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="rounded-md border border-border bg-background px-2 py-1 focus:border-primary-500 focus:outline-none cursor-text"
+                />
+                <span className="text-text-muted font-medium">to</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  min={customStartDate || undefined}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="rounded-md border border-border bg-background px-2 py-1 focus:border-primary-500 focus:outline-none cursor-text"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customStartDate && customEndDate && customStartDate <= customEndDate) {
+                      setLoading(true);
+                      if (customStartDate === appliedCustomStartDate && customEndDate === appliedCustomEndDate) {
+                        loadReport(1, false);
+                      } else {
+                        setAppliedCustomStartDate(customStartDate);
+                        setAppliedCustomEndDate(customEndDate);
+                      }
+                    }
+                  }}
+                  disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
+                  className="rounded-md bg-primary-600 px-3 py-1 font-semibold text-white hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Apply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                    setAppliedCustomStartDate("");
+                    setAppliedCustomEndDate("");
+                    handlePeriodChange("today");
+                  }}
+                  className="rounded-md border border-border bg-background px-3 py-1 font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -383,7 +499,7 @@ export const SuperAdminCallReportView: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Box */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -398,54 +514,71 @@ export const SuperAdminCallReportView: React.FC = () => {
 
           {/* Team Dropdown Filter */}
           <div>
-            <select
+            <DashboardDropdown
               value={selectedTeam}
-              onChange={(e) => setSelectedTeam(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
-            >
-              <option value="ALL">All Teams ({teamsList.length})</option>
-              {teamsList.map((tm) => (
-                <option key={tm} value={tm}>
-                  {tm}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedTeam(val)}
+              options={[
+                { value: "ALL", label: `All Teams (${teamsList.length})` },
+                ...teamsList.map((tm) => ({ value: tm, label: tm })),
+              ]}
+              minWidth="160px"
+            />
           </div>
 
           {/* Calling Activity Filter */}
           <div>
-            <select
+            <DashboardDropdown
               value={callingFilter}
-              onChange={(e) => setCallingFilter(e.target.value as any)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
-            >
-              <option value="ALL">All Calling Statuses</option>
-              <option value="CALLED">Advisors With Logged Calls</option>
-              <option value="ZERO_CALLS">Zero Call Advisors</option>
-            </select>
+              onChange={(val) => setCallingFilter(val as any)}
+              options={[
+                { value: "ALL", label: "All Calling Statuses" },
+                { value: "CALLED", label: "Advisors With Logged Calls" },
+                { value: "ZERO_CALLS", label: "Zero Call Advisors" },
+              ]}
+              minWidth="175px"
+            />
+          </div>
+
+          {/* Call Timing Filter */}
+          <div>
+            <DashboardDropdown
+              id="call-timing-filter"
+              aria-label="Call Timing"
+              value={callTimingFilter}
+              onChange={handleCallTimingChange}
+              options={[
+                { value: "ALL", label: "All Day — 10:00 AM to 7:00 PM" },
+                { value: "PRE_LUNCH", label: "Pre-Lunch Calls — 10:00 AM to 2:00 PM" },
+                { value: "POST_LUNCH", label: "Post-Lunch Calls — 2:30 PM to 7:00 PM" },
+              ]}
+              minWidth="200px"
+            />
           </div>
 
           {/* Call Time (Hourly) Filter */}
           <div>
-            <select
+            <DashboardDropdown
+              id="hourly-call-time-filter"
+              aria-label="Working Hours"
               value={callTimeFilter}
-              onChange={(e) => {
-                setCallTimeFilter(e.target.value);
+              onChange={(val) => {
+                setCallTimeFilter(val);
                 setCallLogsPage(1);
               }}
-              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
-            >
-              <option value="ALL">All Hours (10:00 AM - 07:00 PM)</option>
-              <option value="10:00-11:00">10:00 AM – 11:00 AM</option>
-              <option value="11:00-12:00">11:00 AM – 12:00 PM</option>
-              <option value="12:00-13:00">12:00 PM – 01:00 PM</option>
-              <option value="13:00-14:00">01:00 PM – 02:00 PM</option>
-              <option value="14:00-15:00">02:00 PM – 03:00 PM</option>
-              <option value="15:00-16:00">03:00 PM – 04:00 PM</option>
-              <option value="16:00-17:00">04:00 PM – 05:00 PM</option>
-              <option value="17:00-18:00">05:00 PM – 06:00 PM</option>
-              <option value="18:00-19:00">06:00 PM – 07:00 PM</option>
-            </select>
+              options={[
+                { value: "ALL", label: "All Hours (10:00 AM - 07:00 PM)" },
+                { value: "10:00-11:00", label: "10:00 AM – 11:00 AM" },
+                { value: "11:00-12:00", label: "11:00 AM – 12:00 PM" },
+                { value: "12:00-13:00", label: "12:00 PM – 01:00 PM" },
+                { value: "13:00-14:00", label: "01:00 PM – 02:00 PM" },
+                { value: "14:00-15:00", label: "02:00 PM – 03:00 PM" },
+                { value: "15:00-16:00", label: "03:00 PM – 04:00 PM" },
+                { value: "16:00-17:00", label: "04:00 PM – 05:00 PM" },
+                { value: "17:00-18:00", label: "05:00 PM – 06:00 PM" },
+                { value: "18:00-19:00", label: "06:00 PM – 07:00 PM" },
+              ]}
+              minWidth="190px"
+            />
           </div>
         </div>
       </div>
@@ -544,11 +677,13 @@ export const SuperAdminCallReportView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-border/50">
               {sortedAdvisors.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-text-muted">
-                    No team members match the selected filters.
-                  </td>
-                </tr>
+                <PageEmptyState
+                  isTableRow
+                  colSpan={7}
+                  icon={Users}
+                  title="No team members match the selected filters"
+                  description="Try adjusting your team or calling status filters."
+                />
               ) : (
                 sortedAdvisors.map((adv) => {
                   const hasCalls = adv.callsCount > 0;
@@ -625,11 +760,13 @@ export const SuperAdminCallReportView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-border/50">
               {paginatedCallsTodayList.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-xs text-text-muted">
-                    No recent call activity logged today.
-                  </td>
-                </tr>
+                <PageEmptyState
+                  isTableRow
+                  colSpan={8}
+                  icon={PhoneCall}
+                  title="No recent call activity logged"
+                  description="No calls have been recorded for the selected period and timing filters."
+                />
               ) : (
                 paginatedCallsTodayList.map((call) => (
                   <tr key={call.id} className="hover:bg-surface-hover/50 transition">

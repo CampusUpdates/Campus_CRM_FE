@@ -26,10 +26,15 @@ import {
   type MockCallSession,
   type CallLogItem,
 } from "../../../services/mockCallService";
-import StudentDetailsCard from "../components/StudentDetailsCard";
+import {
+  PageLoadingState,
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 import MockCallPanel from "../components/MockCallPanel";
 import CallOutcomePanel from "../components/CallOutcomePanel";
-import { SuperAdminCallReportView } from "../components/SuperAdminCallReportView";
+import { CallHistoryCard } from "../components/CallHistoryCard";
 import { CallHistoryDrawer } from "../components/CallHistoryDrawer";
 import AddDispositionModal from "../components/AddDispositionModal";
 import { BookmarksDrawer } from "../components/BookmarksDrawer";
@@ -124,12 +129,6 @@ const CallWorkspace = () => {
   const { user, accessToken } = useAuth();
   const toast = useToast();
 
-  const isSuperAdmin = user?.roleCode === "SUPER_ADMIN" || user?.roleId === 1;
-
-  if (isSuperAdmin) {
-    return <SuperAdminCallReportView />;
-  }
-
   const [searchParams, setSearchParams] = useSearchParams();
 
   const paramStudentDataId = searchParams.get("studentDataId");
@@ -145,6 +144,7 @@ const CallWorkspace = () => {
   const [queue, setQueue] = useState<MockCallQueueStudentItem[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   // Call Logs state
   const [callLogs, setCallLogs] = useState<CallLogItem[]>([]);
@@ -154,6 +154,7 @@ const CallWorkspace = () => {
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
 
   // Active call session
   const [callSession, setCallSession] = useState<MockCallSession | null>(null);
@@ -305,6 +306,7 @@ const CallWorkspace = () => {
   const loadQueue = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
+    setQueueError(null);
     try {
       const res = await fetchMockCallQueue(accessToken);
       let items = res.items || [];
@@ -348,7 +350,9 @@ const CallWorkspace = () => {
       setCompletedCount(res.completedCount || 0);
       setCallSession(null);
     } catch (err: any) {
-      toast.error(err.message || "Failed to load assigned call queue.");
+      const msg = err.message || "Failed to load assigned call queue.";
+      setQueueError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -358,6 +362,7 @@ const CallWorkspace = () => {
   const loadLogs = useCallback(async () => {
     if (!accessToken) return;
     setLogsLoading(true);
+    setLogsError(null);
     try {
       const res = await fetchCallLogs(accessToken, {
         page: logsPage,
@@ -369,7 +374,9 @@ const CallWorkspace = () => {
       setLogsTotalPages(res.totalPages || 1);
       setBookmarkedCount(res.bookmarkedCount || 0);
     } catch (err: any) {
-      toast.error(err.message || "Failed to load call logs.");
+      const msg = err.message || "Failed to load call logs.";
+      setLogsError(msg);
+      toast.error(msg);
     } finally {
       setLogsLoading(false);
     }
@@ -567,7 +574,7 @@ const CallWorkspace = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by student name, phone, email, city, state..."
-                className="w-full h-10 rounded-xl border border-border bg-neutral-50/50 pl-10 pr-4 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition"
+                className="w-full h-10 rounded-xl border border-border bg-background pl-10 pr-4 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100/20 transition"
               />
               {searchInput && (
                 <button
@@ -584,10 +591,10 @@ const CallWorkspace = () => {
               <button
                 type="button"
                 onClick={() => setIsBookmarksDrawerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-300 bg-blue-50/90 hover:bg-blue-100 text-blue-800 px-3.5 py-2 font-bold transition shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-800/80 bg-blue-950/50 hover:bg-blue-900/60 text-blue-300 px-3.5 py-2 font-bold transition shadow-2xs cursor-pointer"
                 title="Open active 24h bookmarks slider"
               >
-                <Bookmark size={14} className="fill-blue-600 text-blue-600" />
+                <Bookmark size={14} className="fill-blue-400 text-blue-400" />
                 <span>Bookmarks</span>
                 {bookmarkedCount > 0 && (
                   <span className="inline-flex items-center justify-center rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold">
@@ -602,21 +609,33 @@ const CallWorkspace = () => {
           {/* Call Logs Table */}
           <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xs">
             {logsLoading ? (
-              <div className="p-12 text-center text-xs text-text-muted flex items-center justify-center gap-2">
-                <RefreshCw size={16} className="animate-spin text-primary-600" />
-                Loading searchable call logs...
-              </div>
+              <SectionLoadingState
+                message="Loading searchable call logs..."
+                description="Retrieving calling recordings, student status, and interaction remarks"
+                minHeight="min-h-[260px]"
+              />
+            ) : logsError ? (
+              <PageErrorState
+                title="Unable to load call logs"
+                message={logsError}
+                onRetry={loadLogs}
+                minHeight="min-h-[260px]"
+              />
             ) : callLogs.length === 0 ? (
-              <div className="p-12 text-center text-xs text-text-muted space-y-2">
-                <p className="font-bold text-text-secondary text-sm">No call log records found</p>
-                <p>Try clearing your search criteria or requesting dataset assignments from your Manager.</p>
-              </div>
+              <PageEmptyState
+                icon={PhoneCall}
+                title="No call log records found"
+                description={searchQuery ? `No calls found matching "${searchQuery}".` : "Try clearing your search criteria or requesting dataset assignments from your Manager."}
+                actionText={searchQuery ? "Clear Search" : undefined}
+                onAction={searchQuery ? () => setSearchInput("") : undefined}
+                minHeight="min-h-[260px]"
+              />
             ) : (
               <div className="space-y-4">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
+                      <tr className="border-b border-border bg-background/80 text-text-secondary font-semibold uppercase tracking-wider">
                         <th className="px-5 py-4">Student Name</th>
                         <th className="px-5 py-4">Phone / Email</th>
                         <th className="px-5 py-4">City / State</th>
@@ -629,11 +648,15 @@ const CallWorkspace = () => {
                     <tbody className="divide-y divide-border">
                       {callLogs.map((item) => {
                         const latestOutcome = item.latestCall?.outcome;
-                        const latestOutcomeLabel = latestOutcome ? latestOutcome.replace(/_/g, " ") : "No Call Yet";
+                        const latestOutcomeLabel = latestOutcome === "OTHER"
+                          ? "Other"
+                          : latestOutcome
+                            ? latestOutcome.replace(/_/g, " ")
+                            : "No Call Yet";
                         const isBookmarkActive = item.isBookmarked;
 
                         return (
-                          <tr key={item.studentDataId} className="hover:bg-neutral-50/60 transition">
+                          <tr key={item.studentDataId} className="hover:bg-background/40 transition">
                             {/* Clickable Student Name -> Deep-links to Live Dialer Queue */}
                             <td className="px-5 py-4">
                               <button
@@ -670,12 +693,18 @@ const CallWorkspace = () => {
                               {item.latestCall ? (
                                 <div>
                                   <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold ${latestOutcome === "INTERESTED"
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                                    ? "border-emerald-700 bg-emerald-950/70 text-emerald-300"
                                     : latestOutcome === "FOLLOW_UP" || latestOutcome === "CALL_BACK_LATER"
-                                      ? "border-blue-300 bg-blue-50 text-blue-800"
+                                      ? "border-blue-800/80 bg-blue-950/60 text-blue-300"
                                       : latestOutcome === "DISCONNECTED"
-                                        ? "border-orange-300 bg-orange-50 text-orange-800"
-                                        : "border-neutral-300 bg-neutral-50 text-neutral-700"
+                                        ? "border-orange-800/80 bg-orange-950/60 text-orange-300"
+                                        : latestOutcome === "OTHER"
+                                          ? "border-cyan-800/80 bg-cyan-950/60 text-cyan-300"
+                                          : latestOutcome === "NOT_INTERESTED"
+                                            ? "border-amber-800/80 bg-amber-950/60 text-amber-300"
+                                            : latestOutcome === "WRONG_NUMBER"
+                                              ? "border-rose-800/80 bg-rose-950/60 text-rose-300"
+                                              : "border-slate-700/80 bg-slate-900/80 text-slate-300"
                                     }`}>
                                     {latestOutcomeLabel}
                                   </span>
@@ -695,10 +724,10 @@ const CallWorkspace = () => {
                                 <button
                                   type="button"
                                   onClick={() => setIsBookmarksDrawerOpen(true)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-800 px-2.5 py-1 text-[11px] font-bold shadow-2xs cursor-pointer transition"
+                                  className="inline-flex items-center gap-1 rounded-full border border-blue-800/80 bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 px-2.5 py-1 text-[11px] font-bold shadow-2xs cursor-pointer transition"
                                   title="Click to view all bookmarks in right slider"
                                 >
-                                  <Bookmark size={12} className="fill-blue-600 text-blue-600 shrink-0" />
+                                  <Bookmark size={12} className="fill-blue-400 text-blue-400 shrink-0" />
                                   Active 24h
                                 </button>
                               ) : (
@@ -783,11 +812,10 @@ const CallWorkspace = () => {
                             key={pageNum}
                             type="button"
                             onClick={() => setLogsPage(pageNum)}
-                            className={`flex h-7 min-w-[28px] sm:h-7.5 sm:min-w-[30px] px-1.5 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${
-                              isActive
+                            className={`flex h-7 min-w-[28px] sm:h-7.5 sm:min-w-[30px] px-1.5 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${isActive
                                 ? "bg-primary-600 text-white shadow-xs"
                                 : "border border-border text-text-secondary hover:bg-neutral-100 hover:text-text-primary"
-                            }`}
+                              }`}
                           >
                             {pageNum}
                           </button>
@@ -814,29 +842,34 @@ const CallWorkspace = () => {
         /* LIVE DIALER QUEUE WORKSPACE */
         <div>
           {loading ? (
-            <div className="flex items-center justify-center p-16 text-sm text-text-secondary">
-              <RefreshCw className="animate-spin mr-2" size={20} />
-              Loading your assigned student call queue...
-            </div>
+            <PageLoadingState
+              message="Loading your assigned student call queue..."
+              description="Retrieving student contact numbers, course interests, and pitch details"
+              minHeight="min-h-[380px]"
+            />
+          ) : queueError ? (
+            <PageErrorState
+              title="Unable to load dialer queue"
+              message={queueError}
+              onRetry={loadQueue}
+              minHeight="min-h-[380px]"
+            />
           ) : queue.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-16 text-center bg-surface border border-border rounded-2xl">
-              <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mb-4 text-text-muted">
-                <Users size={32} />
-              </div>
-              <h3 className="text-lg font-bold text-text-primary">No assigned contacts found</h3>
-              <p className="text-sm text-text-secondary mt-1 max-w-md">
-                You do not currently have active student dataset assignments. Please request dataset assignments from your Manager.
-              </p>
-            </div>
+            <PageEmptyState
+              icon={Users}
+              title="No assigned contacts found"
+              description="You do not currently have active student dataset assignments. Please request dataset assignments from your Manager."
+              minHeight="min-h-[380px]"
+            />
           ) : (
             <div className="space-y-4">
               {/* Live Queue Header Bar with Data-Set Jump Dropdown & Uncompleted Filter */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface p-3.5 rounded-xl border border-border gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface p-3.5 rounded-xl border border-border/80 gap-3 min-w-0">
                 {/* Completed Session Count, Data-Set Select, & Uncompleted Filter Toggle */}
-                <div className="flex flex-wrap items-center gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-3 text-xs min-w-0">
                   <div className="flex items-center gap-2 font-semibold text-text-secondary">
                     <span>Completed in Session:</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-800 text-emerald-300 font-mono font-bold">
                       {completedCount} / {queue.length}
                     </span>
                   </div>
@@ -846,26 +879,26 @@ const CallWorkspace = () => {
                       <div className="h-4 w-px bg-border hidden sm:block" />
 
                       {/* Jump to Data Set Selector */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <label htmlFor="dataset-jump-select" className="font-bold text-text-secondary whitespace-nowrap flex items-center gap-1">
-                          <Layers size={14} className="text-primary-600" />
+                          <Layers size={14} className="text-emerald-500 shrink-0" />
                           <span>Data Set:</span>
                         </label>
                         <select
                           id="dataset-jump-select"
                           value={selectedAssignmentId}
                           onChange={(e) => handleJumpToAssignmentBatch(e.target.value)}
-                          className="h-8 rounded-lg border border-border bg-neutral-50 px-2.5 text-xs font-semibold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition cursor-pointer max-w-[220px] sm:max-w-[300px] truncate"
+                          className="h-8 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-semibold text-text-primary outline-none focus:border-emerald-500 transition cursor-pointer max-w-[220px] sm:max-w-[300px] truncate"
                           title="Select an assignment batch to jump to its saved calling position"
                         >
                           {batches.map((batch) => {
                             const dateStr = batch.assignedAt
                               ? new Date(batch.assignedAt).toLocaleDateString("en-GB", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                               : "";
                             return (
                               <option key={batch.assignmentId} value={batch.assignmentId}>
@@ -878,15 +911,14 @@ const CallWorkspace = () => {
                       </div>
 
                       {/* Working Queue Filter Toggle: All Records vs Uncompleted Only */}
-                      <div className="inline-flex items-center rounded-lg border border-border bg-neutral-100/90 p-0.5 shadow-2xs">
+                      <div className="inline-flex items-center rounded-lg border border-border/80 bg-background p-0.5 shadow-2xs">
                         <button
                           type="button"
                           onClick={() => handleToggleFilterMode("all")}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${
-                            filterMode === "all"
-                              ? "bg-surface text-primary-700 shadow-xs border border-border/60"
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${filterMode === "all"
+                              ? "bg-surface text-emerald-300 shadow-xs border border-border/60"
                               : "text-text-secondary hover:text-text-primary"
-                          }`}
+                            }`}
                           title="Show all records in the selected Data Set"
                         >
                           All ({batchTotalRecords})
@@ -894,18 +926,16 @@ const CallWorkspace = () => {
                         <button
                           type="button"
                           onClick={() => handleToggleFilterMode("uncompleted")}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition cursor-pointer flex items-center gap-1.5 ${
-                            filterMode === "uncompleted"
-                              ? "bg-amber-500 text-white shadow-xs"
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition cursor-pointer flex items-center gap-1.5 ${filterMode === "uncompleted"
+                              ? "bg-amber-600 text-white shadow-xs"
                               : "text-text-secondary hover:text-text-primary"
-                          }`}
+                            }`}
                           title="Show only uncompleted records in the selected Data Set"
                         >
                           <span>Uncompleted Only</span>
                           <span
-                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                              filterMode === "uncompleted" ? "bg-amber-600 text-white" : "bg-neutral-200 text-text-secondary"
-                            }`}
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${filterMode === "uncompleted" ? "bg-amber-700 text-white" : "bg-surface border border-border/60 text-text-muted"
+                              }`}
                           >
                             {batchUncompletedCount}
                           </span>
@@ -946,8 +976,8 @@ const CallWorkspace = () => {
                       {activeBatchQueue.length === 0
                         ? "0 / 0"
                         : filterMode === "uncompleted"
-                        ? `Uncompleted ${Math.max(1, batchRecordIndex + 1)} / ${activeBatchQueue.length}`
-                        : `Contact ${batchRecordIndex + 1} of ${activeBatchQueue.length}`}
+                          ? `Uncompleted ${Math.max(1, batchRecordIndex + 1)} / ${activeBatchQueue.length}`
+                          : `Contact ${batchRecordIndex + 1} of ${activeBatchQueue.length}`}
                     </span>
                     <button
                       type="button"
@@ -999,29 +1029,9 @@ const CallWorkspace = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  {/* Left Column: Student Details + Outcome Panel */}
-                  <div className="lg:col-span-7 space-y-6">
-                    <StudentDetailsCard
-                      student={currentStudent}
-                      totalAssigned={activeBatchQueue.length}
-                      currentIndex={batchRecordIndex}
-                      phonePosition={phonePosition}
-                      onOpenHistory={() => {
-                        setSelectedStudentForHistory(currentStudent);
-                        setIsHistoryDrawerOpen(true);
-                      }}
-                    />
-
-                    <CallOutcomePanel
-                      student={currentStudent}
-                      callSession={callSession}
-                      onOutcomeComplete={handleOutcomeComplete}
-                    />
-                  </div>
-
-                  {/* Right Column: Mock Dialer Console */}
-                  <div className="lg:col-span-5">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full min-w-0">
+                  {/* Block 1 — Telephony Console (Large Left Block) */}
+                  <div className="lg:col-span-7 w-full min-w-0">
                     <MockCallPanel
                       student={currentStudent}
                       callSession={callSession}
@@ -1030,6 +1040,28 @@ const CallWorkspace = () => {
                       loading={actionLoading}
                       phonePosition={phonePosition}
                       onPhonePositionChange={handlePhonePositionChange}
+                      totalAssigned={activeBatchQueue.length}
+                      currentIndex={batchRecordIndex}
+                    />
+                  </div>
+
+                  {/* Right Column: Upper-Right Block (History) & Lower-Right Block (Post-Call Details) */}
+                  <div className="lg:col-span-5 space-y-4 w-full min-w-0">
+                    {/* Block 2 — Call History (Upper-Right Block) */}
+                    <CallHistoryCard
+                      student={currentStudent}
+                      refreshKey={historyRefreshKey}
+                      onOpenHistory={() => {
+                        setSelectedStudentForHistory(currentStudent);
+                        setIsHistoryDrawerOpen(true);
+                      }}
+                    />
+
+                    {/* Block 3 — Post-Call Details (Lower-Right Block) */}
+                    <CallOutcomePanel
+                      student={currentStudent}
+                      callSession={callSession}
+                      onOutcomeComplete={handleOutcomeComplete}
                     />
                   </div>
                 </div>

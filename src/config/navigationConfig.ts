@@ -16,6 +16,9 @@ import {
   Database,
   Upload,
   MapPin,
+  RefreshCcw,
+  FileSpreadsheet,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,10 +60,52 @@ export const navigationMenu: NavigationItem[] = [
     roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
   },
   {
+    title: "Calls",
+    icon: PhoneCall,
+    path: ROUTES.CALL_WORKSPACE,
+    roles: ["SUPER_ADMIN"],
+    children: [
+      {
+        title: "Call Workspace",
+        path: ROUTES.CALL_WORKSPACE,
+        icon: PhoneCall,
+      },
+      {
+        title: "Call Reports",
+        path: ROUTES.CALL_REPORTS,
+        icon: BarChart3,
+      },
+    ],
+  },
+  {
     title: "Call Workspace",
     icon: PhoneCall,
-    path: ROUTES.CALLS,
+    path: ROUTES.CALL_WORKSPACE,
+    roles: ["MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
+  },
+  {
+    title: "TPC",
+    icon: PhoneCall,
+    path: ROUTES.TPC,
     roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
+    children: [
+      {
+        title: "My TPCs",
+        path: `${ROUTES.TPC}?tab=my`,
+        icon: Users,
+      },
+      {
+        title: "Assigned TPCs",
+        path: `${ROUTES.TPC}?tab=assigned`,
+        icon: UserCheck,
+      },
+      {
+        title: "TPC Reports",
+        path: ROUTES.TPC_REPORTS,
+        icon: BarChart3,
+        roles: ["SUPER_ADMIN", "MANAGER"],
+      },
+    ],
   },
 
   {
@@ -78,6 +123,18 @@ export const navigationMenu: NavigationItem[] = [
         title: "Data Assignment",
         path: ROUTES.DATA_ASSIGNMENT,
         icon: UserCheck,
+      },
+      {
+        title: "Lead Reallocation",
+        path: ROUTES.LEAD_REALLOCATION,
+        icon: RefreshCcw,
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        title: "Analysis Spreadsheets",
+        path: ROUTES.ANALYSIS_SPREADSHEETS,
+        icon: FileSpreadsheet,
+        roles: ["SUPER_ADMIN", "MANAGER"],
       },
     ],
   },
@@ -104,6 +161,12 @@ export const navigationMenu: NavigationItem[] = [
     icon: CheckCircle2,
     path: ROUTES.PITCH_APPROVALS,
     roles: ["MANAGER", "TEAM_LEAD"],
+  },
+  {
+    title: "College Counselling",
+    icon: GraduationCap,
+    path: ROUTES.COLLEGE_COUNSELLING,
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
   },
   {
     title: "Colleges",
@@ -136,24 +199,6 @@ export const navigationMenu: NavigationItem[] = [
     roles: ["SUPER_ADMIN", "HR"],
   },
   {
-    title: "TPC",
-    icon: PhoneCall,
-    path: ROUTES.TPC,
-    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"],
-    children: [
-      {
-        title: "My TPCs",
-        path: `${ROUTES.TPC}?tab=my`,
-        icon: Users,
-      },
-      {
-        title: "Assigned TPCs",
-        path: `${ROUTES.TPC}?tab=assigned`,
-        icon: UserCheck,
-      },
-    ],
-  },
-  {
     title: "Admissions",
     icon: GraduationCap,
     path: ROUTES.ADMISSIONS,
@@ -172,10 +217,16 @@ export const navigationMenu: NavigationItem[] = [
     roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
   },
   {
+    title: "Broadcast Messages",
+    icon: Megaphone,
+    path: ROUTES.BROADCASTS,
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR"],
+  },
+  {
     title: "Notifications",
     icon: Bell,
     path: ROUTES.NOTIFICATIONS,
-    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"],
+    roles: ["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR"],
   },
   {
     title: "Profile",

@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import {
   UserCheck,
   RefreshCw,
-  AlertCircle,
   Building2,
   Calendar,
   Filter,
@@ -24,6 +23,11 @@ import {
 import { fetchTeams, type TeamItem } from "../../../services/teamService";
 import { fetchRoles, type UserRole } from "../../../services/userService";
 import EmployeeAttendanceDrawer from "../components/EmployeeAttendanceDrawer";
+import {
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const formatTimeString = (isoStr?: string | null) => {
   if (!isoStr) return "—";
@@ -341,11 +345,10 @@ const AttendancePage = () => {
         {/* TOTAL RECORDS */}
         <div
           onClick={() => handleFilterChange(setStatusFilter, "ALL")}
-          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${
-            statusFilter === "ALL"
+          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${statusFilter === "ALL"
               ? "border-primary-500 bg-primary-50/50 dark:bg-primary-950/40 ring-2 ring-primary-500/20"
               : "border-border bg-surface hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
@@ -368,11 +371,10 @@ const AttendancePage = () => {
         {/* PRESENT */}
         <div
           onClick={() => handleFilterChange(setStatusFilter, "PRESENT")}
-          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${
-            statusFilter === "PRESENT"
+          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${statusFilter === "PRESENT"
               ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20"
               : "border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/30 dark:bg-emerald-950/20 hover:bg-emerald-50/60"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-400">
@@ -397,11 +399,10 @@ const AttendancePage = () => {
         {/* ABSENT */}
         <div
           onClick={() => handleFilterChange(setStatusFilter, "ABSENT")}
-          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${
-            statusFilter === "ABSENT"
+          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${statusFilter === "ABSENT"
               ? "border-rose-500 bg-rose-50/60 dark:bg-rose-950/40 ring-2 ring-rose-500/20"
               : "border-rose-200/80 dark:border-rose-800/60 bg-rose-50/30 dark:bg-rose-950/20 hover:bg-rose-50/60"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-rose-900 dark:text-rose-400">
@@ -426,11 +427,10 @@ const AttendancePage = () => {
         {/* HALF DAY */}
         <div
           onClick={() => handleFilterChange(setStatusFilter, "HALF_DAY")}
-          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${
-            statusFilter === "HALF_DAY"
+          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${statusFilter === "HALF_DAY"
               ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 ring-2 ring-amber-500/20"
               : "border-amber-200/80 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/20 hover:bg-amber-50/60"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-400">
@@ -455,11 +455,10 @@ const AttendancePage = () => {
         {/* ON LEAVE */}
         <div
           onClick={() => handleFilterChange(setStatusFilter, "LEAVE")}
-          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${
-            statusFilter === "LEAVE" || statusFilter === "CASUAL_LEAVE"
+          className={`cursor-pointer rounded-2xl border p-4 shadow-2xs transition flex flex-col justify-between ${statusFilter === "LEAVE" || statusFilter === "CASUAL_LEAVE"
               ? "border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20"
               : "border-indigo-200/80 dark:border-indigo-800/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50/60"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-400">
@@ -484,50 +483,44 @@ const AttendancePage = () => {
 
       {/* Main Attendance Table Card */}
       <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xs">
-        {loading ? (
-          <div className="p-12 text-center text-xs text-text-muted flex flex-col items-center justify-center gap-3">
-            <RefreshCw size={24} className="animate-spin text-primary-600" />
-            <p className="font-semibold text-text-primary">Loading real database workforce records...</p>
-          </div>
-        ) : error ? (
-          <div className="p-8 text-center text-xs text-rose-600 flex flex-col items-center justify-center gap-2">
-            <AlertCircle size={20} />
-            <p className="font-semibold">{error}</p>
-            <button
-              onClick={loadAttendance}
-              className="mt-2 px-3 py-1.5 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 text-xs font-bold"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
-                    <th className="px-5 py-4">Employee</th>
-                    <th className="px-5 py-4">Role</th>
-                    <th className="px-5 py-4">Team</th>
-                    <th className="px-5 py-4">Manager</th>
-                    <th className="px-5 py-4 text-center">Status</th>
-                    <th className="px-5 py-4">Check-In</th>
-                    <th className="px-5 py-4">Check-Out</th>
-                    <th className="px-5 py-4 text-right">Working Hours</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {records.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center text-text-muted">
-                        <UserCheck size={36} className="mx-auto text-neutral-300 dark:text-neutral-700 mb-2" />
-                        <p className="text-sm font-semibold text-text-primary">No attendance records found.</p>
-                        <p className="text-xs text-text-secondary mt-1">
-                          No database records match your active filters or search term.
-                        </p>
-                      </td>
-                    </tr>
-                  ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
+                <th className="px-5 py-4">Employee</th>
+                <th className="px-5 py-4">Role</th>
+                <th className="px-5 py-4">Team</th>
+                <th className="px-5 py-4">Manager</th>
+                <th className="px-5 py-4 text-center">Status</th>
+                <th className="px-5 py-4">Check-In</th>
+                <th className="px-5 py-4">Check-Out</th>
+                <th className="px-5 py-4 text-right">Working Hours</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <SectionLoadingState
+                  isTableRow
+                  colSpan={8}
+                  message="Loading attendance records..."
+                />
+              ) : error ? (
+                <PageErrorState
+                  isTableRow
+                  colSpan={8}
+                  title="Failed to load attendance records"
+                  message={error}
+                  onRetry={loadAttendance}
+                />
+              ) : records.length === 0 ? (
+                <PageEmptyState
+                  isTableRow
+                  colSpan={8}
+                  icon={UserCheck}
+                  title="No attendance records found"
+                  message="No database records match your active filters or search term."
+                />
+              ) : (
                     records.map((rec) => {
                       const empUser = rec.user;
                       const empName = empUser
@@ -546,11 +539,10 @@ const AttendancePage = () => {
                         <tr
                           key={rec.id}
                           onClick={() => setSelectedRecord(rec)}
-                          className={`cursor-pointer transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50 ${
-                            isSelected
+                          className={`cursor-pointer transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50 ${isSelected
                               ? "bg-primary-50/60 dark:bg-primary-950/40 font-medium border-l-4 border-l-primary-500"
                               : ""
-                          }`}
+                            }`}
                         >
                           <td className="px-5 py-4 font-bold text-text-primary flex items-center gap-3">
                             <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-950/80 dark:text-primary-300 dark:border dark:border-primary-800/60 flex items-center justify-center font-bold text-xs shrink-0">
@@ -632,9 +624,7 @@ const AttendancePage = () => {
                 </div>
               </div>
             )}
-          </>
-        )}
-      </div>
+        </div>
 
       {/* Selected Employee Right-Side Drawer */}
       {selectedRecord && (

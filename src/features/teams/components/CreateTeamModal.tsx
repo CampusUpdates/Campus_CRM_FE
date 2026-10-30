@@ -318,10 +318,12 @@ const CreateTeamModal = ({
     const roleName = (m.role?.name || "").toLowerCase();
     const query = memberSearchQuery.toLowerCase().trim();
     return (
-      fullName.includes(query) ||
+      m.id !== managerId &&
+      (isProgramAdvisorRole(m.role?.name) || isTeamLeadRole(m.role?.name)) &&
+      (fullName.includes(query) ||
       email.includes(query) ||
       teamName.includes(query) ||
-      roleName.includes(query)
+      roleName.includes(query))
     );
   });
 

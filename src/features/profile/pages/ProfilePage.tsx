@@ -19,6 +19,10 @@ import {
   type UpdateProfilePayload,
   type UserProfile,
 } from "../../../services/profileService";
+import {
+  PageLoadingState,
+  PageErrorState,
+} from "../../../components/common";
 
 const ProfilePage = () => {
   const { accessToken, user } = useAuth();
@@ -29,6 +33,7 @@ const ProfilePage = () => {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -42,6 +47,7 @@ const ProfilePage = () => {
 
   const loadProfile = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await fetchUserProfile(accessToken || undefined);
       setProfile(data);
@@ -54,7 +60,9 @@ const ProfilePage = () => {
       });
     } catch (err: any) {
       console.error("Failed to load user profile:", err);
-      toast.showToast("Failed to load your user profile details", "error");
+      const msg = err.message || "Failed to load your user profile details";
+      setLoadError(msg);
+      toast.showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -95,11 +103,17 @@ const ProfilePage = () => {
     }
   };
 
-  if (loading || !profile) {
+  if (loading) {
+    return <PageLoadingState message="Loading your user profile..." />;
+  }
+
+  if (loadError || !profile) {
     return (
-      <div className="flex items-center justify-center py-20 text-sm text-text-muted">
-        Loading your user profile...
-      </div>
+      <PageErrorState
+        title="Failed to load profile"
+        message={loadError || "User profile details could not be found."}
+        onRetry={loadProfile}
+      />
     );
   }
 
@@ -263,10 +277,9 @@ const ProfilePage = () => {
                   onChange={handleChange}
                   className={`
                     w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
-                    ${
-                      canEditProfile
-                        ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                    ${canEditProfile
+                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
@@ -284,10 +297,9 @@ const ProfilePage = () => {
                   onChange={handleChange}
                   className={`
                     w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
-                    ${
-                      canEditProfile
-                        ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                    ${canEditProfile
+                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
@@ -332,10 +344,9 @@ const ProfilePage = () => {
                     onChange={handleChange}
                     className={`
                       w-full rounded-lg border border-border pl-10 pr-3.5 py-2.5 text-sm transition
-                      ${
-                        canEditProfile
-                          ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                          : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                      ${canEditProfile
+                        ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        : "bg-neutral-100 text-text-secondary cursor-not-allowed"
                       }
                     `}
                   />
@@ -355,10 +366,9 @@ const ProfilePage = () => {
                   placeholder="Optional backup phone"
                   className={`
                     w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
-                    ${
-                      canEditProfile
-                        ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                    ${canEditProfile
+                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
@@ -377,10 +387,9 @@ const ProfilePage = () => {
                 onChange={handleChange}
                 className={`
                   w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
-                  ${
-                    canEditProfile
-                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                  ${canEditProfile
+                    ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    : "bg-neutral-100 text-text-secondary cursor-not-allowed"
                   }
                 `}
               />

@@ -41,8 +41,22 @@ const getTargetRouteForType = (
   title?: string,
   message?: string
 ): string => {
+  const linkMatch = (message || "").match(/Link:\s*(\/[^\s\n]+)/);
+  if (linkMatch && linkMatch[1]) {
+    return linkMatch[1];
+  }
+
   const titleLower = (title || "").toLowerCase();
   const msgLower = (message || "").toLowerCase();
+
+  if (
+    titleLower.includes("announcement:") ||
+    titleLower.includes("broadcast") ||
+    msgLower.includes("broadcast") ||
+    msgLower.includes("announcement")
+  ) {
+    return ROUTES.BROADCASTS;
+  }
 
   if (
     type === "DATA_ASSIGNMENT" ||
@@ -62,6 +76,9 @@ const getTargetRouteForType = (
     case "TPC":
       return ROUTES.TPC;
     case "SYSTEM":
+      if (titleLower.includes("counselling") || msgLower.includes("counselling")) {
+        return ROUTES.COLLEGE_COUNSELLING;
+      }
       if (titleLower.includes("college") || msgLower.includes("college")) {
         return ROUTES.COLLEGES;
       }
@@ -79,6 +96,7 @@ const NotificationDrawer = () => {
     isDrawerOpen,
     closeDrawer,
     unreadCount,
+    pendingBroadcastCount,
     recentNotifications,
     markAsRead,
     markAllAsRead,
@@ -166,6 +184,14 @@ const NotificationDrawer = () => {
                     {unreadCount}
                   </span>
                 )}
+                {pendingBroadcastCount > 0 && (
+                  <span
+                    title={`${pendingBroadcastCount} broadcast(s) awaiting acknowledgement`}
+                    className="rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white"
+                  >
+                    {pendingBroadcastCount} pending ack
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-text-secondary">Recent activities & alerts</p>
             </div>
@@ -173,7 +199,7 @@ const NotificationDrawer = () => {
 
           <button
             onClick={() => handleClose()}
-            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            className="p-1.5 rounded-lg text-text-muted hover:text-white hover:border hover:border-emerald-500/60 transition-all duration-200"
             title="Close notifications"
           >
             <X size={18} />
@@ -182,11 +208,11 @@ const NotificationDrawer = () => {
 
         {/* Action Toolbar */}
         {recentNotifications.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border-b border-border text-xs shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 bg-neutral-900/60 border-b border-border text-xs shrink-0">
             <button
               onClick={markAllAsRead}
               disabled={unreadCount === 0}
-              className="flex items-center gap-1.5 font-medium text-text-secondary hover:text-primary-600 disabled:opacity-40 transition"
+              className="flex items-center gap-1.5 font-medium text-text-secondary hover:text-emerald-400 disabled:opacity-40 transition"
             >
               <CheckSquare size={14} />
               Mark All Read
@@ -194,7 +220,7 @@ const NotificationDrawer = () => {
 
             <button
               onClick={handleViewAllPage}
-              className="flex items-center gap-1 font-semibold text-primary-600 hover:underline"
+              className="flex items-center gap-1 font-semibold text-emerald-400 hover:text-emerald-300 hover:underline"
             >
               View All Page
               <ArrowRight size={13} />
@@ -209,13 +235,13 @@ const NotificationDrawer = () => {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-20 rounded-xl border border-border bg-neutral-100 dark:bg-neutral-800/40 animate-pulse"
+                  className="h-20 rounded-xl border border-border bg-neutral-800/40 animate-pulse"
                 />
               ))}
             </div>
           ) : recentNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center py-8">
-              <div className="p-4 rounded-full bg-neutral-100 dark:bg-neutral-800 text-text-muted mb-3">
+              <div className="p-4 rounded-full bg-neutral-800 text-text-muted mb-3">
                 <Bell size={28} />
               </div>
               <h4 className="text-sm font-semibold text-text-primary">No Notifications</h4>
@@ -234,15 +260,15 @@ const NotificationDrawer = () => {
                     group relative flex flex-col rounded-xl border p-4 transition-all duration-200 cursor-pointer
                     ${
                       !item.isRead
-                        ? "border-primary-200 bg-primary-50/40 hover:border-primary-300 dark:border-primary-900/50 dark:bg-primary-950/30"
-                        : "border-border bg-surface hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+                        ? "border-primary-200 bg-primary-950/30 dark:border-primary-900/50 hover:border-emerald-500/60 hover:shadow-[0_0_10px_rgba(16,185,129,0.12)]"
+                        : "border-border bg-surface hover:border-emerald-500/60 hover:shadow-[0_0_10px_rgba(16,185,129,0.12)]"
                     }
                   `}
                 >
                   {/* Card Header Row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-white dark:bg-neutral-800 shadow-2xs mt-0.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background shadow-2xs mt-0.5">
                         {getIconForType(item.type)}
                       </div>
 
@@ -274,10 +300,10 @@ const NotificationDrawer = () => {
                         type="button"
                         onClick={(e) => handleToggleExpand(item.id, e)}
                         title={isExpanded ? "Collapse notification" : "Expand notification"}
-                        className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                        className="p-1 rounded-md text-text-muted hover:text-white hover:border hover:border-emerald-500/60 transition-all duration-200"
                       >
                         {isExpanded ? (
-                          <ChevronUp size={16} className="text-primary-600" />
+                          <ChevronUp size={16} className="text-emerald-400" />
                         ) : (
                           <ChevronDown size={16} />
                         )}
@@ -289,7 +315,7 @@ const NotificationDrawer = () => {
                           e.stopPropagation();
                           deleteItem(item.id);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-rose-600 rounded transition"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-rose-400 rounded transition"
                         title="Delete notification"
                       >
                         <Trash2 size={14} />
@@ -353,7 +379,7 @@ const NotificationDrawer = () => {
         <div className="p-3 border-t border-border bg-surface shrink-0">
           <button
             onClick={handleViewAllPage}
-            className="w-full py-2 px-3 rounded-lg border border-border text-xs font-semibold text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5"
+            className="w-full py-2 px-3 rounded-lg border border-border text-xs font-semibold text-text-primary hover:border-emerald-500/60 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5"
           >
             Go to Notifications Page
             <ArrowRight size={14} />

@@ -32,10 +32,17 @@ import {
   type EligibleProgramAdvisor,
   type FilterStudentDataParams,
   type AssigneeSummaryRecord,
+  type FilteredStudentDataResponse,
 } from "../../../services/dataManagementService";
+import { getIndianStates, getCitiesByState } from "../../../data/indianStatesCities";
 import AssignmentReviewModal from "../components/AssignmentReviewModal";
 import PaginationControls from "../components/PaginationControls";
 import { AssigneeDetailsDrawer } from "../components/AssigneeDetailsDrawer";
+import {
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const PREDEFINED_QUANTITIES = [20, 50, 100, 200, 500];
 
@@ -49,6 +56,7 @@ const DISPOSITION_OPTIONS: { label: string; value: string }[] = [
   { label: "Call Back Later", value: "CALL_BACK_LATER" },
   { label: "Wrong Number", value: "WRONG_NUMBER" },
   { label: "Disconnected", value: "DISCONNECTED" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const DataAssignmentPage = () => {
@@ -66,23 +74,28 @@ const DataAssignmentPage = () => {
   const [availableMatchingCount, setAvailableMatchingCount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [serverDistribution, setServerDistribution] = useState<Record<string, number>>({});
-  const [filterOptions, setFilterOptions] = useState<{
-    states: string[];
-    cities: string[];
-    uploads: { id: string; fileName: string }[];
-  }>({ states: [], cities: [], uploads: [] });
+  const [filterOptions, setFilterOptions] = useState<FilteredStudentDataResponse["filterOptions"]>({
+    states: [],
+    cities: [],
+    cityOptionsWithState: [],
+    uploads: [],
+  });
 
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [filterAlert, setFilterAlert] = useState<string | null>(
     paramAssignedTo ? `Filtered for Advisor ID #${paramAssignedTo}` : null
   );
 
-
   // Filters State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [stateSearchTerm, setStateSearchTerm] = useState<string>("");
+  const [citySearchTerm, setCitySearchTerm] = useState<string>("");
   const [selectedUploadIds, setSelectedUploadIds] = useState<string[]>([]);
   const [assignmentStatus, setAssignmentStatus] = useState<"AVAILABLE" | "ASSIGNED" | "ALL">(
     paramStatus === "ASSIGNED" || paramStatus === "ACTIVE" ? "ASSIGNED" : paramStatus === "EXPIRED" ? "ALL" : "AVAILABLE"
@@ -178,7 +191,7 @@ const DataAssignmentPage = () => {
 
       setReclaimModalState((prev) => ({ ...prev, isOpen: false, submitting: false }));
       setTimeout(() => setSuccessToast(null), 5000);
-      await loadFilteredData();
+      await Promise.all([loadFilteredData(), loadAssignmentsHistory()]);
     } catch (err: any) {
       setReclaimModalState((prev) => ({
         ...prev,
@@ -187,6 +200,31 @@ const DataAssignmentPage = () => {
       }));
     }
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".filter-dropdown-container")) {
+        setIsStateDropdownOpen(false);
+        setIsCityDropdownOpen(false);
+        setIsUploadDropdownOpen(false);
+        setIsDispositionDropdownOpen(false);
+        setIsNotCalledByDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch eligible advisors once
+  useEffect(() => {
+    if (accessToken) {
+      fetchEligibleProgramAdvisors(accessToken)
+        .then((res) => setEligibleAdvisors(res || []))
+        .catch(console.error);
+    }
+  }, [accessToken]);
 
   // Fisher-Yates Shuffle Algorithm (Unbiased Randomization)
   const fisherYatesShuffle = <T,>(array: T[]): T[] => {
@@ -200,38 +238,35 @@ const DataAssignmentPage = () => {
 
   // Fetch Filtered Data
   const loadFilteredData = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setDataError(null);
     try {
       const filterParams: FilterStudentDataParams = {
-        states: selectedStates,
-        cities: selectedCities,
-        uploadIds: selectedUploadIds,
+        states: selectedStates.length > 0 ? selectedStates : undefined,
+        cities: selectedCities.length > 0 ? selectedCities : undefined,
+        uploadIds: selectedUploadIds.length > 0 ? selectedUploadIds : undefined,
         assignmentStatus,
-        search: searchTerm,
+        search: searchTerm.trim() || undefined,
         dispositions: selectedDispositions.length > 0 ? selectedDispositions : undefined,
         notCalledByUserIds: selectedNotCalledByUserIds.length > 0 ? selectedNotCalledByUserIds : undefined,
         page: 1,
         limit: 5000,
       };
 
-      const [filteredRes, assignmentsRes, advisorsData] = await Promise.all([
-        fetchFilteredStudentData(accessToken, filterParams),
-        fetchDataAssignments(accessToken, historyPage, 10),
-        fetchEligibleProgramAdvisors(accessToken).catch(() => []),
-      ]);
+      const filteredRes = await fetchFilteredStudentData(accessToken, filterParams);
 
-      setAllStudents(filteredRes.data);
-      setAvailableMatchingCount(filteredRes.meta.availableCount);
-      setTotalCount(filteredRes.meta.total);
+      setAllStudents(filteredRes.data || []);
+      setAvailableMatchingCount(filteredRes.meta?.availableCount ?? 0);
+      setTotalCount(filteredRes.meta?.total ?? 0);
       setServerDistribution(filteredRes.distribution || {});
-      setFilterOptions(filteredRes.filterOptions || { states: [], cities: [], uploads: [] });
-      setAssignments(assignmentsRes.data);
-      setHistoryTotalPages(assignmentsRes.pagination?.totalPages || 1);
-      setHistoryTotalCount(assignmentsRes.pagination?.total || assignmentsRes.data.length);
-      setEligibleAdvisors(advisorsData);
+      setFilterOptions(filteredRes.filterOptions || { states: [], cities: [], cityOptionsWithState: [], uploads: [] });
     } catch (err: any) {
       console.error("Failed to load data assignment records:", err);
+      setDataError(err.message || "Failed to load student data. Please check your network or try again.");
     } finally {
       setLoading(false);
     }
@@ -244,8 +279,25 @@ const DataAssignmentPage = () => {
     selectedDispositions,
     selectedNotCalledByUserIds,
     searchTerm,
-    historyPage,
   ]);
+
+  // Fetch Data Assignments History
+  const loadAssignmentsHistory = useCallback(async () => {
+    if (!accessToken) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const assignmentsRes = await fetchDataAssignments(accessToken, historyPage, 10);
+      setAssignments(assignmentsRes.data || []);
+      setHistoryTotalPages(assignmentsRes.pagination?.totalPages || 1);
+      setHistoryTotalCount(assignmentsRes.pagination?.total || assignmentsRes.data?.length || 0);
+    } catch (err: any) {
+      console.error("Failed to load data assignments history:", err);
+      setHistoryError(err.message || "Failed to load assignment history.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [accessToken, historyPage]);
 
   // Mix Data / Shuffle Action
   const handleMixData = () => {
@@ -277,6 +329,53 @@ const DataAssignmentPage = () => {
     loadFilteredData();
   }, [loadFilteredData]);
 
+  useEffect(() => {
+    loadAssignmentsHistory();
+  }, [loadAssignmentsHistory]);
+
+  // State-constrained city options reusing existing backend options with master dataset fallback
+  const availableStateOptions = useMemo(() => {
+    if (filterOptions.states && filterOptions.states.length > 0) {
+      return filterOptions.states;
+    }
+    return getIndianStates();
+  }, [filterOptions.states]);
+
+  const availableCityOptions = useMemo(() => {
+    if (selectedStates.length === 0) {
+      return filterOptions.cities && filterOptions.cities.length > 0
+        ? filterOptions.cities
+        : [];
+    }
+
+    let cities: string[] = [];
+    if (filterOptions.cityOptionsWithState && filterOptions.cityOptionsWithState.length > 0) {
+      const selectedStatesLower = new Set(selectedStates.map((s) => s.toLowerCase()));
+      cities = filterOptions.cityOptionsWithState
+        .filter((item) => item.state && selectedStatesLower.has(item.state.toLowerCase()))
+        .map((item) => item.city)
+        .filter(Boolean);
+    }
+
+    if (cities.length === 0) {
+      cities = selectedStates.flatMap((st) => getCitiesByState(st));
+    }
+
+    return Array.from(new Set(cities)).sort((a, b) => a.localeCompare(b));
+  }, [selectedStates, filterOptions.cities, filterOptions.cityOptionsWithState]);
+
+  const filteredStateOptions = useMemo(() => {
+    if (!stateSearchTerm.trim()) return availableStateOptions;
+    const term = stateSearchTerm.toLowerCase();
+    return availableStateOptions.filter((st) => st.toLowerCase().includes(term));
+  }, [availableStateOptions, stateSearchTerm]);
+
+  const filteredCityOptions = useMemo(() => {
+    if (!citySearchTerm.trim()) return availableCityOptions;
+    const term = citySearchTerm.toLowerCase();
+    return availableCityOptions.filter((ct) => ct.toLowerCase().includes(term));
+  }, [availableCityOptions, citySearchTerm]);
+
   // Reset Selection When Filters Change
   const resetSelectionWithNotice = useCallback(() => {
     if (explicitSelectedIds.length > 0 || selectedQuantity !== null || selectionMode === "ALL_MATCHING") {
@@ -290,9 +389,39 @@ const DataAssignmentPage = () => {
   }, [explicitSelectedIds.length, selectedQuantity, selectionMode]);
 
   const handleStateToggle = (st: string) => {
-    setSelectedStates((prev) =>
-      prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]
-    );
+    const nextStates = selectedStates.includes(st)
+      ? selectedStates.filter((s) => s !== st)
+      : [...selectedStates, st];
+    setSelectedStates(nextStates);
+
+    // Reset selected cities that are not valid for the newly selected states
+    if (nextStates.length > 0) {
+      const validCities = new Set<string>();
+      if (filterOptions.cityOptionsWithState && filterOptions.cityOptionsWithState.length > 0) {
+        const nextStatesLower = new Set(nextStates.map((s) => s.toLowerCase()));
+        for (const item of filterOptions.cityOptionsWithState) {
+          if (item.state && nextStatesLower.has(item.state.toLowerCase()) && item.city) {
+            validCities.add(item.city.toLowerCase());
+          }
+        }
+      }
+      for (const s of nextStates) {
+        for (const c of getCitiesByState(s)) {
+          validCities.add(c.toLowerCase());
+        }
+      }
+
+      setSelectedCities((prevCities) =>
+        prevCities.filter((city) => validCities.has(city.toLowerCase()))
+      );
+    }
+
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
+  const handleSelectAllStates = () => {
+    setSelectedStates([]);
     setPage(1);
     resetSelectionWithNotice();
   };
@@ -301,6 +430,12 @@ const DataAssignmentPage = () => {
     setSelectedCities((prev) =>
       prev.includes(ct) ? prev.filter((c) => c !== ct) : [...prev, ct]
     );
+    setPage(1);
+    resetSelectionWithNotice();
+  };
+
+  const handleSelectAllCities = () => {
+    setSelectedCities([]);
     setPage(1);
     resetSelectionWithNotice();
   };
@@ -372,6 +507,8 @@ const DataAssignmentPage = () => {
     setSelectedDispositions([]);
     setSelectedNotCalledByUserIds([]);
     setCallerSearchTerm("");
+    setStateSearchTerm("");
+    setCitySearchTerm("");
     setSearchTerm("");
     setPage(1);
     resetSelectionWithNotice();
@@ -504,6 +641,7 @@ const DataAssignmentPage = () => {
       setSelectedQuantity(null);
       setSelectionMode("EXPLICIT");
       loadFilteredData();
+      loadAssignmentsHistory();
       setTimeout(() => setSuccessToast(null), 5000);
     } catch (err: any) {
       setModalError(err.message || "Failed to complete data assignment.");
@@ -559,11 +697,14 @@ const DataAssignmentPage = () => {
           </button>
 
           <button
-            onClick={loadFilteredData}
+            onClick={() => {
+              loadFilteredData();
+              loadAssignmentsHistory();
+            }}
             title="Refresh student data"
-            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
+            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={18} className={loading || historyLoading ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
@@ -588,13 +729,14 @@ const DataAssignmentPage = () => {
         {/* Filter Dropdowns Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
           {/* State Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
             <button
               type="button"
               onClick={() => {
                 setIsStateDropdownOpen(!isStateDropdownOpen);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
               className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
@@ -606,37 +748,85 @@ const DataAssignmentPage = () => {
             </button>
 
             {isStateDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
-                {filterOptions.states.length === 0 ? (
-                  <p className="p-2 text-xs text-text-muted">No state options available</p>
-                ) : (
-                  filterOptions.states.map((st) => (
-                    <label
-                      key={st}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedStates.includes(st)}
-                        onChange={() => handleStateToggle(st)}
-                        className="rounded border-border text-primary-600 focus:ring-primary-400"
-                      />
-                      <span>{st}</span>
-                    </label>
-                  ))
+              <div className="absolute left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+                {/* Search Bar if > 6 options */}
+                {availableStateOptions.length > 6 && (
+                  <div className="relative mb-1 shrink-0">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search states..."
+                      value={stateSearchTerm}
+                      onChange={(e) => setStateSearchTerm(e.target.value)}
+                      className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-border bg-neutral-50 text-xs text-text-primary outline-none focus:border-primary-500"
+                    />
+                  </div>
                 )}
+
+                {/* All States Option */}
+                <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    checked={selectedStates.length === 0}
+                    onChange={handleSelectAllStates}
+                    className="rounded border-border text-primary-600 focus:ring-primary-400"
+                  />
+                  <span>All States</span>
+                </label>
+
+                <div className="h-px bg-border my-1" />
+
+                <div className="overflow-y-auto space-y-1 max-h-48 pr-1">
+                  {loading && availableStateOptions.length === 0 ? (
+                    <div className="flex items-center justify-center gap-2 p-3 text-xs text-text-muted">
+                      <RefreshCw className="animate-spin text-primary-600" size={14} />
+                      <span>Loading states...</span>
+                    </div>
+                  ) : filteredStateOptions.length === 0 ? (
+                    <p className="p-2 text-xs text-text-muted">No state options available</p>
+                  ) : (
+                    filteredStateOptions.map((st) => (
+                      <label
+                        key={st}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStates.includes(st)}
+                          onChange={() => handleStateToggle(st)}
+                          className="rounded border-border text-primary-600 focus:ring-primary-400"
+                        />
+                        <span>{st}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+
+                <div className="pt-2 mt-1 border-t border-border flex items-center justify-between text-xs text-text-muted px-1 shrink-0">
+                  <span>{selectedStates.length > 0 ? `${selectedStates.length} selected` : "All"}</span>
+                  {selectedStates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllStates}
+                      className="text-primary-600 hover:underline font-medium"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* City Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
             <button
               type="button"
               onClick={() => {
                 setIsCityDropdownOpen(!isCityDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
               className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
@@ -648,31 +838,80 @@ const DataAssignmentPage = () => {
             </button>
 
             {isCityDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
-                {filterOptions.cities.length === 0 ? (
-                  <p className="p-2 text-xs text-text-muted">No city options available</p>
-                ) : (
-                  filterOptions.cities.map((ct) => (
-                    <label
-                      key={ct}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCities.includes(ct)}
-                        onChange={() => handleCityToggle(ct)}
-                        className="rounded border-border text-primary-600 focus:ring-primary-400"
-                      />
-                      <span>{ct}</span>
-                    </label>
-                  ))
+              <div className="absolute left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+                {/* Search Bar if > 6 options */}
+                {availableCityOptions.length > 6 && (
+                  <div className="relative mb-1 shrink-0">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search cities..."
+                      value={citySearchTerm}
+                      onChange={(e) => setCitySearchTerm(e.target.value)}
+                      className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-border bg-neutral-50 text-xs text-text-primary outline-none focus:border-primary-500"
+                    />
+                  </div>
                 )}
+
+                {/* All Cities Option */}
+                <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    checked={selectedCities.length === 0}
+                    onChange={handleSelectAllCities}
+                    className="rounded border-border text-primary-600 focus:ring-primary-400"
+                  />
+                  <span>All Cities</span>
+                </label>
+
+                <div className="h-px bg-border my-1" />
+
+                <div className="overflow-y-auto space-y-1 max-h-48 pr-1">
+                  {loading && availableCityOptions.length === 0 ? (
+                    <div className="flex items-center justify-center gap-2 p-3 text-xs text-text-muted">
+                      <RefreshCw className="animate-spin text-primary-600" size={14} />
+                      <span>Loading cities...</span>
+                    </div>
+                  ) : filteredCityOptions.length === 0 ? (
+                    <p className="p-2 text-xs text-text-muted">
+                      {selectedStates.length > 0 ? "No cities found for selected state(s)" : "No city options available"}
+                    </p>
+                  ) : (
+                    filteredCityOptions.map((ct) => (
+                      <label
+                        key={ct}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs text-text-primary"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedCities.includes(ct)}
+                          onChange={() => handleCityToggle(ct)}
+                          className="rounded border-border text-primary-600 focus:ring-primary-400"
+                        />
+                        <span>{ct}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+
+                <div className="pt-2 mt-1 border-t border-border flex items-center justify-between text-xs text-text-muted px-1 shrink-0">
+                  <span>{selectedCities.length > 0 ? `${selectedCities.length} selected` : "All"}</span>
+                  {selectedCities.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllCities}
+                      className="text-primary-600 hover:underline font-medium"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* Upload File Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
             <button
               type="button"
               onClick={() => {
@@ -727,7 +966,7 @@ const DataAssignmentPage = () => {
           </div>
 
           {/* Call Disposition Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
             <button
               type="button"
               onClick={() => {
@@ -797,7 +1036,7 @@ const DataAssignmentPage = () => {
           </div>
 
           {/* Not Called By Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
             <button
               type="button"
               onClick={() => {
@@ -1173,20 +1412,25 @@ const DataAssignmentPage = () => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center p-12 text-sm text-text-secondary">
-            <RefreshCw className="animate-spin mr-2" size={18} />
-            Loading student data...
-          </div>
+          <SectionLoadingState
+            message="Loading student records..."
+            description="Filtering datasets by assignment status, courses, and geographic location"
+            minHeight="min-h-[300px]"
+          />
+        ) : dataError ? (
+          <PageErrorState
+            title="Failed to load student records"
+            message={dataError}
+            onRetry={loadFilteredData}
+            minHeight="min-h-[300px]"
+          />
         ) : students.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
-              <Users size={24} />
-            </div>
-            <h3 className="text-base font-semibold text-text-primary">No student records found</h3>
-            <p className="text-sm text-text-secondary mt-1 max-w-sm">
-              Try broadening your filter criteria or search query.
-            </p>
-          </div>
+          <PageEmptyState
+            icon={Users}
+            title="No student records found"
+            description="Try broadening your filter criteria or search query."
+            minHeight="min-h-[300px]"
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -1303,6 +1547,12 @@ const DataAssignmentPage = () => {
                                   {cleanOutcome}
                                 </span>
                               );
+                            case "OTHER":
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-2 py-0.5 text-xs font-bold text-cyan-800 border border-cyan-300">
+                                  {cleanOutcome}
+                                </span>
+                              );
                             default:
                               return (
                                 <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700 border border-neutral-300">
@@ -1380,12 +1630,29 @@ const DataAssignmentPage = () => {
             </thead>
 
             <tbody>
-              {assignments.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-xs text-text-muted">
-                    No data assignment operations recorded yet.
-                  </td>
-                </tr>
+              {historyLoading ? (
+                <SectionLoadingState
+                  isTableRow
+                  colSpan={7}
+                  message="Loading assignment history..."
+                  description="Retrieving batch assignments, expiration timers, and advisor tracking"
+                />
+              ) : historyError ? (
+                <PageErrorState
+                  isTableRow
+                  colSpan={7}
+                  title="Unable to load assignment history"
+                  message={historyError}
+                  onRetry={loadAssignmentsHistory}
+                />
+              ) : assignments.length === 0 ? (
+                <PageEmptyState
+                  isTableRow
+                  colSpan={7}
+                  icon={Clock}
+                  title="No assignments recorded"
+                  description="No data assignment operations have been recorded yet."
+                />
               ) : (
                 assignments.map((item) => {
                   const assigneeName = item.assignee.fullName || "Program Advisor";
@@ -1510,14 +1777,6 @@ const DataAssignmentPage = () => {
         />
       )}
 
-      {/* Toast Notification */}
-      {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-emerald-900 text-white px-5 py-3.5 text-xs font-semibold shadow-2xl animate-in slide-in-from-bottom duration-300 border border-emerald-700">
-          <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-          <span>{successToast}</span>
-        </div>
-      )}
-
       {/* Assignee Details Right-Side Drawer */}
       {selectedAssigneeIdForDrawer && accessToken && (
         <AssigneeDetailsDrawer
@@ -1526,6 +1785,7 @@ const DataAssignmentPage = () => {
           onClose={() => setSelectedAssigneeIdForDrawer(null)}
           onAssignmentReclaimed={() => {
             loadFilteredData();
+            loadAssignmentsHistory();
           }}
         />
       )}

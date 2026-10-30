@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Download,
   Filter,
+  Calendar,
 } from "lucide-react";
 
 import { useAuth } from "../../../context/AuthContext";
@@ -41,6 +42,17 @@ const DISPOSITION_OPTIONS: { label: string; value: string }[] = [
   { label: "Call Back Later", value: "CALL_BACK_LATER" },
   { label: "Wrong Number", value: "WRONG_NUMBER" },
   { label: "Disconnected", value: "DISCONNECTED" },
+  { label: "Other", value: "OTHER" },
+];
+
+const DATE_FILTER_OPTIONS: { label: string; value: string }[] = [
+  { label: "All Time", value: "ALL" },
+  { label: "Today", value: "TODAY" },
+  { label: "Yesterday", value: "YESTERDAY" },
+  { label: "This Week", value: "THIS_WEEK" },
+  { label: "This Month", value: "THIS_MONTH" },
+  { label: "This Year", value: "THIS_YEAR" },
+  { label: "Custom Date Range", value: "CUSTOM" },
 ];
 
 interface DatasetHistoryDrawerProps {
@@ -68,8 +80,15 @@ export const DatasetHistoryDrawer = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState<string>("ALL");
   const [selectedCalledById, setSelectedCalledById] = useState<string>("ALL");
+  const [selectedDateRange, setSelectedDateRange] = useState<string>("ALL");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [appliedStartDate, setAppliedStartDate] = useState<string>("");
+  const [appliedEndDate, setAppliedEndDate] = useState<string>("");
+  const [customDateError, setCustomDateError] = useState<string | null>(null);
   const [callerOptions, setCallerOptions] = useState<DatasetCallerItem[]>([]);
   const [matchingTotalCount, setMatchingTotalCount] = useState<number | null>(null);
+  const latestRequestIdRef = useRef<number>(0);
 
   const [selectedStudent, setSelectedStudent] = useState<StudentDataRecord | null>(null);
   const [callHistory, setCallHistory] = useState<CallRecordItem[]>([]);
@@ -89,6 +108,7 @@ export const DatasetHistoryDrawer = ({
   // Reset drawer state when dataset upload changes or opens
   useEffect(() => {
     if (isOpen && upload) {
+      latestRequestIdRef.current++;
       setView("list");
       setSelectedStudent(null);
       setStudents([]);
@@ -98,6 +118,12 @@ export const DatasetHistoryDrawer = ({
       setSearchQuery("");
       setSelectedDisposition("ALL");
       setSelectedCalledById("ALL");
+      setSelectedDateRange("ALL");
+      setCustomStartDate("");
+      setCustomEndDate("");
+      setAppliedStartDate("");
+      setAppliedEndDate("");
+      setCustomDateError(null);
       setMatchingTotalCount(null);
 
       if (accessToken) {
@@ -115,9 +141,13 @@ export const DatasetHistoryDrawer = ({
       searchVal: string,
       dispFilter: string,
       callerFilter: string,
+      dateRange: string,
+      fromDateVal: string,
+      toDateVal: string,
       isReset: boolean
     ) => {
       if (!accessToken || !upload) return;
+      const currentRequestId = ++latestRequestIdRef.current;
       if (isReset) {
         setLoading(true);
       } else {
@@ -130,19 +160,30 @@ export const DatasetHistoryDrawer = ({
           search: searchVal || undefined,
           disposition: dispFilter !== "ALL" ? dispFilter : undefined,
           calledById: callerFilter !== "ALL" ? callerFilter : undefined,
+          time: dateRange !== "ALL" ? dateRange : undefined,
+          fromDate: dateRange === "CUSTOM" && fromDateVal ? fromDateVal : undefined,
+          toDate: dateRange === "CUSTOM" && toDateVal ? toDateVal : undefined,
           page: pageNum,
           limit: 25,
         });
+
+        if (currentRequestId !== latestRequestIdRef.current) {
+          return;
+        }
 
         const fetchedData = res.data || [];
         setStudents((prev) => (isReset ? fetchedData : [...prev, ...fetchedData]));
         setMatchingTotalCount(res.meta?.total ?? null);
         setHasMore(pageNum < (res.meta?.totalPages || 1));
       } catch (err) {
-        console.error("Failed to load dataset students:", err);
+        if (currentRequestId === latestRequestIdRef.current) {
+          console.error("Failed to load dataset students:", err);
+        }
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (currentRequestId === latestRequestIdRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [accessToken, upload]
@@ -155,10 +196,24 @@ export const DatasetHistoryDrawer = ({
         searchQuery,
         selectedDisposition,
         selectedCalledById,
+        selectedDateRange,
+        appliedStartDate,
+        appliedEndDate,
         page === 1
       );
     }
-  }, [isOpen, upload, page, searchQuery, selectedDisposition, selectedCalledById, loadStudents]);
+  }, [
+    isOpen,
+    upload,
+    page,
+    searchQuery,
+    selectedDisposition,
+    selectedCalledById,
+    selectedDateRange,
+    appliedStartDate,
+    appliedEndDate,
+    loadStudents,
+  ]);
 
   const handleDispositionChange = (newDisposition: string) => {
     setSelectedDisposition(newDisposition);
@@ -167,6 +222,43 @@ export const DatasetHistoryDrawer = ({
 
   const handleCalledByChange = (newCallerId: string) => {
     setSelectedCalledById(newCallerId);
+    setPage(1);
+  };
+
+  const handleDateRangeChange = (newDateRange: string) => {
+    setSelectedDateRange(newDateRange);
+    setCustomDateError(null);
+    if (newDateRange !== "CUSTOM") {
+      setCustomStartDate("");
+      setCustomEndDate("");
+      setAppliedStartDate("");
+      setAppliedEndDate("");
+    }
+    setPage(1);
+  };
+
+  const handleApplyCustomDates = () => {
+    if (customStartDate && customEndDate && customEndDate < customStartDate) {
+      setCustomDateError("End date must not precede start date");
+      return;
+    }
+    setCustomDateError(null);
+    setAppliedStartDate(customStartDate);
+    setAppliedEndDate(customEndDate);
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setSearchQuery("");
+    setSelectedDisposition("ALL");
+    setSelectedCalledById("ALL");
+    setSelectedDateRange("ALL");
+    setCustomStartDate("");
+    setCustomEndDate("");
+    setAppliedStartDate("");
+    setAppliedEndDate("");
+    setCustomDateError(null);
     setPage(1);
   };
 
@@ -212,7 +304,10 @@ export const DatasetHistoryDrawer = ({
         upload.id,
         upload.fileName,
         selectedDisposition,
-        selectedCalledById
+        selectedCalledById,
+        selectedDateRange !== "ALL" ? selectedDateRange : undefined,
+        selectedDateRange === "CUSTOM" && appliedStartDate ? appliedStartDate : undefined,
+        selectedDateRange === "CUSTOM" && appliedEndDate ? appliedEndDate : undefined
       );
       toast.success("Dataset response history exported successfully.");
     } catch (err: any) {
@@ -258,6 +353,12 @@ export const DatasetHistoryDrawer = ({
             {cleanOutcome}
           </span>
         );
+      case "OTHER":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-800 border border-cyan-300">
+            {cleanOutcome}
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-700 border border-neutral-300">
@@ -266,6 +367,13 @@ export const DatasetHistoryDrawer = ({
         );
     }
   };
+
+  const hasActiveFilters = Boolean(
+    searchQuery ||
+    selectedDisposition !== "ALL" ||
+    selectedCalledById !== "ALL" ||
+    selectedDateRange !== "ALL"
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -282,7 +390,7 @@ export const DatasetHistoryDrawer = ({
           {/* DRAWER VIEW A: DATASET STUDENT LIST */}
           <div className={`flex flex-col h-full ${view === "list" ? "block" : "hidden"}`}>
             {/* Header */}
-            <div className="p-5 border-b border-border bg-neutral-50/70 flex items-start justify-between">
+            <div className="p-5 border-b border-border bg-neutral-50/70 dark:bg-slate-800/50 flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <FileSpreadsheet size={20} className="text-primary-600 shrink-0" />
@@ -291,8 +399,8 @@ export const DatasetHistoryDrawer = ({
                   </h2>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-primary-50 px-2 py-0.5 text-[11px] font-bold text-primary-700 border border-primary-200 font-mono">
-                    {matchingTotalCount !== null && (selectedDisposition !== "ALL" || selectedCalledById !== "ALL" || searchQuery)
+                  <span className="inline-flex items-center gap-1 rounded-md bg-primary-50 dark:bg-primary-950/60 px-2 py-0.5 text-[11px] font-bold text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800 font-mono">
+                    {matchingTotalCount !== null && hasActiveFilters
                       ? `${matchingTotalCount} matching records`
                       : `${totalRecordCount} records`}
                   </span>
@@ -326,7 +434,7 @@ export const DatasetHistoryDrawer = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-xl text-text-secondary hover:bg-neutral-200 transition cursor-pointer"
+                  className="p-2 rounded-xl text-text-secondary hover:bg-neutral-200 dark:hover:bg-slate-800 transition cursor-pointer"
                   title="Close drawer"
                 >
                   <X size={20} />
@@ -334,17 +442,17 @@ export const DatasetHistoryDrawer = ({
               </div>
             </div>
 
-            {/* Search Input Box & Disposition & Called By Filters inside drawer */}
+            {/* Search Input Box & Date, Disposition & Called By Filters inside drawer */}
             <div className="p-4 border-b border-border bg-surface space-y-2.5">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="relative flex-1">
+              <div className="flex flex-col gap-2">
+                <div className="relative w-full">
                   <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search students by name, phone..."
-                    className="w-full h-9.5 rounded-xl border border-border bg-neutral-50/50 pl-9.5 pr-8 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition"
+                    className="w-full h-9.5 rounded-xl border border-border bg-neutral-50/50 dark:bg-slate-800/50 pl-9.5 pr-8 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition"
                   />
                   {search && (
                     <button
@@ -357,13 +465,31 @@ export const DatasetHistoryDrawer = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Date Filter */}
+                  <div className="relative">
+                    <select
+                      value={selectedDateRange}
+                      onChange={(e) => handleDateRangeChange(e.target.value)}
+                      className="w-full h-9.5 rounded-xl border border-border bg-neutral-50 dark:bg-slate-800 px-3 pr-8 text-xs font-bold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 cursor-pointer appearance-none truncate"
+                      aria-label="Filter records by date range"
+                    >
+                      {DATE_FILTER_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.value === "ALL" ? "Date: All Time" : `Date: ${opt.label}`}
+                        </option>
+                      ))}
+                    </select>
+                    <Calendar size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  </div>
+
                   {/* Disposition Filter */}
                   <div className="relative">
                     <select
                       value={selectedDisposition}
                       onChange={(e) => handleDispositionChange(e.target.value)}
-                      className="h-9.5 rounded-xl border border-border bg-neutral-50 px-3 pr-8 text-xs font-bold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 cursor-pointer appearance-none max-w-[170px] truncate"
+                      className="w-full h-9.5 rounded-xl border border-border bg-neutral-50 dark:bg-slate-800 px-3 pr-8 text-xs font-bold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 cursor-pointer appearance-none truncate"
+                      aria-label="Filter records by disposition"
                     >
                       {DISPOSITION_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -379,7 +505,8 @@ export const DatasetHistoryDrawer = ({
                     <select
                       value={selectedCalledById}
                       onChange={(e) => handleCalledByChange(e.target.value)}
-                      className="h-9.5 rounded-xl border border-border bg-neutral-50 px-3 pr-8 text-xs font-bold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 cursor-pointer appearance-none max-w-[170px] truncate"
+                      className="w-full h-9.5 rounded-xl border border-border bg-neutral-50 dark:bg-slate-800 px-3 pr-8 text-xs font-bold text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 cursor-pointer appearance-none truncate"
+                      aria-label="Filter records by caller"
                     >
                       <option value="ALL">Called By: All</option>
                       {callerOptions.map((caller) => (
@@ -393,23 +520,98 @@ export const DatasetHistoryDrawer = ({
                 </div>
               </div>
 
-              {(selectedDisposition !== "ALL" || selectedCalledById !== "ALL" || searchQuery) && (
+              {/* Custom Date Range Controls */}
+              {selectedDateRange === "CUSTOM" && (
+                <div className="flex flex-col gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-neutral-50/70 dark:bg-slate-800/70 p-2 text-xs shadow-2xs">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+                      <span className="text-[11px] text-text-muted font-medium shrink-0">From:</span>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        max={customEndDate || undefined}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomStartDate(val);
+                          if (customEndDate && val && val > customEndDate) {
+                            setCustomDateError("End date must not precede start date");
+                          } else {
+                            setCustomDateError(null);
+                          }
+                        }}
+                        className="w-full rounded-lg border border-border bg-surface dark:bg-slate-900 px-2 py-1 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+                      <span className="text-[11px] text-text-muted font-medium shrink-0">To:</span>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        min={customStartDate || undefined}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomEndDate(val);
+                          if (customStartDate && val && val < customStartDate) {
+                            setCustomDateError("End date must not precede start date");
+                          } else {
+                            setCustomDateError(null);
+                          }
+                        }}
+                        className="w-full rounded-lg border border-border bg-surface dark:bg-slate-900 px-2 py-1 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleApplyCustomDates}
+                        disabled={
+                          (!customStartDate && !customEndDate) ||
+                          Boolean(customStartDate && customEndDate && customEndDate < customStartDate)
+                        }
+                        className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                      >
+                        Apply
+                      </button>
+                      {(appliedStartDate || appliedEndDate) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomStartDate("");
+                            setCustomEndDate("");
+                            setAppliedStartDate("");
+                            setAppliedEndDate("");
+                            setCustomDateError(null);
+                            setPage(1);
+                          }}
+                          className="text-[11px] font-bold text-text-muted hover:text-text-primary transition cursor-pointer px-1.5 py-1"
+                          title="Clear custom dates"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {customDateError && (
+                    <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 pl-1">
+                      {customDateError}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {hasActiveFilters && (
                 <div className="flex items-center justify-between text-xs text-text-secondary pt-0.5">
                   <span className="font-medium">
                     Showing{" "}
-                    <strong className="text-primary-700 font-bold">
+                    <strong className="text-primary-700 dark:text-primary-400 font-bold">
                       {matchingTotalCount ?? students.length}
                     </strong>{" "}
                     matching records
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSearch("");
-                      setSelectedDisposition("ALL");
-                      setSelectedCalledById("ALL");
-                    }}
-                    className="text-[11px] font-bold text-primary-600 hover:text-primary-700 underline cursor-pointer"
+                    onClick={handleResetFilters}
+                    className="text-[11px] font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 underline cursor-pointer"
                   >
                     Reset Filters
                   </button>
@@ -433,7 +635,7 @@ export const DatasetHistoryDrawer = ({
                   <User size={32} className="mx-auto text-text-muted opacity-50" />
                   <p className="font-bold text-text-secondary text-sm">No student records found</p>
                   <p>
-                    {selectedDisposition !== "ALL" || selectedCalledById !== "ALL"
+                    {hasActiveFilters
                       ? "No students match the current filter criteria."
                       : "Try matching student name or phone number."}
                   </p>

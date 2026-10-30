@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
 
   /* Primary */
@@ -91,6 +93,12 @@
 
   --color-background: #f6f7f6;
   --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-active: #e2e8f0;
+
+  --color-dropdown-bg: #ffffff;
+  --color-dropdown-hover: #f1f5f9;
+  --color-dropdown-selected: #e2e8f0;
 
   /* Layout */
 
@@ -159,8 +167,14 @@
   /* Layout & Surfaces */
   --color-background: #0f172a;
   --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-surface-active: #243247;
   --color-sidebar: #0f172a;
   --color-navbar: #1e293b;
+
+  --color-dropdown-bg: #1e293b;
+  --color-dropdown-hover: #334155;
+  --color-dropdown-selected: #243247;
 
   /* Accent & Active states */
   --color-sidebar-active: #132a24;
@@ -174,17 +188,17 @@
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
 
-  /* Inverted Neutral Scale for dark surfaces */
+  /* Neutral scale for dark surfaces */
   --color-neutral-50: #1e293b;
   --color-neutral-100: #334155;
   --color-neutral-200: #475569;
   --color-neutral-300: #64748b;
   --color-neutral-400: #94a3b8;
   --color-neutral-500: #cbd5e1;
-  --color-neutral-600: #e2e8f0;
-  --color-neutral-700: #f1f5f9;
-  --color-neutral-800: #f8fafc;
-  --color-neutral-900: #ffffff;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #334155;
+  --color-neutral-900: #0f172a;
 
   --color-primary-800: #74b697;
   --color-primary-700: #579f80;
@@ -222,14 +236,116 @@ select {
   font: inherit;
 }
 
+select {
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-primary, #1f2937);
+  border-color: var(--color-border, #e7e9e8);
+}
+
 select option {
   background-color: var(--color-surface, #ffffff);
   color: var(--color-text-primary, #1f2937);
 }
 
-.dark select option {
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: var(--color-surface-hover, #f1f5f9);
+  color: var(--color-text-primary, #1f2937);
+}
+
+.dark select {
   background-color: var(--color-surface, #1e293b);
   color: var(--color-text-primary, #f8fafc);
+  border-color: var(--color-border, #334155);
+}
+
+.dark select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:checked {
+  background-color: #334155;
+  color: #f8fafc;
+}
+
+/* Standard Campus CRM Dropdown & Option Interaction Rules */
+.crm-dropdown-menu {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e7e9e8);
+}
+
+.dark .crm-dropdown-menu {
+  background-color: var(--color-surface, #1e293b);
+  border-color: var(--color-border, #334155);
+}
+
+.crm-dropdown-item {
+  color: var(--color-text-primary);
+  background-color: transparent;
+  transition: background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+
+.crm-dropdown-item:hover,
+.crm-dropdown-item:focus,
+.crm-dropdown-item:focus-visible,
+.crm-dropdown-item.is-highlighted {
+  background-color: var(--color-surface-hover, #f1f5f9);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.dark .crm-dropdown-item:hover,
+.dark .crm-dropdown-item:focus,
+.dark .crm-dropdown-item:focus-visible,
+.dark .crm-dropdown-item.is-highlighted {
+  background-color: var(--color-surface-hover, #334155);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.crm-dropdown-item[aria-selected="true"],
+.crm-dropdown-item.is-selected {
+  background-color: var(--color-surface-active, #e2e8f0);
+  color: var(--color-text-primary);
+}
+
+.dark .crm-dropdown-item[aria-selected="true"],
+.dark .crm-dropdown-item.is-selected {
+  background-color: var(--color-surface-active, #243247);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+/* Global safeguard: strictly prevent white hover/focus in dark mode dropdowns */
+.dark [role="listbox"] button:hover,
+.dark [role="listbox"] button:focus,
+.dark [role="listbox"] button:focus-visible,
+.dark [role="listbox"] [role="option"]:hover,
+.dark [role="listbox"] [role="option"]:focus,
+.dark [role="listbox"] [role="option"]:focus-visible,
+.dark [role="listbox"] label:hover,
+.dark [role="listbox"] label:focus,
+.dark .crm-dropdown-menu button:hover,
+.dark .crm-dropdown-menu button:focus,
+.dark .crm-dropdown-menu button:focus-visible,
+.dark .crm-dropdown-menu [role="option"]:hover,
+.dark .crm-dropdown-menu [role="option"]:focus,
+.dark .crm-dropdown-menu [role="option"]:focus-visible,
+.dark .crm-dropdown-item:hover,
+.dark .crm-dropdown-item:focus,
+.dark .crm-dropdown-item:focus-visible {
+  background-color: var(--color-surface-hover, #334155) !important;
+  color: var(--color-text-primary, #f8fafc) !important;
+}
+
+.dark [role="listbox"] [role="option"][aria-selected="true"],
+.dark [role="listbox"] button[aria-selected="true"],
+.dark .crm-dropdown-menu [role="option"][aria-selected="true"] {
+  background-color: var(--color-surface-active, #243247) !important;
+  color: var(--color-text-primary, #f8fafc) !important;
 }
 
 @keyframes slideIn {

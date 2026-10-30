@@ -91,11 +91,11 @@ export const BookmarksDrawer = ({
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
         <div className="w-screen max-w-md sm:w-[480px] bg-surface border-l border-border shadow-2xl flex flex-col transform transition-transform duration-300 animate-in slide-in-from-right">
           {/* Header */}
-          <div className="p-5 border-b border-border bg-neutral-50/50 space-y-3">
+          <div className="p-5 border-b border-border bg-background/60 space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-primary-600 uppercase tracking-wider">
-                  <Bookmark size={14} className="fill-primary-600 text-primary-600" />
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <Bookmark size={14} className="fill-emerald-400 text-emerald-400" />
                   Active Bookmarks
                 </div>
                 <h2 className="text-lg font-bold text-text-primary mt-0.5">
@@ -111,7 +111,7 @@ export const BookmarksDrawer = ({
                   type="button"
                   onClick={loadBookmarks}
                   title="Refresh bookmarks"
-                  className="p-1.5 rounded-lg border border-border text-text-secondary hover:bg-neutral-100 transition cursor-pointer"
+                  className="p-1.5 rounded-lg border border-border text-text-secondary hover:bg-surface hover:text-text-primary transition cursor-pointer"
                 >
                   <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                 </button>
@@ -119,7 +119,7 @@ export const BookmarksDrawer = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-1.5 rounded-lg border border-border text-text-secondary hover:bg-neutral-100 transition cursor-pointer"
+                  className="p-1.5 rounded-lg border border-border text-text-secondary hover:bg-surface hover:text-text-primary transition cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -196,15 +196,15 @@ export const BookmarksDrawer = ({
 
                   const badgeClass =
                     outcome === "CALL_BACK_LATER"
-                      ? "border-purple-300 bg-purple-50 text-purple-800"
-                      : "border-blue-300 bg-blue-50 text-blue-800";
+                      ? "border-purple-800/80 bg-purple-950/60 text-purple-300"
+                      : "border-blue-800/80 bg-blue-950/60 text-blue-300";
 
                   const expiresText = formatExpiresIn(item.bookmarkExpiresAt);
 
                   return (
                     <div
                       key={item.studentDataId}
-                      className="p-4 rounded-xl border border-border bg-surface hover:border-primary-200 transition shadow-2xs space-y-3"
+                      className="p-4 rounded-xl border border-border/80 bg-background/80 hover:border-border transition shadow-2xs space-y-3"
                     >
                       {/* Top Bar: Name & Outcome Badge */}
                       <div className="flex items-start justify-between gap-2">
@@ -215,10 +215,10 @@ export const BookmarksDrawer = ({
                               onClose();
                               onOpenDialer(item.studentDataId);
                             }}
-                            className="group font-bold text-sm text-text-primary hover:text-primary-600 flex items-center gap-1.5 text-left cursor-pointer"
+                            className="group font-bold text-sm text-text-primary hover:text-emerald-400 flex items-center gap-1.5 text-left cursor-pointer"
                           >
                             <span>{item.fullName}</span>
-                            <ExternalLink size={13} className="text-primary-500 opacity-0 group-hover:opacity-100 transition" />
+                            <ExternalLink size={13} className="text-emerald-400 opacity-0 group-hover:opacity-100 transition" />
                           </button>
                           <p className="text-xs font-mono text-text-secondary mt-0.5">
                             {item.phone} {item.email ? `• ${item.email}` : ""}
@@ -231,8 +231,8 @@ export const BookmarksDrawer = ({
                       </div>
 
                       {/* Expiry & Upload Info */}
-                      <div className="flex flex-wrap items-center justify-between text-[11px] text-text-muted gap-2 border-t border-b border-neutral-100 py-1.5">
-                        <span className="flex items-center gap-1 font-medium text-blue-700">
+                      <div className="flex flex-wrap items-center justify-between text-[11px] text-text-muted gap-2 border-t border-b border-border/60 py-1.5">
+                        <span className="flex items-center gap-1 font-medium text-blue-400">
                           <Clock size={12} />
                           {expiresText}
                         </span>
@@ -243,7 +243,7 @@ export const BookmarksDrawer = ({
 
                       {/* Notes snippet if available */}
                       {item.latestCall?.notes && (
-                        <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-text-secondary flex items-start gap-2">
+                        <div className="p-2.5 rounded-lg bg-surface/90 border border-border/70 text-xs text-text-secondary flex items-start gap-2">
                           <FileText size={13} className="text-text-muted shrink-0 mt-0.5" />
                           <p className="italic line-clamp-2">"{item.latestCall.notes}"</p>
                         </div>

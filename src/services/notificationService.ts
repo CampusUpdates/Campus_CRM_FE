@@ -137,3 +137,40 @@ export async function clearAllNotifications(token: string): Promise<void> {
     throw new Error("Failed to clear notifications");
   }
 }
+
+export interface SidebarIndicators {
+  leadsUnread?: number;
+  counsellingUnread: number;
+  collegesUnread: number;
+  notificationsUnread: number;
+}
+
+export async function fetchSidebarIndicators(token: string): Promise<SidebarIndicators> {
+  const res = await fetch(`${API_URL}/notifications/sidebar-indicators`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    return { leadsUnread: 0, counsellingUnread: 0, collegesUnread: 0, notificationsUnread: 0 };
+  }
+
+  return res.json();
+}
+
+export async function markModuleSeen(
+  token: string,
+  module: 'COLLEGE_COUNSELLING' | 'COLLEGES' | 'LEADS'
+): Promise<void> {
+  await fetch(`${API_URL}/notifications/module-seen`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ module }),
+  }).catch(() => {});
+}

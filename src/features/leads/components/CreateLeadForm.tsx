@@ -14,6 +14,15 @@ import {
 import LeadPipelineDrawer from "./LeadPipelineDrawer";
 import { StateCitySelect } from "../../../components/common/StateCitySelect";
 import { getFieldValidationClass } from "../../../utils/formValidation";
+import { broadcastCounsellingUpdate } from "../../../services/counsellingService";
+
+export const getLocalTodayDateString = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 type CreateLeadFormProps = {
   initialLead?: Partial<LeadItem>;
@@ -38,6 +47,10 @@ const CreateLeadForm = ({
     gender: initialLead?.gender || "",
     city: initialLead?.city || "",
     state: initialLead?.state || "",
+    preferredState: initialLead?.preferredState || "",
+    preferredCity: initialLead?.preferredCity || "",
+    preferredBudget: initialLead?.preferredBudget != null ? String(initialLead.preferredBudget) : "",
+    referredBy: initialLead?.referredBy || "",
     aadharNumber: initialLead?.aadharNumber || "",
     dateOfBirth: initialLead?.dateOfBirth ? initialLead.dateOfBirth.split("T")[0] : "",
     // Existing Academic fields
@@ -108,13 +121,88 @@ const CreateLeadForm = ({
   });
 
   const [isCollegeDropdownOpen, setIsCollegeDropdownOpen] = useState(false);
-  
+
+  // College Counselling State
+  const [isCounsellingRequired, setIsCounsellingRequired] = useState<boolean>(() => {
+    return Boolean(
+      initialLead?.counsellingRequests && initialLead.counsellingRequests.length > 0
+    );
+  });
+  const [counsellingRequests, setCounsellingRequests] = useState<
+    Array<{
+      id?: string;
+      collegeId: string;
+      preferredDate: string;
+      preferredTime: string;
+      purpose: string;
+      status?: string;
+      college?: any;
+    }>
+  >(() => {
+    if (initialLead?.counsellingRequests && initialLead.counsellingRequests.length > 0) {
+      return initialLead.counsellingRequests.map((req: any) => {
+        let prefDate = "";
+        if (req.preferredDate) {
+          prefDate = String(req.preferredDate).split("T")[0];
+        } else if (req.preferredTiming) {
+          prefDate = req.preferredTiming.split(" ")[0] || "";
+        }
+        let prefTime = req.preferredTime || "";
+        if (!prefTime && req.preferredTiming) {
+          prefTime = req.preferredTiming.split(" ").slice(1).join(" ") || "";
+        }
+        return {
+          id: req.id,
+          collegeId: req.collegeId || req.college?.id,
+          preferredDate: prefDate,
+          preferredTime: prefTime,
+          purpose: req.purpose || "",
+          status: req.status || "REQUESTED",
+          college: req.college,
+        };
+      });
+    }
+    return [];
+  });
+  const [isCounsellingDropdownOpen, setIsCounsellingDropdownOpen] = useState(false);
+
+  // Synchronize counselling state if initialLead is updated asynchronously
+  useEffect(() => {
+    if (initialLead?.counsellingRequests && initialLead.counsellingRequests.length > 0) {
+      setIsCounsellingRequired(true);
+      setCounsellingRequests((prev) => {
+        if (prev.length > 0) return prev;
+        return (initialLead.counsellingRequests || []).map((req: any) => {
+          let prefDate = "";
+          if (req.preferredDate) {
+            prefDate = String(req.preferredDate).split("T")[0];
+          } else if (req.preferredTiming) {
+            prefDate = req.preferredTiming.split(" ")[0] || "";
+          }
+          let prefTime = req.preferredTime || "";
+          if (!prefTime && req.preferredTiming) {
+            prefTime = req.preferredTiming.split(" ").slice(1).join(" ") || "";
+          }
+          return {
+            id: req.id,
+            collegeId: req.collegeId || req.college?.id,
+            preferredDate: prefDate,
+            preferredTime: prefTime,
+            purpose: req.purpose || "",
+            status: req.status || "REQUESTED",
+            college: req.college,
+          };
+        });
+      });
+    }
+  }, [initialLead]);
+
   // Negative Colleges Autocomplete State
   const [negativeSearchQuery, setNegativeSearchQuery] = useState("");
   const [negativeSuggestions, setNegativeSuggestions] = useState<College[]>([]);
   const [isSearchingNegative, setIsSearchingNegative] = useState(false);
   const [isNegativeDropdownOpen, setIsNegativeDropdownOpen] = useState(false);
-  
+
   const [negativeCollegeError, setNegativeCollegeError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -136,7 +224,7 @@ const CreateLeadForm = ({
   // Search for negative colleges
   useEffect(() => {
     if (!accessToken) return;
-    
+
     if (!negativeSearchQuery.trim()) {
       setNegativeSuggestions([]);
       return;
@@ -160,8 +248,14 @@ const CreateLeadForm = ({
     if (name === "firstName" && !String(value || "").trim()) {
       return "First name is required";
     }
-    if (name === "phone" && !String(value || "").trim()) {
-      return "Phone number is required";
+    if (name === "phone") {
+      const v = String(value || "").trim();
+      if (!v) return "Phone number is required";
+      if (!/^\d{10}$/.test(v)) return "Phone number must be exactly 10 digits";
+    }
+    if (name === "alternatePhone") {
+      const v = String(value || "").trim();
+      if (v && !/^\d{10}$/.test(v)) return "Alternate phone number must be exactly 10 digits";
     }
     if (name === "email") {
       const v = String(value || "").trim();
@@ -194,6 +288,14 @@ const CreateLeadForm = ({
     if (name === "courseInterestedOther" && _currentData.courseInterested === "OTHER" && !String(value || "").trim()) {
       return "Specify Course is required";
     }
+    if (name === "preferredBudget") {
+      const v = String(value ?? "").trim();
+      if (v !== "") {
+        const num = Number(v);
+        if (isNaN(num)) return "Preferred budget must be a valid number";
+        if (num < 0) return "Preferred budget cannot be negative";
+      }
+    }
     return null;
   };
 
@@ -206,7 +308,16 @@ const CreateLeadForm = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+
+    if (name === "phone" || name === "alternatePhone" || name === "fatherPhone" || name === "motherPhone") {
+      value = value.replace(/\D/g, "");
+      if (value.length > 10) {
+        value = value.slice(0, 10);
+      }
+    }
+
     const next = { ...formData, [name]: value };
     setFormData(next);
     if (touched[name]) {
@@ -237,10 +348,44 @@ const CreateLeadForm = ({
     setErrors((prev) => ({ ...prev, colleges: err }));
   };
 
+  const handleAddCounsellingCollege = (collegeId: string) => {
+    if (!counsellingRequests.some((cr) => cr.collegeId === collegeId)) {
+      setCounsellingRequests((prev) => [
+        ...prev,
+        {
+          collegeId,
+          preferredDate: getLocalTodayDateString(),
+          preferredTime: "",
+          purpose: "",
+        },
+      ]);
+    }
+    setIsCounsellingDropdownOpen(false);
+  };
+
+  const handleRemoveCounsellingCollege = (collegeId: string) => {
+    setCounsellingRequests((prev) => prev.filter((cr) => cr.collegeId !== collegeId));
+  };
+
+  const handleUpdateCounsellingItem = (
+    collegeId: string,
+    field: "preferredDate" | "preferredTime" | "purpose",
+    value: string
+  ) => {
+    if (field === "preferredDate" && value && value < getLocalTodayDateString()) {
+      toast.error("Preferred counselling date cannot be in the past");
+    }
+    setCounsellingRequests((prev) =>
+      prev.map((cr) =>
+        cr.collegeId === collegeId ? { ...cr, [field]: value } : cr
+      )
+    );
+  };
+
   const handleAddNegativeCollege = (collegeName: string) => {
     const trimmed = collegeName.trim();
     if (!trimmed) return;
-    
+
     if (!selectedNegativeColleges.some((name) => name.toLowerCase() === trimmed.toLowerCase())) {
       setSelectedNegativeColleges((prev) => [...prev, trimmed]);
     }
@@ -250,6 +395,60 @@ const CreateLeadForm = ({
 
   const handleRemoveNegativeCollege = (collegeName: string) => {
     setSelectedNegativeColleges((prev) => prev.filter((name) => name !== collegeName));
+  };
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleBlur("phone");
+
+      const form = e.currentTarget.form;
+      if (form) {
+        const nextField = form.elements.namedItem("alternatePhone") as HTMLElement | null;
+        if (nextField && typeof nextField.focus === "function") {
+          nextField.focus();
+          return;
+        }
+
+        const focusables = Array.from(
+          form.querySelectorAll<HTMLElement>(
+            'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
+          )
+        ).filter((el) => el.offsetParent !== null && el.tabIndex !== -1);
+        const idx = focusables.indexOf(e.currentTarget);
+        if (idx !== -1 && idx < focusables.length - 1) {
+          focusables[idx + 1].focus();
+        }
+      }
+    }
+  };
+
+  const handleAlternatePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleBlur("alternatePhone");
+
+      const form = e.currentTarget.form;
+      if (form) {
+        const nextField = form.elements.namedItem("email") as HTMLElement | null;
+        if (nextField && typeof nextField.focus === "function") {
+          nextField.focus();
+          return;
+        }
+
+        const focusables = Array.from(
+          form.querySelectorAll<HTMLElement>(
+            'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
+          )
+        ).filter((el) => el.offsetParent !== null && el.tabIndex !== -1);
+        const idx = focusables.indexOf(e.currentTarget);
+        if (idx !== -1 && idx < focusables.length - 1) {
+          focusables[idx + 1].focus();
+        }
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -270,6 +469,13 @@ const CreateLeadForm = ({
       if (err) hasError = true;
     });
 
+    const budgetErr = validateLeadField("preferredBudget", formData.preferredBudget);
+    if (budgetErr) {
+      newTouched["preferredBudget"] = true;
+      newErrors["preferredBudget"] = budgetErr;
+      hasError = true;
+    }
+
     setTouched(newTouched);
     setErrors(newErrors);
 
@@ -280,6 +486,35 @@ const CreateLeadForm = ({
         toast.error(firstErr);
       }
       return;
+    }
+
+    if (isCounsellingRequired && counsellingRequests.length > 0) {
+      const todayStr = getLocalTodayDateString();
+      const existingReqDateMap = new Map(
+        (initialLead?.counsellingRequests || []).map((r: any) => [
+          r.id,
+          r.preferredDate
+            ? String(r.preferredDate).split("T")[0]
+            : (r.preferredTiming?.split(" ")[0] || ""),
+        ])
+      );
+      for (const req of counsellingRequests) {
+        // Only validate that preferred date is not in the past for newly added requests
+        // or existing requests where the date was actively changed to a past date
+        const isExistingUnmodified =
+          req.id &&
+          existingReqDateMap.has(req.id) &&
+          existingReqDateMap.get(req.id) === req.preferredDate?.trim();
+
+        if (!isExistingUnmodified && req.preferredDate && req.preferredDate.trim()) {
+          if (req.preferredDate.trim() < todayStr) {
+            const msg = "Preferred counselling date cannot be in the past";
+            setErrorMsg(msg);
+            toast.error(msg);
+            return;
+          }
+        }
+      }
     }
 
     setLoading(true);
@@ -296,6 +531,16 @@ const CreateLeadForm = ({
         gender: formData.gender || undefined,
         city: formData.city.trim(),
         state: formData.state.trim(),
+        preferredState: formData.preferredState.trim() ? formData.preferredState.trim() : (isEdit ? null : undefined),
+        preferredCity: formData.preferredCity.trim() ? formData.preferredCity.trim() : (isEdit ? null : undefined),
+        preferredBudget:
+          formData.preferredBudget !== "" && !isNaN(Number(formData.preferredBudget))
+            ? Number(formData.preferredBudget)
+            : (isEdit ? null : undefined),
+        referredBy:
+          formData.source === "REFERENCE"
+            ? (formData.referredBy.trim() ? formData.referredBy.trim() : (isEdit ? null : undefined))
+            : (isEdit ? undefined : undefined),
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : undefined,
         // Existing Academic
         tenthPercentage: formData.tenthPercentage ? Number(formData.tenthPercentage) : undefined,
@@ -329,6 +574,19 @@ const CreateLeadForm = ({
         notes: formData.notes.trim() || undefined,
         // Metadata & Colleges
         collegeIds: selectedCollegeIds,
+        counsellingRequests:
+          isCounsellingRequired && counsellingRequests.length > 0
+            ? counsellingRequests.map((r) => ({
+                collegeId: r.collegeId,
+                preferredDate: r.preferredDate?.trim() || undefined,
+                preferredTime: r.preferredTime?.trim() || undefined,
+                preferredTiming:
+                  [r.preferredDate?.trim(), r.preferredTime?.trim()]
+                    .filter(Boolean)
+                    .join(" ") || undefined,
+                purpose: r.purpose.trim() || undefined,
+              }))
+            : undefined,
         negativeColleges: selectedNegativeColleges,
         source: formData.source || "OTHER",
         sourceOther: formData.source === "OTHER" ? (formData.sourceOther.trim() || undefined) : undefined,
@@ -364,12 +622,18 @@ const CreateLeadForm = ({
           delete updatePayload.statusId;
           const updated = await updateLead(accessToken, initialLead.id, updatePayload);
           setUpdatedLeadState(updated || initialLead);
+          if (payload.counsellingRequests && payload.counsellingRequests.length > 0) {
+            broadcastCounsellingUpdate();
+          }
           toast.info("Lead details saved. Complete stage transition in the pipeline drawer.");
           setActivePipelineStatus(selectedStatusObj);
           return;
         }
 
         const updated = await updateLead(accessToken, initialLead.id, payload);
+        if (payload.counsellingRequests && payload.counsellingRequests.length > 0) {
+          broadcastCounsellingUpdate();
+        }
         toast.success("Lead details updated successfully!");
         if (onSuccess) {
           onSuccess(updated);
@@ -389,6 +653,9 @@ const CreateLeadForm = ({
         const selectedStatusName = (selectedStatusObj?.name || "").toUpperCase();
 
         const created = await createLead(accessToken, payload);
+        if (payload.counsellingRequests && payload.counsellingRequests.length > 0) {
+          broadcastCounsellingUpdate();
+        }
 
         if (selectedStatusObj && PIPELINE_STATUSES.includes(selectedStatusName)) {
           setUpdatedLeadState(created);
@@ -416,6 +683,10 @@ const CreateLeadForm = ({
 
   const unselectedColleges = colleges.filter(
     (c) => !selectedCollegeIds.includes(c.id)
+  );
+
+  const unselectedCounsellingColleges = colleges.filter(
+    (c) => !counsellingRequests.some((cr) => cr.collegeId === c.id)
   );
 
   return (
@@ -482,24 +753,32 @@ const CreateLeadForm = ({
           <Input
             label="Phone"
             name="phone"
+            type="tel"
+            inputMode="numeric"
             value={formData.phone}
             onChange={handleChange}
             onBlur={() => handleBlur("phone")}
+            onKeyDown={handlePhoneKeyDown}
             touched={touched.phone}
             error={errors.phone}
             placeholder="Enter phone number"
+            maxLength={10}
             required
           />
 
           <Input
             label="Alternate Phone"
             name="alternatePhone"
+            type="tel"
+            inputMode="numeric"
             value={formData.alternatePhone}
             onChange={handleChange}
             onBlur={() => handleBlur("alternatePhone")}
+            onKeyDown={handleAlternatePhoneKeyDown}
             touched={touched.alternatePhone}
             error={errors.alternatePhone}
             placeholder="Enter alternate phone"
+            maxLength={10}
           />
 
           <Input
@@ -595,9 +874,14 @@ const CreateLeadForm = ({
         <div className="space-y-4">
           {/* Pitched Colleges (Application Colleges) */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
-              Pitched Colleges <span className="text-red-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-text-secondary">
+                Formal Application Colleges <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[11px] text-text-muted">
+                Requires at least 1 college
+              </span>
+            </div>
 
             <div className="relative">
               <div
@@ -660,9 +944,8 @@ const CreateLeadForm = ({
                 <div className="ml-auto pr-1 text-text-muted">
                   <ChevronDown
                     size={18}
-                    className={`transition-transform ${
-                      isCollegeDropdownOpen ? "rotate-180" : ""
-                    }`}
+                    className={`transition-transform ${isCollegeDropdownOpen ? "rotate-180" : ""
+                      }`}
                   />
                 </div>
               </div>
@@ -670,6 +953,7 @@ const CreateLeadForm = ({
               {/* College Dropdown Menu */}
               {isCollegeDropdownOpen && (
                 <div
+                  role="listbox"
                   className="
                     absolute
                     left-0 right-0
@@ -683,6 +967,7 @@ const CreateLeadForm = ({
                     bg-surface
                     py-1
                     shadow-lg
+                    crm-dropdown-menu
                   "
                 >
                   {colleges.length === 0 ? (
@@ -698,13 +983,15 @@ const CreateLeadForm = ({
                       <button
                         key={college.id}
                         type="button"
+                        role="option"
                         onClick={() => handleSelectCollege(college.id)}
                         className="
                           w-full
                           px-3.5 sm:px-4 py-2 sm:py-2.5
                           text-left text-xs sm:text-sm
                           text-text-primary
-                          hover:bg-neutral-100
+                          hover:bg-surface-hover focus:bg-surface-hover
+                          crm-dropdown-item
                           flex items-center justify-between
                           transition
                           cursor-pointer
@@ -730,7 +1017,222 @@ const CreateLeadForm = ({
             )}
           </div>
 
-          {/* Negative Colleges */}
+          {/* Counselling Required Section */}
+          <div className="pt-4 border-t border-border space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-semibold text-text-primary block">
+                  Counselling required from college?
+                </label>
+                <p className="text-[11px] text-text-muted mt-0.5">
+                  Request guidance and counselling sessions for specific colleges.
+                </p>
+              </div>
+              <div className="inline-flex rounded-md border border-border bg-surface p-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCounsellingRequired(false);
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                    !isCounsellingRequired
+                      ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  No
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCounsellingRequired(true)}
+                  className={`px-3 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                    isCounsellingRequired
+                      ? "bg-primary-600 text-white"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  Yes
+                </button>
+              </div>
+            </div>
+
+            {isCounsellingRequired && (
+              <div className="space-y-3 pt-1">
+                <div className="relative">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
+                    Colleges requiring counselling
+                  </label>
+                  <div
+                    onClick={() => setIsCounsellingDropdownOpen(!isCounsellingDropdownOpen)}
+                    className="min-h-[40px] w-full rounded-lg border border-border bg-surface px-3 py-2 flex items-center justify-between cursor-pointer transition focus-within:border-primary-500"
+                  >
+                    <span className="text-xs text-text-muted">
+                      Select colleges...
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className={`text-text-muted transition-transform ${
+                        isCounsellingDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+
+                  {isCounsellingDropdownOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-lg crm-dropdown-menu"
+                    >
+                      {unselectedCounsellingColleges.length === 0 ? (
+                        <div className="px-4 py-2 text-xs text-text-muted text-center">
+                          All colleges added to counselling
+                        </div>
+                      ) : (
+                        unselectedCounsellingColleges.map((college) => (
+                          <button
+                            key={college.id}
+                            type="button"
+                            role="option"
+                            onClick={() => handleAddCounsellingCollege(college.id)}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-surface-hover focus:bg-surface-hover crm-dropdown-item flex items-center justify-between cursor-pointer text-text-primary transition"
+                          >
+                            <span className="font-medium">{college.name}</span>
+                            {college.city && (
+                              <span className="text-[11px] text-text-muted">
+                                {college.city}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Counselling Colleges List */}
+                {counsellingRequests.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <div className="text-xs font-medium text-text-secondary">
+                      Selected colleges:
+                    </div>
+                    <div className="divide-y divide-border/60">
+                      {counsellingRequests.map((req) => {
+                        const col = colleges.find((c) => c.id === req.collegeId) || req.college;
+                        if (!col) return null;
+                        return (
+                          <div
+                            key={req.collegeId}
+                            className="py-2.5 first:pt-0 last:pb-0 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-xs text-text-primary">
+                                  {col.name} {col.city ? `(${col.city})` : ""}
+                                </span>
+                                {req.status && (
+                                  <span
+                                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                      req.status === "COMPLETED"
+                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                        : req.status === "SCHEDULED"
+                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                        : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                                    }`}
+                                  >
+                                    {req.status}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCounsellingCollege(req.collegeId)}
+                                className="text-text-muted hover:text-danger-600 transition p-0.5 cursor-pointer"
+                                title="Remove college"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-text-muted shrink-0">
+                                  Pref Date:
+                                </label>
+                                <input
+                                  type="date"
+                                  min={req.id ? undefined : getLocalTodayDateString()}
+                                  value={req.preferredDate}
+                                  onChange={(e) =>
+                                    handleUpdateCounsellingItem(
+                                      req.collegeId,
+                                      "preferredDate",
+                                      e.target.value
+                                    )
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  title="Preferred Counselling Date"
+                                  className="flex-1 min-w-0 rounded border border-border px-2 py-1 text-xs text-text-primary bg-surface focus:border-primary-500 focus:outline-hidden"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-text-muted shrink-0">
+                                  Pref Time:
+                                </label>
+                                <input
+                                  type="time"
+                                  value={req.preferredTime}
+                                  onChange={(e) =>
+                                    handleUpdateCounsellingItem(
+                                      req.collegeId,
+                                      "preferredTime",
+                                      e.target.value
+                                    )
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  title="Preferred Counselling Time"
+                                  className="flex-1 min-w-0 rounded border border-border px-2 py-1 text-xs text-text-primary bg-surface focus:border-primary-500 focus:outline-hidden"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-text-muted shrink-0">
+                                  Purpose:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={req.purpose}
+                                  onChange={(e) =>
+                                    handleUpdateCounsellingItem(
+                                      req.collegeId,
+                                      "purpose",
+                                      e.target.value
+                                    )
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  placeholder="e.g. Course guidance"
+                                  className="flex-1 min-w-0 rounded border border-border px-2 py-1 text-xs text-text-primary bg-surface focus:border-primary-500 focus:outline-hidden"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Negative Colleges */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
@@ -778,15 +1280,17 @@ const CreateLeadForm = ({
                         handleRemoveNegativeCollege(collegeName);
                       }}
                       className="rounded-full p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition shrink-0 cursor-pointer"
+                      aria-label={`Remove ${collegeName}`}
                     >
                       <X size={12} className="sm:w-3.5 sm:h-3.5" />
                     </button>
                   </span>
                 ))}
-                
+
                 <input
                   type="text"
                   placeholder={selectedNegativeColleges.length === 0 ? "Search or type college..." : ""}
+                  aria-label="Add negative college"
                   className="flex-1 bg-transparent min-w-[120px] outline-none text-xs sm:text-sm"
                   value={negativeSearchQuery}
                   onChange={(e) => {
@@ -795,11 +1299,14 @@ const CreateLeadForm = ({
                   }}
                   onFocus={() => setIsNegativeDropdownOpen(true)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
+                      e.stopPropagation();
                       if (negativeSearchQuery.trim()) {
                         handleAddNegativeCollege(negativeSearchQuery);
                       }
+                    } else if (e.key === "Escape") {
+                      setIsNegativeDropdownOpen(false);
                     }
                   }}
                 />
@@ -808,6 +1315,7 @@ const CreateLeadForm = ({
               {/* Negative College Dropdown Menu */}
               {isNegativeDropdownOpen && negativeSearchQuery.trim() !== "" && (
                 <div
+                  role="listbox"
                   className="
                     absolute
                     left-0 right-0
@@ -821,6 +1329,7 @@ const CreateLeadForm = ({
                     bg-surface
                     py-1
                     shadow-lg
+                    crm-dropdown-menu
                   "
                 >
                   {isSearchingNegative ? (
@@ -837,13 +1346,16 @@ const CreateLeadForm = ({
                       <button
                         key={college.id}
                         type="button"
+                        role="option"
                         onClick={() => handleAddNegativeCollege(college.name)}
                         className="
                           w-full
                           px-3.5 sm:px-4 py-2 sm:py-2.5
                           text-left text-xs sm:text-sm
                           text-text-primary
-                          hover:bg-rose-50 dark:hover:bg-rose-950/30
+                          hover:bg-surface-hover focus:bg-surface-hover
+                          dark:hover:bg-rose-950/30
+                          crm-dropdown-item
                           flex items-center justify-between
                           transition
                           cursor-pointer
@@ -870,6 +1382,64 @@ const CreateLeadForm = ({
                 {negativeCollegeError}
               </p>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION — PREFERRED STUDY LOCATION & BUDGET */}
+      <section className="space-y-4 pt-2">
+        <div>
+          <h3 className="text-sm sm:text-base font-semibold text-text-primary">
+            Preferred Study Location & Budget
+          </h3>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Optional study destination preferences and student budget.
+          </p>
+          <div className="mt-2 border-b border-border" />
+        </div>
+
+        <div className="space-y-4">
+          <StateCitySelect
+            stateValue={formData.preferredState}
+            cityValue={formData.preferredCity}
+            stateLabel="Preferred State"
+            cityLabel="Preferred City"
+            statePlaceholder="Select Preferred State"
+            cityPlaceholder="Select Preferred City"
+            allowClear={true}
+            onStateChange={(state) => {
+              setFormData((prev) => ({
+                ...prev,
+                preferredState: state,
+                preferredCity: "",
+              }));
+              if (touched.preferredState) {
+                setErrors((prev) => ({ ...prev, preferredState: null }));
+              }
+            }}
+            onCityChange={(city) => {
+              setFormData((prev) => ({ ...prev, preferredCity: city }));
+              if (touched.preferredCity) {
+                setErrors((prev) => ({ ...prev, preferredCity: null }));
+              }
+            }}
+            required={false}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Preferred Budget (₹)"
+              name="preferredBudget"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="e.g. 800000"
+              value={formData.preferredBudget}
+              onChange={handleChange}
+              onBlur={() => handleBlur("preferredBudget")}
+              touched={touched.preferredBudget}
+              error={errors.preferredBudget}
+            />
           </div>
         </div>
       </section>
@@ -913,10 +1483,24 @@ const CreateLeadForm = ({
               { value: "MAT", label: "MAT" },
               { value: "IBSAT", label: "IBSAT" },
               { value: "SNAP", label: "SNAP" },
+              { value: "REFERENCE", label: "Reference" },
               { value: "OTHER", label: "Other" },
             ]}
             required
           />
+
+          {formData.source === "REFERENCE" && (
+            <Input
+              label="Referred By"
+              name="referredBy"
+              value={formData.referredBy}
+              onChange={handleChange}
+              onBlur={() => handleBlur("referredBy")}
+              touched={touched.referredBy}
+              error={errors.referredBy}
+              placeholder="Enter referrer name (optional)"
+            />
+          )}
 
           {formData.source === "OTHER" && (
             <Input
@@ -1311,8 +1895,8 @@ const CreateLeadForm = ({
               ? "Saving Changes..."
               : "Creating Lead..."
             : isEdit
-            ? "Save Changes"
-            : "Create Lead"}
+              ? "Save Changes"
+              : "Create Lead"}
         </button>
       </div>
 
@@ -1367,9 +1951,8 @@ const CollapsibleSection = ({
           )}
         </div>
         <div
-          className={`p-1 text-text-muted transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`p-1 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
         >
           <ChevronDown size={18} />
         </div>
@@ -1389,6 +1972,7 @@ type InputProps = {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   touched?: boolean;
   error?: string | null;
   placeholder?: string;
@@ -1396,8 +1980,11 @@ type InputProps = {
   required?: boolean;
   min?: string;
   max?: string;
+  step?: string;
   maxLength?: number;
+  inputMode?: "text" | "none" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
   wrapperClassName?: string;
+  id?: string;
 };
 
 const Input = ({
@@ -1406,6 +1993,7 @@ const Input = ({
   value,
   onChange,
   onBlur,
+  onKeyDown,
   touched,
   error,
   placeholder,
@@ -1413,14 +2001,42 @@ const Input = ({
   required,
   min,
   max,
+  step,
   maxLength,
+  inputMode,
   wrapperClassName = "",
+  id,
 }: InputProps) => {
   const inputClass = getFieldValidationClass(
     touched,
     error,
     "h-10 w-full rounded-lg border bg-surface px-3.5 text-xs sm:text-sm text-text-primary outline-none transition placeholder:text-text-muted"
   );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (onKeyDown) {
+      onKeyDown(e);
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const form = e.currentTarget.form;
+      if (form) {
+        const focusable = Array.from(
+          form.querySelectorAll<HTMLElement>(
+            'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
+          )
+        ).filter((el) => el.offsetParent !== null && el.tabIndex !== -1);
+        const currentIndex = focusable.indexOf(e.currentTarget);
+        if (currentIndex !== -1 && currentIndex < focusable.length - 1) {
+          focusable[currentIndex + 1].focus();
+        } else {
+          e.currentTarget.blur();
+        }
+      }
+    }
+  };
 
   return (
     <div className={wrapperClassName}>
@@ -1432,13 +2048,17 @@ const Input = ({
       <input
         type={type}
         name={name}
+        id={id || name}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         min={min}
         max={max}
+        step={step}
         maxLength={maxLength}
+        inputMode={inputMode}
         className={inputClass}
       />
       {touched && error && (
@@ -1621,22 +2241,20 @@ const ScoreInput = ({
           <button
             type="button"
             onClick={() => onScoreTypeChange("percentage")}
-            className={`px-2 py-0.5 transition ${
-              scoreType === "percentage"
-                ? "bg-primary-500 text-white"
-                : "bg-surface text-text-muted hover:bg-neutral-100"
-            }`}
+            className={`px-2 py-0.5 transition ${scoreType === "percentage"
+              ? "bg-primary-500 text-white"
+              : "bg-surface text-text-muted hover:bg-neutral-100"
+              }`}
           >
             %
           </button>
           <button
             type="button"
             onClick={() => onScoreTypeChange("cgpa")}
-            className={`px-2 py-0.5 transition ${
-              scoreType === "cgpa"
-                ? "bg-primary-500 text-white"
-                : "bg-surface text-text-muted hover:bg-neutral-100"
-            }`}
+            className={`px-2 py-0.5 transition ${scoreType === "cgpa"
+              ? "bg-primary-500 text-white"
+              : "bg-surface text-text-muted hover:bg-neutral-100"
+              }`}
           >
             CGPA
           </button>
@@ -1654,6 +2272,25 @@ const ScoreInput = ({
           const raw = e.target.value;
           if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
             onChange(e);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const form = e.currentTarget.form;
+            if (form) {
+              const focusable = Array.from(
+                form.querySelectorAll<HTMLElement>(
+                  'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
+                )
+              ).filter((el) => el.offsetParent !== null && el.tabIndex !== -1);
+              const currentIndex = focusable.indexOf(e.currentTarget);
+              if (currentIndex !== -1 && currentIndex < focusable.length - 1) {
+                focusable[currentIndex + 1].focus();
+              } else {
+                e.currentTarget.blur();
+              }
+            }
           }
         }}
         placeholder={placeholder}

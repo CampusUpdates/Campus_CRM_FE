@@ -6,6 +6,7 @@ import {
   fetchActivityLogs,
   type ActivityLogItem,
 } from "../../../services/activityLogService";
+import { DashboardDropdown } from "../../../components/common";
 
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
@@ -207,19 +208,14 @@ const ActivityList = ({
               />
             </div>
 
-            <div className="flex items-center gap-1 min-w-[140px]">
-              <Filter size={14} className="text-text-muted shrink-0" />
-              <select
+            <div className="flex items-center min-w-[150px]">
+              <DashboardDropdown
+                icon={Filter}
                 value={selectedActivity}
-                onChange={(e) => setSelectedActivity(e.target.value)}
-                className="w-full h-8 px-2 text-xs border border-border rounded-lg bg-neutral-50/50 outline-none focus:border-primary-500 transition text-text-secondary"
-              >
-                {ACTIVITY_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedActivity(val)}
+                options={ACTIVITY_TYPE_OPTIONS}
+                minWidth="150px"
+              />
             </div>
           </div>
         )}

@@ -17,6 +17,11 @@ import {
   type OfficeItem,
 } from "../../../services/officeService";
 import OfficeDrawer from "../components/OfficeDrawer";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const OfficeSettingsPage = () => {
   const { accessToken } = useAuth();
@@ -24,6 +29,7 @@ const OfficeSettingsPage = () => {
 
   const [offices, setOffices] = useState<OfficeItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -32,12 +38,15 @@ const OfficeSettingsPage = () => {
   const loadOffices = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchOffices(accessToken);
       setOffices(data);
     } catch (err: any) {
       console.error("Failed to load offices:", err);
-      toast.error(err.message || "Failed to load office locations.");
+      const msg = err.message || "Failed to load office locations.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -128,29 +137,21 @@ const OfficeSettingsPage = () => {
 
       {/* Office Cards Grid */}
       {loading ? (
-        <div className="flex items-center justify-center p-16 text-sm text-text-secondary bg-surface rounded-xl border border-border">
-          <RefreshCw className="animate-spin mr-2 text-primary-500" size={20} />
-          Loading office locations...
-        </div>
+        <PageLoadingState message="Loading office locations..." />
+      ) : error ? (
+        <PageErrorState
+          title="Failed to load office locations"
+          message={error}
+          onRetry={loadOffices}
+        />
       ) : offices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 text-center bg-surface rounded-xl border border-border">
-          <div className="w-14 h-14 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mb-4">
-            <Building2 size={28} />
-          </div>
-          <h3 className="text-lg font-semibold text-text-primary">
-            No Offices Configured
-          </h3>
-          <p className="text-sm text-text-secondary mt-1 max-w-md leading-relaxed">
-            Create physical office locations with GPS coordinates so employees can check in for attendance upon logging in.
-          </p>
-          <button
-            onClick={handleOpenCreate}
-            className="mt-6 flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-600 transition"
-          >
-            <Plus size={18} />
-            Configure First Office
-          </button>
-        </div>
+        <PageEmptyState
+          icon={Building2}
+          title="No Offices Configured"
+          message="Create physical office locations with GPS coordinates so employees can check in for attendance upon logging in."
+          actionText="Configure First Office"
+          onAction={handleOpenCreate}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {offices.map((office) => {

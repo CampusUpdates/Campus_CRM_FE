@@ -27,6 +27,11 @@ import {
   deleteTodo,
   type TodoItem,
 } from "../../../services/todoService";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 // Helper to format date as YYYY-MM-DD
 const formatDateIso = (d: Date) => {
@@ -47,6 +52,7 @@ const Todo = () => {
   const [selectedDate, setSelectedDate] = useState<string>(formatDateIso(new Date()));
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,12 +74,15 @@ const Todo = () => {
   const loadTodos = async () => {
     if (!accessToken) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchTodos(accessToken, selectedDate);
       setTodos(data);
     } catch (err: any) {
       console.error("Failed to load todos:", err);
-      toast.showToast(err.message || "Failed to load todos", "error");
+      const msg = err.message || "Failed to load todos";
+      setError(msg);
+      toast.showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -349,8 +358,8 @@ const Todo = () => {
             <button
               onClick={() => setStatusFilter("ALL")}
               className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "ALL"
-                  ? "bg-surface text-text-primary font-semibold shadow-2xs"
-                  : "text-text-secondary hover:text-text-primary"
+                ? "bg-surface text-text-primary font-semibold shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
                 }`}
             >
               All
@@ -358,8 +367,8 @@ const Todo = () => {
             <button
               onClick={() => setStatusFilter("PENDING")}
               className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "PENDING"
-                  ? "bg-surface text-blue-700 font-semibold shadow-2xs"
-                  : "text-text-secondary hover:text-text-primary"
+                ? "bg-surface text-blue-700 font-semibold shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
                 }`}
             >
               Pending
@@ -367,8 +376,8 @@ const Todo = () => {
             <button
               onClick={() => setStatusFilter("COMPLETED")}
               className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "COMPLETED"
-                  ? "bg-surface text-emerald-700 font-semibold shadow-2xs"
-                  : "text-text-secondary hover:text-text-primary"
+                ? "bg-surface text-emerald-700 font-semibold shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
                 }`}
             >
               Completed
@@ -419,29 +428,27 @@ const Todo = () => {
       {/* Main Todo Container */}
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm min-h-[350px]">
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-text-muted">
-            <RefreshCw size={22} className="animate-spin text-primary-600 mr-2" />
-            <span className="text-xs font-medium">Loading your todos for {selectedDate}...</span>
-          </div>
+          <PageLoadingState message={`Loading your todos for ${selectedDate}...`} />
+        ) : error ? (
+          <PageErrorState
+            title="Failed to load todos"
+            message={error}
+            onRetry={loadTodos}
+          />
         ) : filteredTodos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Clock size={40} className="text-neutral-300 mb-3" />
-            <h3 className="text-base font-bold text-text-primary">No Todo Tasks Found</h3>
-            <p className="text-xs text-text-secondary mt-1 max-w-sm">
-              {todos.length === 0
-                ? `You don't have any todo items scheduled for ${isTodaySelected ? "Today" : selectedDate
-                }. Click the button below to add your first task.`
-                : "No todo tasks match your selected search or status filters."}
-            </p>
-            {todos.length === 0 && (
-              <button
-                onClick={handleOpenCreateModal}
-                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 text-white text-xs font-semibold shadow-2xs hover:bg-primary-700 transition"
-              >
-                <Plus size={15} /> Add Todo Task
-              </button>
-            )}
-          </div>
+          <PageEmptyState
+            icon={ListTodo}
+            title="No Todo Tasks Found"
+            message={
+              todos.length === 0
+                ? `You don't have any todo items scheduled for ${
+                    selectedDate === formatDateIso(new Date()) ? "Today" : selectedDate
+                  }. Click the button below to add your first task.`
+                : "No todo tasks match your selected search or status filters."
+            }
+            actionText={todos.length === 0 ? "Add Todo Task" : undefined}
+            onAction={todos.length === 0 ? handleOpenCreateModal : undefined}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredTodos.map((todo) => {
@@ -479,8 +486,8 @@ const Todo = () => {
                         <div className="min-w-0 flex-1">
                           <h3
                             className={`text-sm font-semibold leading-snug ${todo.isCompleted
-                                ? "line-through text-text-muted"
-                                : "text-text-primary"
+                              ? "line-through text-text-muted"
+                              : "text-text-primary"
                               }`}
                           >
                             {todo.title}

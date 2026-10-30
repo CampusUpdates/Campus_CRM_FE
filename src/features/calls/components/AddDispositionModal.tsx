@@ -14,7 +14,8 @@ export type CallOutcomeType =
   | "FOLLOW_UP"
   | "CALL_BACK_LATER"
   | "INTERESTED"
-  | "DISCONNECTED";
+  | "DISCONNECTED"
+  | "OTHER";
 
 interface AddDispositionModalProps {
   student: CallLogItem;
@@ -23,13 +24,14 @@ interface AddDispositionModalProps {
 }
 
 const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; color: string; desc: string }[] = [
-  { label: "No Answer", value: "NO_ANSWER", color: "border-neutral-300 text-neutral-700 bg-neutral-50 hover:bg-neutral-100", desc: "Phone rang with no response" },
-  { label: "Wrong Number", value: "WRONG_NUMBER", color: "border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100", desc: "Number does not belong to student" },
-  { label: "Not Interested", value: "NOT_INTERESTED", color: "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100", desc: "Student declined program offering" },
-  { label: "Follow Up Required", value: "FOLLOW_UP", color: "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100", desc: "Creates 24-hr active bookmark" },
-  { label: "Call Back Later", value: "CALL_BACK_LATER", color: "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100", desc: "Creates 24-hr active bookmark" },
-  { label: "Interested / Lead", value: "INTERESTED", color: "border-emerald-500 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold", desc: "Student interested in admission" },
-  { label: "Disconnected", value: "DISCONNECTED", color: "border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100", desc: "Call got disconnected prematurely" },
+  { label: "No Answer", value: "NO_ANSWER", color: "border-slate-700/80 bg-slate-900/80 text-slate-300 hover:border-slate-500 hover:bg-slate-800", desc: "Phone rang with no response" },
+  { label: "Wrong Number", value: "WRONG_NUMBER", color: "border-rose-900/60 bg-rose-950/40 text-rose-300 hover:border-rose-700 hover:bg-rose-950/70", desc: "Number does not belong to student" },
+  { label: "Not Interested", value: "NOT_INTERESTED", color: "border-amber-900/60 bg-amber-950/40 text-amber-300 hover:border-amber-700 hover:bg-amber-950/70", desc: "Student declined program offering" },
+  { label: "Follow Up Required", value: "FOLLOW_UP", color: "border-blue-900/60 bg-blue-950/40 text-blue-300 hover:border-blue-700 hover:bg-blue-950/70", desc: "Creates 24-hr active bookmark" },
+  { label: "Call Back Later", value: "CALL_BACK_LATER", color: "border-purple-900/60 bg-purple-950/40 text-purple-300 hover:border-purple-700 hover:bg-purple-950/70", desc: "Creates 24-hr active bookmark" },
+  { label: "Interested / Lead", value: "INTERESTED", color: "border-emerald-700 bg-emerald-950/60 text-emerald-300 hover:border-emerald-600 hover:bg-emerald-950/90 font-bold", desc: "Student interested in admission" },
+  { label: "Disconnected", value: "DISCONNECTED", color: "border-orange-900/60 bg-orange-950/40 text-orange-300 hover:border-orange-700 hover:bg-orange-950/70", desc: "Call got disconnected prematurely" },
+  { label: "Other", value: "OTHER", color: "border-cyan-900/60 bg-cyan-950/40 text-cyan-300 hover:border-cyan-700 hover:bg-cyan-950/70", desc: "Other disposition or special scenario" },
 ];
 
 const AddDispositionModal = ({
@@ -118,7 +120,7 @@ const AddDispositionModal = ({
               )}
 
               {/* Student Info Card */}
-              <div className="rounded-xl border border-border bg-neutral-50/60 dark:bg-neutral-900/40 p-3.5 space-y-1 text-xs">
+              <div className="rounded-xl border border-border bg-background/80 p-3.5 space-y-1 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-text-primary text-sm">{student.fullName}</span>
                   <span className="font-mono text-text-muted font-medium">{student.phone}</span>
@@ -143,7 +145,7 @@ const AddDispositionModal = ({
                         onClick={() => setSelectedOutcome(opt.value)}
                         className={`p-3 rounded-xl border text-xs text-left transition flex flex-col justify-between space-y-1 cursor-pointer ${
                           isSelected
-                            ? "border-primary-600 bg-primary-50/70 text-primary-950 ring-2 ring-primary-200 font-bold"
+                            ? "border-emerald-500 bg-emerald-950/70 text-emerald-300 ring-2 ring-emerald-500/40 font-bold"
                             : opt.color
                         }`}
                       >

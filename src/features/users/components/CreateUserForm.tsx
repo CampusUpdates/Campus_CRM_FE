@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Copy, Check, Key, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 import {
   createUser,
   updateUser,
@@ -35,6 +36,9 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
     roleId: "",
     teamId: "",
   });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [teams, setTeams] = useState<UserTeam[]>([]);
@@ -79,11 +83,60 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
     }
   }, [accessToken]);
 
+  const validateField = (name: string, value: string): string | null => {
+    switch (name) {
+      case "firstName":
+        if (!value.trim()) return "First name is required";
+        if (!/^[A-Za-z]+$/.test(value)) return "First name can only contain letters";
+        return null;
+      case "lastName":
+        if (value.trim() && !/^[A-Za-z]+$/.test(value)) return "Last name can only contain letters";
+        return null;
+      case "email":
+        if (!value.trim()) return "Email is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
+        return null;
+      case "phone":
+        if (!value.trim()) return "Phone number is required";
+        if (!/^\d{10}$/.test(value)) return "Phone number must be exactly 10 digits";
+        return null;
+      case "alternatePhone":
+        if (value.trim() && !/^\d{10}$/.test(value)) return "Alternate phone must be exactly 10 digits";
+        return null;
+      case "roleId":
+        if (!value) return "System Role is required";
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: validateField(name, formData[name as keyof typeof formData]) }));
+  };
+
+  const normalizeName = (val: string) => val.replace(/(^|\s|-|')\S/g, (match) => match.toUpperCase());
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+
+    // Strict input behavior for phone
+    if (name === "phone" || name === "alternatePhone") {
+      if (value && !/^\d*$/.test(value)) return;
+      if (value.length > 10) return;
+    }
+
+    if (name === "firstName" || name === "lastName") {
+      value = normalizeName(value);
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (touched[name]) {
+      setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+    }
   };
 
   const handleCopy = (text: string, fieldName: string) => {
@@ -97,44 +150,23 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
     e.preventDefault();
     if (!accessToken) return;
 
-    // Client-side validation
-    if (!formData.firstName.trim()) {
-      const msg = "First name is required";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    // Validate all fields on submit
+    const newTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string | null> = {};
+    let hasError = false;
 
-    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      const msg = "Please enter a valid email address";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    Object.keys(formData).forEach((key) => {
+      newTouched[key] = true;
+      const err = validateField(key, formData[key as keyof typeof formData]);
+      newErrors[key] = err;
+      if (err) hasError = true;
+    });
 
-    if (!formData.phone.trim()) {
-      const msg = "Phone number is required";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    setTouched(newTouched);
+    setErrors(newErrors);
 
-    if (!formData.roleId) {
-      const msg = "Please select a user role";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
-
-    const selectedRole = roles.find((r) => String(r.id) === String(formData.roleId));
-    const isTeamLeadSelected = selectedRole
-      ? (selectedRole.name.toUpperCase().includes("TEAM_LEAD") || selectedRole.name.toUpperCase().includes("TEAM LEAD"))
-      : String(formData.roleId) === "5";
-
-    if (isTeamLeadSelected && !formData.teamId) {
-      const msg = "Team Lead must be assigned to a team";
-      setErrorMsg(msg);
-      toast.error(msg);
+    if (hasError) {
+      setErrorMsg("Please fix the validation errors before submitting.");
       return;
     }
 
@@ -292,7 +324,7 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8" noValidate>
       {errorMsg && (
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
           {errorMsg}
@@ -316,8 +348,11 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
+            onBlur={() => handleBlur("firstName")}
             placeholder="e.g. Rahul"
             required
+            touched={touched.firstName}
+            error={errors.firstName}
           />
 
           <Input
@@ -325,7 +360,10 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="lastName"
             value={formData.lastName}
             onChange={handleChange}
+            onBlur={() => handleBlur("lastName")}
             placeholder="e.g. Verma"
+            touched={touched.lastName}
+            error={errors.lastName}
           />
 
           <Input
@@ -334,8 +372,11 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={() => handleBlur("email")}
             placeholder="e.g. rahul.verma@company.com"
             required
+            touched={touched.email}
+            error={errors.email}
           />
 
           <Input
@@ -343,8 +384,11 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="phone"
             value={formData.phone}
             onChange={handleChange}
+            onBlur={() => handleBlur("phone")}
             placeholder="e.g. 9876543210"
             required
+            touched={touched.phone}
+            error={errors.phone}
           />
 
           <Input
@@ -352,7 +396,10 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="alternatePhone"
             value={formData.alternatePhone}
             onChange={handleChange}
+            onBlur={() => handleBlur("alternatePhone")}
             placeholder="e.g. 9123456789"
+            touched={touched.alternatePhone}
+            error={errors.alternatePhone}
           />
 
           <Input
@@ -361,6 +408,9 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
             name="dob"
             value={formData.dob}
             onChange={handleChange}
+            onBlur={() => handleBlur("dob")}
+            touched={touched.dob}
+            error={errors.dob}
           />
         </div>
       </section>
@@ -385,21 +435,13 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
               name="roleId"
               value={formData.roleId}
               onChange={handleChange}
+              onBlur={() => handleBlur("roleId")}
               required
-              className="
-                h-11
-                w-full
-                rounded-lg
-                border border-border
-                bg-surface
-                px-4
-                text-sm text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-              "
+              className={getFieldValidationClass(
+                touched.roleId,
+                errors.roleId,
+                "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition"
+              )}
             >
               <option value="">Select Role</option>
               {roles.length > 0 ? (
@@ -420,48 +462,36 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
                 </>
               )}
             </select>
+            {touched.roleId && errors.roleId && (
+              <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.roleId}</p>
+            )}
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-text-primary">
-              Assign Team {(() => {
-                const selectedRole = roles.find((r) => String(r.id) === String(formData.roleId));
-                const isTL = selectedRole
-                  ? (selectedRole.name.toUpperCase().includes("TEAM_LEAD") || selectedRole.name.toUpperCase().includes("TEAM LEAD"))
-                  : String(formData.roleId) === "5";
-                return isTL ? (
-                  <span className="text-danger-500">*</span>
-                ) : (
-                  <span className="text-text-tertiary font-normal">(Optional)</span>
-                );
-              })()}
+              Assign Team <span className="text-text-tertiary font-normal">(Optional)</span>
             </label>
             <select
               name="teamId"
               value={formData.teamId}
               onChange={handleChange}
-              className="
-                h-11
-                w-full
-                rounded-lg
-                border border-border
-                bg-surface
-                px-4
-                text-sm text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-              "
+              onBlur={() => handleBlur("teamId")}
+              className={getFieldValidationClass(
+                touched.teamId,
+                errors.teamId,
+                "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition"
+              )}
             >
-              <option value="">Unassigned</option>
+              <option value="">No Team</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
             </select>
+            {touched.teamId && errors.teamId && (
+              <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.teamId}</p>
+            )}
           </div>
         </div>
       </section>
@@ -486,8 +516,8 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
               ? "Saving Changes..."
               : "Save Changes"
             : loading
-            ? "Creating User Account..."
-            : "Create User"}
+              ? "Creating User Account..."
+              : "Create User"}
         </button>
       </div>
     </form>
@@ -501,9 +531,12 @@ type InputProps = {
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
   required?: boolean;
+  touched?: boolean;
+  error?: string | null;
 };
 
 const Input = ({
@@ -511,10 +544,19 @@ const Input = ({
   name,
   value,
   onChange,
+  onBlur,
   placeholder,
   type = "text",
   required,
+  touched = false,
+  error = null,
 }: InputProps) => {
+  const inputClass = getFieldValidationClass(
+    touched,
+    error,
+    "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted"
+  );
+
   return (
     <div>
       <label className="mb-2 block text-sm font-medium text-text-primary">
@@ -527,24 +569,14 @@ const Input = ({
         name={name}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         placeholder={placeholder}
         required={required}
-        className="
-          h-11
-          w-full
-          rounded-lg
-          border border-border
-          bg-surface
-          px-4
-          text-sm text-text-primary
-          outline-none
-          transition
-          placeholder:text-text-muted
-          focus:border-primary-500
-          focus:ring-2
-          focus:ring-primary-100
-        "
+        className={inputClass}
       />
+      {touched && error && (
+        <p className="mt-1 text-xs text-red-500 dark:text-red-400">{error}</p>
+      )}
     </div>
   );
 };
