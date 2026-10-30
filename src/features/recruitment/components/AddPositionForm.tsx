@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { createPosition, type CreatePositionPayload } from "../../../services/positionService";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 type AddPositionFormProps = {
   onSuccess?: () => void;
@@ -19,20 +20,45 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
     isActive: true,
   });
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const validatePositionField = (name: string, value: any): string | null => {
+    if (name === "title" && !String(value || "").trim()) {
+      return "Job position title is required.";
+    }
+    if (name === "department" && !String(value || "").trim()) {
+      return "Department is required.";
+    }
+    return null;
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const err = validatePositionField(name, (formData as any)[name]);
+    setErrors((prev) => ({ ...prev, [name]: err }));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
+    let nextVal: any = value;
     if (type === "checkbox") {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
+      nextVal = (e.target as HTMLInputElement).checked;
     } else if (name === "vacancies") {
-      setFormData((prev) => ({ ...prev, [name]: Number(value) }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      nextVal = Number(value);
+    }
+
+    const nextData = { ...formData, [name]: nextVal };
+    setFormData(nextData);
+
+    if (touched[name]) {
+      const err = validatePositionField(name, nextVal);
+      setErrors((prev) => ({ ...prev, [name]: err }));
     }
   };
 
@@ -40,13 +66,24 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!formData.title.trim()) {
-      setErrorMsg("Job position title is required.");
-      return;
-    }
+    const allFields = ["title", "department", "vacancies", "description"];
+    const newTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string | null> = {};
+    let hasError = false;
 
-    if (!formData.department.trim()) {
-      setErrorMsg("Department is required.");
+    allFields.forEach((f) => {
+      newTouched[f] = true;
+      const err = validatePositionField(f, (formData as any)[f]);
+      newErrors[f] = err;
+      if (err) hasError = true;
+    });
+
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (hasError) {
+      const firstErr = Object.values(newErrors).find(Boolean);
+      if (firstErr) setErrorMsg(firstErr);
       return;
     }
 
@@ -67,7 +104,7 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5">
       {errorMsg && (
         <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">
           {errorMsg}
@@ -76,47 +113,45 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
 
       {/* Position Title */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Position Title <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
           name="title"
-          required
           value={formData.title}
           onChange={handleChange}
+          onBlur={() => handleBlur("title")}
           placeholder="e.g. Senior Program Advisor, Admissions Lead"
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary placeholder:text-text-muted
-            focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          className={getFieldValidationClass(touched.title, errors.title, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition")}
         />
+        {touched.title && errors.title && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.title}</p>
+        )}
       </div>
 
       {/* Department */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Department <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
           name="department"
-          required
           value={formData.department}
           onChange={handleChange}
+          onBlur={() => handleBlur("department")}
           placeholder="e.g. Sales & Admissions, Human Resources, Engineering"
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary placeholder:text-text-muted
-            focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          className={getFieldValidationClass(touched.department, errors.department, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition")}
         />
+        {touched.department && errors.department && (
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.department}</p>
+        )}
       </div>
 
       {/* Vacancies */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Open Vacancies
         </label>
         <input
@@ -125,17 +160,14 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
           min="1"
           value={formData.vacancies}
           onChange={handleChange}
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary placeholder:text-text-muted
-            focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          onBlur={() => handleBlur("vacancies")}
+          className={getFieldValidationClass(touched.vacancies, errors.vacancies, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition")}
         />
       </div>
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1">
+        <label className="block text-xs font-semibold text-text-secondary mb-1">
           Job Description / Requirements
         </label>
         <textarea
@@ -143,12 +175,9 @@ const AddPositionForm = ({ onSuccess }: AddPositionFormProps) => {
           rows={4}
           value={formData.description}
           onChange={handleChange}
+          onBlur={() => handleBlur("description")}
           placeholder="Enter position responsibilities, qualifications, or prerequisites..."
-          className="
-            w-full rounded-lg border border-border bg-background px-3.5 py-2.5
-            text-sm text-text-primary placeholder:text-text-muted
-            focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-          "
+          className={getFieldValidationClass(touched.description, errors.description, "w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition")}
         />
       </div>
 

@@ -1,8 +1,17 @@
 import { API_URL } from "../config/api";
 
+export type AdvisorDatePeriod = "today" | "this_week" | "this_month" | "custom";
+
+export interface AdvisorDateFilter {
+  period: AdvisorDatePeriod;
+  startDate?: string; // ISO date string YYYY-MM-DD, used for "custom" only
+  endDate?: string;   // ISO date string YYYY-MM-DD, used for "custom" only
+}
+
 export interface AdvisorKPIs {
   totalLeads: number;
   admissionsDone: number;
+  callsTodayCount?: number;
   inProgressApplications: number;
   conversionRate: number;
   pitchesTotal: number;
@@ -64,8 +73,25 @@ export interface AdvisorDashboardData {
   recentLeads: RecentAdvisorLead[];
 }
 
-export async function fetchAdvisorDashboardStats(token?: string): Promise<AdvisorDashboardData> {
-  const response = await fetch(`${API_URL}/dashboard/advisor`, {
+export async function fetchAdvisorDashboardStats(
+  token?: string,
+  filter?: AdvisorDateFilter,
+): Promise<AdvisorDashboardData> {
+  const params = new URLSearchParams();
+  if (filter) {
+    params.set("period", filter.period);
+    if (filter.period === "custom" && filter.startDate) {
+      params.set("startDate", filter.startDate);
+    }
+    if (filter.period === "custom" && filter.endDate) {
+      params.set("endDate", filter.endDate);
+    }
+  }
+
+  const queryString = params.toString();
+  const url = `${API_URL}/dashboard/advisor${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   FileSpreadsheet,
   Filter,
@@ -13,9 +13,22 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext";
 import { fetchActiveColleges, type College } from "../../../services/collegeService";
 import { fetchTeams, fetchTeamMembers, type EligibleMember } from "../../../services/teamService";
-import { fetchLeadStatuses, fetchLeads, type LeadItem, type LeadStatusItem } from "../../../services/leadService";
+import { fetchLeadStatuses, type LeadItem, type LeadStatusItem } from "../../../services/leadService";
+import {
+  fetchCRMReport,
+  fetchCRMReportExport,
+  type SummaryMetrics,
+  type PerformanceItem,
+} from "../../../services/reportService";
+import {
+  PageLoadingState,
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 type PeriodFilterOption =
   | "ALL"
@@ -25,8 +38,19 @@ type PeriodFilterOption =
   | "THIS_YEAR"
   | "CUSTOM";
 
-export const ManagerReportsView = () => {
+export interface ManagerReportsViewProps {
+  headerTitle?: string;
+  subtitle?: string;
+  leadScopeLabel?: string;
+}
+
+export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
+  headerTitle = "Manager Reports",
+  subtitle = "Generate detailed reports for your team's leads, conversions and performance.",
+  leadScopeLabel = "All Team Leads",
+}) => {
   const { accessToken } = useAuth();
+  const toast = useToast();
 
   // Filters State
   const [period, setPeriod] = useState<PeriodFilterOption>("THIS_MONTH");
@@ -40,16 +64,31 @@ export const ManagerReportsView = () => {
   const [colleges, setColleges] = useState<College[]>([]);
   const [members, setMembers] = useState<EligibleMember[]>([]);
   const [statuses, setStatuses] = useState<LeadStatusItem[]>([]);
-  const [rawLeads, setRawLeads] = useState<LeadItem[]>([]);
 
   // Generation & Status State
   const [initialLoading, setInitialLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Generated Result Dataset
-  const [filteredLeads, setFilteredLeads] = useState<LeadItem[]>([]);
+  // Backend Report Results
+  const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetrics>({
+    total: 0,
+    applications: 0,
+    interviewScheduled: 0,
+    interviewDone: 0,
+    selected: 0,
+    letterOut: 0,
+    admissionsDone: 0,
+    cancelled: 0,
+  });
+  const [collegeWiseData, setCollegeWiseData] = useState<PerformanceItem[]>([]);
+  const [memberWiseData, setMemberWiseData] = useState<PerformanceItem[]>([]);
+  const [leadDataset, setLeadDataset] = useState<LeadItem[]>([]);
+  const [totalFilteredCount, setTotalFilteredCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [appliedFilterSummary, setAppliedFilterSummary] = useState({
     periodText: "",
     collegeText: "",
@@ -61,25 +100,25 @@ export const ManagerReportsView = () => {
   const [tableSearch, setTableSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPipeline, setIsExportingPipeline] = useState(false);
   const pageSize = 10;
 
-  // Load initial options & raw leads
+  // Load initial options
   const loadInitialData = async () => {
     if (!accessToken) return;
     setInitialLoading(true);
+    setLoadError(null);
     try {
-      const [collegesRes, statusesRes, teamsRes, leadsRes] = await Promise.all([
+      const [collegesRes, statusesRes, teamsRes] = await Promise.all([
         fetchActiveColleges(accessToken).catch(() => []),
         fetchLeadStatuses(accessToken).catch(() => []),
         fetchTeams(accessToken).catch(() => []),
-        fetchLeads(accessToken).catch(() => []),
       ]);
 
       setColleges(collegesRes);
       setStatuses(statusesRes);
-      setRawLeads(Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || []);
 
-      // Fetch team members from all managed teams
+      // Fetch team members from all available teams
       if (teamsRes.length > 0) {
         const memberPromises = teamsRes.map((t) =>
           fetchTeamMembers(accessToken, t.id).catch(() => [])
@@ -92,8 +131,9 @@ export const ManagerReportsView = () => {
         );
         setMembers(uniqueMembers);
       }
-    } catch (err) {
-      console.error("Error loading initial data for manager reports:", err);
+    } catch (err: any) {
+      console.error("Error loading initial data for reports:", err);
+      setLoadError(err.message || "Failed to load initial report configuration.");
     } finally {
       setInitialLoading(false);
     }
@@ -103,7 +143,118 @@ export const ManagerReportsView = () => {
     loadInitialData();
   }, [accessToken]);
 
-  // Handle Report Generation
+  // Load report data from backend
+  const executeReportFetch = async (
+    pageToFetch: number = 1,
+    searchToUse: string = tableSearch,
+    filterOverrides?: {
+      period?: PeriodFilterOption;
+      startDate?: string;
+      endDate?: string;
+      collegeId?: string;
+      memberId?: string;
+      statusId?: string;
+    }
+  ) => {
+    if (!accessToken) return;
+    setIsGenerating(true);
+
+    const activePeriod = filterOverrides?.period ?? period;
+    const activeStartDate = filterOverrides?.startDate ?? startDate;
+    const activeEndDate = filterOverrides?.endDate ?? endDate;
+    const activeCollegeId = filterOverrides?.collegeId ?? selectedCollegeId;
+    const activeMemberId = filterOverrides?.memberId ?? selectedMemberId;
+    const activeStatusId = filterOverrides?.statusId ?? selectedStatusId;
+
+    try {
+      const res = await fetchCRMReport(accessToken, {
+        period: activePeriod,
+        startDate: activePeriod === "CUSTOM" ? activeStartDate : undefined,
+        endDate: activePeriod === "CUSTOM" ? activeEndDate : undefined,
+        collegeId: activeCollegeId,
+        memberId: activeMemberId,
+        statusId: activeStatusId,
+        search: searchToUse,
+        page: pageToFetch,
+        pageSize,
+      });
+
+      setSummaryMetrics(res.summaryMetrics);
+      setCollegeWiseData(res.collegeWiseData);
+      setMemberWiseData(res.memberWiseData);
+      setLeadDataset(res.leadDataset);
+      setTotalFilteredCount(res.totalFilteredCount);
+      setTotalPages(res.totalPages);
+
+      // Format summary labels
+      const collegeObj = colleges.find((c) => c.id === activeCollegeId);
+      const memberObj = members.find((m) => m.id === activeMemberId);
+
+      let stageLabel = "All Stages";
+      if (activeStatusId && activeStatusId !== "ALL") {
+        const foundStatus = statuses.find(
+          (s) =>
+            s.id.toString() === activeStatusId ||
+            s.name.toUpperCase() === activeStatusId.toUpperCase()
+        );
+        stageLabel = foundStatus?.name || activeStatusId;
+      }
+
+      let periodLabel = "All Time";
+      if (activePeriod === "TODAY") periodLabel = "Today";
+      else if (activePeriod === "THIS_WEEK") periodLabel = "This Week";
+      else if (activePeriod === "THIS_MONTH") periodLabel = "This Month";
+      else if (activePeriod === "THIS_YEAR") periodLabel = "This Year";
+      else if (activePeriod === "CUSTOM") periodLabel = `${activeStartDate} to ${activeEndDate}`;
+
+      setAppliedFilterSummary({
+        periodText: periodLabel,
+        collegeText: collegeObj ? collegeObj.name : "All Colleges",
+        memberText: memberObj
+          ? `${memberObj.firstName} ${memberObj.lastName || ""}`.trim()
+          : "All Members",
+        statusText: stageLabel,
+      });
+
+      setHasGenerated(true);
+    } catch (err) {
+      console.error("Failed to fetch CRM report:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Automatically refresh report and summary cards when filters change
+  useEffect(() => {
+    if (!accessToken || initialLoading) return;
+
+    if (period === "CUSTOM") {
+      if (!startDate || !endDate) return;
+      if (new Date(startDate) > new Date(endDate)) return;
+    }
+
+    setValidationError(null);
+    setCurrentPage(1);
+    executeReportFetch(1, tableSearch, {
+      period,
+      startDate,
+      endDate,
+      collegeId: selectedCollegeId,
+      memberId: selectedMemberId,
+      statusId: selectedStatusId,
+    });
+  }, [
+    accessToken,
+    initialLoading,
+    period,
+    startDate,
+    endDate,
+    selectedCollegeId,
+    selectedMemberId,
+    selectedStatusId,
+  ]);
+
+  // Handle Report Generation Click
   const handleGenerateReport = () => {
     setValidationError(null);
 
@@ -119,336 +270,500 @@ export const ManagerReportsView = () => {
       }
     }
 
-    setIsGenerating(true);
-
-    setTimeout(() => {
-      const now = new Date();
-      let startBoundary: Date | null = null;
-      let endBoundary: Date | null = null;
-
-      if (period === "TODAY") {
-        startBoundary = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endBoundary = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-      } else if (period === "THIS_WEEK") {
-        startBoundary = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endBoundary = now;
-      } else if (period === "THIS_MONTH") {
-        startBoundary = new Date(now.getFullYear(), now.getMonth(), 1);
-        endBoundary = now;
-      } else if (period === "THIS_YEAR") {
-        startBoundary = new Date(now.getFullYear(), 0, 1);
-        endBoundary = now;
-      } else if (period === "CUSTOM") {
-        startBoundary = new Date(startDate);
-        endBoundary = new Date(endDate);
-        endBoundary.setHours(23, 59, 59, 999);
-      }
-
-      // Filter raw leads
-      const result = rawLeads.filter((lead) => {
-        // Date Filter
-        if (startBoundary && endBoundary) {
-          const leadDate = new Date(lead.createdAt);
-          if (leadDate < startBoundary || leadDate > endBoundary) return false;
-        }
-
-        // College Filter
-        if (selectedCollegeId !== "ALL") {
-          const hasCollege = lead.collegeApplications?.some(
-            (app) => app.collegeId === selectedCollegeId || app.college?.id === selectedCollegeId
-          );
-          if (!hasCollege) return false;
-        }
-
-        // Team Member Filter
-        if (selectedMemberId !== "ALL") {
-          const isAssigned = lead.assignments?.some(
-            (a) => a.user?.id === selectedMemberId && a.status === "ACTIVE"
-          );
-          const isCreator = lead.createdBy?.id === selectedMemberId;
-          if (!isAssigned && !isCreator) return false;
-        }
-
-        // Lead Stage Filter
-        if (selectedStatusId !== "ALL") {
-          const targetStatusIdNum = parseInt(selectedStatusId, 10);
-          if (lead.statusId !== targetStatusIdNum && lead.status?.id !== targetStatusIdNum) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      // Format summary labels
-      const collegeObj = colleges.find((c) => c.id === selectedCollegeId);
-      const memberObj = members.find((m) => m.id === selectedMemberId);
-      const statusObj = statuses.find((s) => s.id.toString() === selectedStatusId);
-
-      let periodLabel = "All Time";
-      if (period === "TODAY") periodLabel = "Today";
-      else if (period === "THIS_WEEK") periodLabel = "This Week";
-      else if (period === "THIS_MONTH") periodLabel = "This Month";
-      else if (period === "THIS_YEAR") periodLabel = "This Year";
-      else if (period === "CUSTOM") periodLabel = `${startDate} to ${endDate}`;
-
-      setAppliedFilterSummary({
-        periodText: periodLabel,
-        collegeText: collegeObj ? collegeObj.name : "All Colleges",
-        memberText: memberObj
-          ? `${memberObj.firstName} ${memberObj.lastName || ""}`.trim()
-          : "All Members",
-        statusText: statusObj ? statusObj.name : "All Stages",
-      });
-
-      setFilteredLeads(result);
-      setHasGenerated(true);
-      setIsGenerating(false);
-      setCurrentPage(1);
-    }, 300);
+    setCurrentPage(1);
+    executeReportFetch(1, tableSearch);
   };
 
-  // Summaries & Aggregations from filteredLeads
-  const summaryMetrics = useMemo(() => {
-    let total = filteredLeads.length;
-    let applications = 0;
-    let interviewScheduled = 0;
-    let interviewDone = 0;
-    let selected = 0;
-    let letterOut = 0;
-    let admissionsDone = 0;
-    let cancelled = 0;
+  // Pagination page change
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    executeReportFetch(newPage, tableSearch);
+  };
 
-    filteredLeads.forEach((l) => {
-      const stName = (l.status?.name || "").toUpperCase();
+  // Search input change
+  const handleSearchChange = (term: string) => {
+    setTableSearch(term);
+    setCurrentPage(1);
+    executeReportFetch(1, term);
+  };
 
-      if (l.collegeApplications && l.collegeApplications.length > 0) {
-        applications++;
-      } else if (stName.includes("APP")) {
-        applications++;
-      }
-
-      if (stName.includes("INTERVIEW_SCHEDULED") || stName === "INTERVIEW SCHEDULED") {
-        interviewScheduled++;
-      } else if (stName.includes("INTERVIEW_DONE") || stName === "INTERVIEW DONE") {
-        interviewDone++;
-      } else if (stName.includes("SELECTION")) {
-        selected++;
-      } else if (stName.includes("LETTER") || stName === "LETTER OUT") {
-        letterOut++;
-      } else if (stName === "ADMISSION_DONE" || stName === "ADMISSION DONE" || stName === "CONFIRMED") {
-        admissionsDone++;
-      } else if (stName.includes("CANCEL")) {
-        cancelled++;
-      }
-    });
-
-    return {
-      total,
-      applications,
-      interviewScheduled,
-      interviewDone,
-      selected,
-      letterOut,
-      admissionsDone,
-      cancelled,
-    };
-  }, [filteredLeads]);
-
-
-
-  // College-Wise Performance Aggregation
-  const collegeWiseData = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; leads: number; apps: number; interviews: number; admissions: number }
-    >();
-
-    filteredLeads.forEach((lead) => {
-      const apps = lead.collegeApplications || [];
-      if (apps.length > 0) {
-        apps.forEach((app) => {
-          const cId = app.collegeId || app.college?.id || "Unknown";
-          const cName = app.college?.name || "Other College";
-          if (!map.has(cId)) {
-            map.set(cId, { name: cName, leads: 0, apps: 0, interviews: 0, admissions: 0 });
-          }
-          const curr = map.get(cId)!;
-          curr.leads++;
-          curr.apps++;
-          const st = (lead.status?.name || "").toUpperCase();
-          if (st.includes("INTERVIEW")) curr.interviews++;
-          if (st === "ADMISSION_DONE" || st === "ADMISSION DONE") curr.admissions++;
-        });
-      } else {
-        const cId = "UNSPECIFIED";
-        if (!map.has(cId)) {
-          map.set(cId, { name: "Direct / General Leads", leads: 0, apps: 0, interviews: 0, admissions: 0 });
-        }
-        const curr = map.get(cId)!;
-        curr.leads++;
-        const st = (lead.status?.name || "").toUpperCase();
-        if (st.includes("INTERVIEW")) curr.interviews++;
-        if (st === "ADMISSION_DONE" || st === "ADMISSION DONE") curr.admissions++;
-      }
-    });
-
-    return Array.from(map.values());
-  }, [filteredLeads]);
-
-  // Member-Wise Performance Aggregation
-  const memberWiseData = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; leads: number; apps: number; interviews: number; admissions: number }
-    >();
-
-    filteredLeads.forEach((lead) => {
-      const assignedUser = lead.assignments?.find((a) => a.status === "ACTIVE")?.user || lead.createdBy;
-      const mId = assignedUser?.id || "UNASSIGNED";
-      const mName = assignedUser
-        ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim()
-        : "Unassigned";
-
-      if (!map.has(mId)) {
-        map.set(mId, { name: mName, leads: 0, apps: 0, interviews: 0, admissions: 0 });
-      }
-      const curr = map.get(mId)!;
-      curr.leads++;
-      if (lead.collegeApplications && lead.collegeApplications.length > 0) curr.apps++;
-      const st = (lead.status?.name || "").toUpperCase();
-      if (st.includes("INTERVIEW")) curr.interviews++;
-      if (st === "ADMISSION_DONE" || st === "ADMISSION DONE") curr.admissions++;
-    });
-
-    return Array.from(map.values());
-  }, [filteredLeads]);
-
-  const getCollegesAppliedTo = (lead: LeadItem): string => {
-    if (!lead.collegeApplications || lead.collegeApplications.length === 0) return "N/A";
-    const names = lead.collegeApplications
+  const getCollegesAppliedTo = (lead: LeadItem, filterCollegeId?: string): string => {
+    let apps = lead.collegeApplications || [];
+    if (filterCollegeId && filterCollegeId !== "ALL") {
+      apps = apps.filter(
+        (app) => app.collegeId === filterCollegeId || app.college?.id === filterCollegeId
+      );
+    }
+    if (apps.length === 0) return "N/A";
+    const names = apps
       .map((app) => app.college?.name)
       .filter((n): n is string => Boolean(n && n.trim()));
     const uniqueNames = Array.from(new Set(names));
     return uniqueNames.length > 0 ? uniqueNames.join(", ") : "N/A";
   };
 
-  // Detailed Lead Table Filtering & Pagination
-  const searchFilteredLeads = useMemo(() => {
-    if (!tableSearch.trim()) return filteredLeads;
-    const term = tableSearch.toLowerCase().trim();
-    return filteredLeads.filter((l) => {
-      const fullName = `${l.firstName} ${l.lastName || ""}`.toLowerCase();
-      const phone = l.phone.toLowerCase();
-      const email = (l.email || "").toLowerCase();
-      const statusName = (l.status?.name || "").toLowerCase();
-      const collegesStr = getCollegesAppliedTo(l).toLowerCase();
-      return (
-        fullName.includes(term) ||
-        phone.includes(term) ||
-        email.includes(term) ||
-        statusName.includes(term) ||
-        collegesStr.includes(term)
-      );
-    });
-  }, [filteredLeads, tableSearch]);
-
-  const totalPages = Math.ceil(searchFilteredLeads.length / pageSize) || 1;
-  const paginatedLeads = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return searchFilteredLeads.slice(start, start + pageSize);
-  }, [searchFilteredLeads, currentPage]);
-
-  // Single-Sheet Excel Export Handler ("Lead Report")
-  const handleExportExcel = () => {
-    const datasetToExport = searchFilteredLeads.length > 0 ? searchFilteredLeads : filteredLeads;
-    if (datasetToExport.length === 0) return;
-
+  // Single-Sheet Excel Export Handler ("Lead Report") via GET /reports/crm/export
+  const handleExportExcel = async () => {
+    if (!accessToken) return;
     setIsExporting(true);
 
-    setTimeout(() => {
-      try {
-        const wb = XLSX.utils.book_new();
+    try {
+      const exportRes = await fetchCRMReportExport(accessToken, {
+        period,
+        startDate: period === "CUSTOM" ? startDate : undefined,
+        endDate: period === "CUSTOM" ? endDate : undefined,
+        collegeId: selectedCollegeId,
+        memberId: selectedMemberId,
+        statusId: selectedStatusId,
+        search: tableSearch,
+      });
 
-        // Single Worksheet Data Array (AOA - Array of Arrays)
-        const sheetData: (string | number)[][] = [
-          ["TEAM LEAD REPORT"],
-          ["Period:", appliedFilterSummary.periodText],
-          ["Lead Scope:", "All Team Leads"],
-          ["College:", appliedFilterSummary.collegeText],
-          ["Member:", appliedFilterSummary.memberText],
-          ["Stage:", appliedFilterSummary.statusText],
-          ["Generated At:", new Date().toLocaleString()],
-          [],
-          [
-            "Lead Name",
-            "Phone",
-            "Email",
-            "Colleges Applied To",
-            "Assigned Member",
-            "Current Status",
-            "Created Date",
-          ],
-        ];
-
-        datasetToExport.forEach((l) => {
-          const assignedUser =
-            l.assignments?.find((a) => a.status === "ACTIVE")?.user || l.createdBy;
-
-          sheetData.push([
-            `${l.firstName} ${l.lastName || ""}`.trim(),
-            l.phone,
-            l.email || "",
-            getCollegesAppliedTo(l),
-            assignedUser
-              ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim()
-              : "Unassigned",
-            l.status?.name || "N/A",
-            new Date(l.createdAt).toLocaleDateString(),
-          ]);
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(sheetData);
-
-        // Dynamic Column Widths for readability
-        ws["!cols"] = [
-          { wch: 24 }, // Lead Name
-          { wch: 16 }, // Phone
-          { wch: 28 }, // Email
-          { wch: 38 }, // Colleges Applied To
-          { wch: 24 }, // Assigned Member
-          { wch: 20 }, // Current Status
-          { wch: 16 }, // Created Date
-        ];
-
-        // Enable Excel's built-in column autofilter starting at Table Header row (Row 9, index 8)
-        const headerRowNumber = 9; // 1-based row index in Excel
-        const lastRowNumber = headerRowNumber + datasetToExport.length;
-        ws["!autofilter"] = { ref: `A${headerRowNumber}:G${lastRowNumber}` };
-
-        // Freeze header row and title metadata so scrolling keeps header visible
-        ws["!views"] = [{ state: "frozen", ySplit: headerRowNumber }];
-
-        // Append exactly ONE worksheet named "Lead Report"
-        XLSX.utils.book_append_sheet(wb, ws, "Lead Report");
-
-        // Export file
-        const dateStamp = new Date().toISOString().split("T")[0];
-        XLSX.writeFile(wb, `Team_Lead_Report_${dateStamp}.xlsx`);
-      } catch (err) {
-        console.error("Failed to export Excel report:", err);
-      } finally {
+      const datasetToExport = exportRes.leads;
+      if (datasetToExport.length === 0) {
         setIsExporting(false);
+        return;
       }
-    }, 150);
+
+      const wb = XLSX.utils.book_new();
+
+      // Single Worksheet Data Array (AOA - Array of Arrays) starting directly with headers
+      const sheetData: (string | number)[][] = [
+        [
+          "Lead Name",
+          "Phone",
+          "Email",
+          "Colleges Applied To",
+          "Assigned Member",
+          "Current Status",
+          "Created Date",
+        ],
+      ];
+
+      datasetToExport.forEach((l) => {
+        const assignedUser =
+          l.assignments?.find((a) => a.status === "ACTIVE")?.user || l.createdBy;
+
+        sheetData.push([
+          `${l.firstName} ${l.lastName || ""}`.trim(),
+          l.phone,
+          l.email || "",
+          getCollegesAppliedTo(l),
+          assignedUser
+            ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim()
+            : "Unassigned",
+          l.status?.name || "N/A",
+          new Date(l.createdAt).toLocaleDateString(),
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+      // Dynamic Column Widths for readability
+      ws["!cols"] = [
+        { wch: 24 }, // Lead Name
+        { wch: 16 }, // Phone
+        { wch: 28 }, // Email
+        { wch: 38 }, // Colleges Applied To
+        { wch: 24 }, // Assigned Member
+        { wch: 20 }, // Current Status
+        { wch: 16 }, // Created Date
+      ];
+
+      // Enable Excel's built-in column autofilter starting at Table Header row (Row 1)
+      const headerRowNumber = 1;
+      const lastRowNumber = headerRowNumber + datasetToExport.length;
+      ws["!autofilter"] = { ref: `A${headerRowNumber}:G${lastRowNumber}` };
+
+      // Freeze header row so scrolling keeps header visible
+      ws["!views"] = [{ state: "frozen", ySplit: 1 }];
+
+      // Append exactly ONE worksheet named "Lead Report"
+      XLSX.utils.book_append_sheet(wb, ws, "Lead Report");
+
+
+      // Export file
+      const dateStamp = new Date().toISOString().split("T")[0];
+      const fileName = `${headerTitle.replace(/\s+/g, "_")}_${dateStamp}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      console.error("Failed to export Excel report:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Multi-Sheet Excel Export Handler ("Admission Pipeline Funnel") containing 8 worksheets
+  const handleExportPipelineExcel = async () => {
+    if (!accessToken) return;
+
+    if (period === "CUSTOM") {
+      if (!startDate || !endDate) {
+        setValidationError("Please select both start and end dates.");
+        return;
+      }
+      if (new Date(startDate) > new Date(endDate)) {
+        setValidationError("Start date cannot be after end date.");
+        return;
+      }
+    }
+    setValidationError(null);
+
+    setIsExportingPipeline(true);
+
+    try {
+      // Respect all active filters: Period, Scope, College, Member, Search
+      // We query full matching dataset across all pipeline stages
+      const exportRes = await fetchCRMReportExport(accessToken, {
+        period,
+        startDate: period === "CUSTOM" ? startDate : undefined,
+        endDate: period === "CUSTOM" ? endDate : undefined,
+        collegeId: selectedCollegeId,
+        memberId: selectedMemberId,
+        search: tableSearch,
+      });
+
+      const allLeads = exportRes.leads || [];
+
+      // College-stage evaluation helpers
+      const getRelevantApps = (lead: LeadItem) => {
+        let apps = lead.collegeApplications || [];
+        if (selectedCollegeId && selectedCollegeId !== "ALL") {
+          apps = apps.filter(
+            (a) => a.collegeId === selectedCollegeId || a.college?.id === selectedCollegeId
+          );
+        }
+        return apps;
+      };
+
+      const isCollegeCancelled = (app: any): boolean => {
+        const st = (app.status?.name || "").toUpperCase();
+        const appSt = (app.approvalStatus || "").toUpperCase();
+        return Boolean(
+          app.isCancelled ||
+          app.statusId === 7 ||
+          st.includes("CANCEL") ||
+          appSt.includes("CANCEL")
+        );
+      };
+
+      const isCollegeApplicationDone = (app: any): boolean => {
+        if (isCollegeCancelled(app)) return false;
+        const st = (app.status?.name || "").toUpperCase();
+        return app.statusId === 2 || st === "APPLICATION" || st === "APPLICATION_DONE" || st === "APPLICATION DONE";
+      };
+
+      const isCollegeInterviewScheduled = (app: any): boolean => {
+        if (isCollegeCancelled(app)) return false;
+        const st = (app.status?.name || "").toUpperCase();
+        return (
+          app.statusId === 3 ||
+          st === "INTERVIEW_SCHEDULED" ||
+          st === "INTERVIEW SCHEDULED" ||
+          Boolean(app.interviews?.some((i: any) => i.status === "SCHEDULED"))
+        );
+      };
+
+      const isCollegeInterviewDone = (app: any): boolean => {
+        if (isCollegeCancelled(app)) return false;
+        const st = (app.status?.name || "").toUpperCase();
+        return (
+          app.statusId === 4 ||
+          st === "INTERVIEW_DONE" ||
+          st === "INTERVIEW DONE" ||
+          Boolean(app.interviews?.some((i: any) => i.status === "COMPLETED" && i.result !== "PASSED"))
+        );
+      };
+
+      const isCollegeSelectionLetter = (app: any): boolean => {
+        if (isCollegeCancelled(app)) return false;
+        const st = (app.status?.name || "").toUpperCase();
+        return (
+          app.statusId === 5 ||
+          st === "LETTER_OUT" ||
+          st === "LETTER OUT" ||
+          st.includes("SELECTION") ||
+          Boolean(app.interviews?.some((i: any) => i.result === "PASSED")) ||
+          Boolean(app.selectionLetters && app.selectionLetters.length > 0)
+        );
+      };
+
+      const isCollegeAdmissionDone = (app: any, lead: any): boolean => {
+        const st = (app.status?.name || "").toUpperCase();
+        return Boolean(
+          app.statusId === 6 ||
+          st === "ADMISSION_DONE" ||
+          st === "ADMISSION DONE" ||
+          st === "CONFIRMED" ||
+          Boolean(app.payments && app.payments.some((p: any) => p.type === "ADMISSION_FEE")) ||
+          (lead.finalCollegeId &&
+            (lead.finalCollegeId === app.collegeId || lead.finalCollegeId === app.college?.id) &&
+            (lead.statusId === 6 || (lead.status?.name || "").toUpperCase() === "ADMISSION_DONE"))
+        );
+      };
+
+      // Helper to build stage items with exact college names for that stage
+      interface StageItem {
+        lead: LeadItem;
+        colleges: string;
+        stage: string;
+      }
+
+      const buildStageItems = (
+        predicate: (app: any, lead: LeadItem) => boolean,
+        defaultStageName: string
+      ): StageItem[] => {
+        const items: StageItem[] = [];
+        for (const lead of allLeads) {
+          const apps = getRelevantApps(lead);
+          if (apps.length > 0) {
+            const matchingApps = apps.filter((a) => predicate(a, lead));
+            if (matchingApps.length > 0) {
+              const names = Array.from(
+                new Set(matchingApps.map((a) => a.college?.name).filter(Boolean))
+              ).join(", ");
+              items.push({
+                lead,
+                colleges: names || "N/A",
+                stage: defaultStageName,
+              });
+            }
+          } else if (!selectedCollegeId || selectedCollegeId === "ALL") {
+            // Direct lead without college applications
+            const dummyApp = {
+              statusId: lead.statusId,
+              status: lead.status,
+              isCancelled: lead.statusId === 7,
+            };
+            if (predicate(dummyApp, lead)) {
+              items.push({
+                lead,
+                colleges: "Direct Lead",
+                stage: defaultStageName,
+              });
+            }
+          }
+        }
+        return items;
+      };
+
+      // 1. Leads Sheet: matches currently selected report filters
+      // Rule 2: A student who has reached APPLICATION must still count in LEAD because the student originally entered the pipeline as a lead.
+      let leadsSheetData: StageItem[] = [];
+      const targetStageUpper =
+        statuses.find(
+          (s) =>
+            s.id.toString() === selectedStatusId ||
+            s.name.toUpperCase() === selectedStatusId.toUpperCase()
+        )?.name?.toUpperCase() || selectedStatusId.toUpperCase();
+
+      if (selectedStatusId === "ALL" || selectedStatusId === "1" || targetStageUpper === "LEAD") {
+        leadsSheetData = allLeads.map((lead) => {
+          const apps = getRelevantApps(lead);
+          const names = Array.from(
+            new Set(apps.map((a) => a.college?.name).filter(Boolean))
+          ).join(", ");
+          return {
+            lead,
+            colleges: names || "N/A",
+            stage: lead.status?.name || "LEAD",
+          };
+        });
+      } else {
+        // If a specific stage is filtered, use that stage's records
+        if (targetStageUpper === "APPLICATION" || selectedStatusId === "2") {
+          leadsSheetData = buildStageItems(isCollegeApplicationDone, "APPLICATION");
+        } else if (targetStageUpper === "INTERVIEW_SCHEDULED" || selectedStatusId === "3") {
+          leadsSheetData = buildStageItems(isCollegeInterviewScheduled, "INTERVIEW_SCHEDULED");
+        } else if (targetStageUpper === "INTERVIEW_DONE" || selectedStatusId === "4") {
+          leadsSheetData = buildStageItems(isCollegeInterviewDone, "INTERVIEW_DONE");
+        } else if (
+          targetStageUpper.includes("LETTER") ||
+          targetStageUpper.includes("SELECTION") ||
+          selectedStatusId === "5"
+        ) {
+          leadsSheetData = buildStageItems(isCollegeSelectionLetter, "LETTER_OUT");
+        } else if (targetStageUpper.includes("ADMISSION") || selectedStatusId === "6") {
+          leadsSheetData = buildStageItems(isCollegeAdmissionDone, "ADMISSION_DONE");
+        } else if (targetStageUpper.includes("CANCEL") || selectedStatusId === "7") {
+          leadsSheetData = buildStageItems(isCollegeCancelled, "CANCELLED");
+        } else {
+          leadsSheetData = allLeads.map((lead) => ({
+            lead,
+            colleges: getCollegesAppliedTo(lead, selectedCollegeId),
+            stage: lead.status?.name || "N/A",
+          }));
+        }
+      }
+
+      // 2-7. Pipeline stage subsets
+      const applicationDoneItems = buildStageItems(isCollegeApplicationDone, "APPLICATION");
+      const interviewScheduledItems = buildStageItems(isCollegeInterviewScheduled, "INTERVIEW_SCHEDULED");
+      const interviewDoneItems = buildStageItems(isCollegeInterviewDone, "INTERVIEW_DONE");
+      const selectionLetterItems = buildStageItems(isCollegeSelectionLetter, "LETTER_OUT");
+      const admissionDoneItems = buildStageItems(isCollegeAdmissionDone, "ADMISSION_DONE");
+      const cancellationItems = buildStageItems(isCollegeCancelled, "CANCELLED");
+
+      // 8. Retained: Confirmed admissions after accounting for cancellations, without double-counting students or admissions
+      const retainedItems = buildStageItems(
+        (app, lead) => isCollegeAdmissionDone(app, lead) && !isCollegeCancelled(app),
+        "ADMISSION_DONE"
+      );
+
+      const wb = XLSX.utils.book_new();
+
+      const EXCEL_HEADERS = [
+        "Student Name",
+        "Phone",
+        "Alternate Phone",
+        "Email",
+        "Course Interested",
+        "Specialization",
+        "City",
+        "State",
+        "Preferred Location",
+        "Colleges Pitched / Applied",
+        "Current Owner",
+        "Team",
+        "Lead Stage",
+        "Created Date",
+        "Last Updated",
+      ];
+
+      const EXCEL_WIDTHS = [
+        { wch: 24 }, // Student Name
+        { wch: 15 }, // Phone
+        { wch: 16 }, // Alternate Phone
+        { wch: 28 }, // Email
+        { wch: 22 }, // Course Interested
+        { wch: 22 }, // Specialization
+        { wch: 16 }, // City
+        { wch: 16 }, // State
+        { wch: 25 }, // Preferred Location
+        { wch: 35 }, // Colleges Pitched / Applied
+        { wch: 22 }, // Current Owner
+        { wch: 18 }, // Team
+        { wch: 20 }, // Lead Stage
+        { wch: 16 }, // Created Date
+        { wch: 16 }, // Last Updated
+      ];
+
+      const formatRow = (item: StageItem): (string | number)[] => {
+        const lead = item.lead;
+        const studentName = `${lead.firstName || ""} ${lead.lastName || ""}`.trim() || "N/A";
+        const phone = lead.phone || "";
+        const altPhone = lead.alternatePhone || "";
+        const email = lead.email || "";
+        const course = lead.courseInterested || lead.courseInterestedOther || "N/A";
+        const specialization = lead.specializationInterested || "N/A";
+        const city = lead.city || "N/A";
+        const state = lead.state || "N/A";
+        const preferredLocation =
+          [lead.preferredCity, lead.preferredState].filter(Boolean).join(", ") || "N/A";
+
+        const collegesPitched = item.colleges;
+
+        const activeAssignment = lead.assignments?.find((a) => a.status === "ACTIVE");
+        const assignedUser = activeAssignment?.user || lead.createdBy;
+        const currentOwner = assignedUser
+          ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim()
+          : "Unassigned";
+
+        const team = (lead as any).team?.name || "N/A";
+        const leadStage = item.stage;
+
+        const createdDate = lead.createdAt
+          ? new Date(lead.createdAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : "N/A";
+
+        const lastUpdated = (lead as any).updatedAt
+          ? new Date((lead as any).updatedAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : createdDate;
+
+        return [
+          studentName,
+          phone,
+          altPhone,
+          email,
+          course,
+          specialization,
+          city,
+          state,
+          preferredLocation,
+          collegesPitched,
+          currentOwner,
+          team,
+          leadStage,
+          createdDate,
+          lastUpdated,
+        ];
+      };
+
+      const createWorksheet = (dataset: StageItem[]): XLSX.WorkSheet => {
+        const rows: (string | number)[][] = [EXCEL_HEADERS];
+        dataset.forEach((item) => rows.push(formatRow(item)));
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws["!cols"] = EXCEL_WIDTHS;
+        ws["!views"] = [{ state: "frozen", ySplit: 1 }];
+
+        if (dataset.length > 0) {
+          ws["!autofilter"] = { ref: `A1:O${dataset.length + 1}` };
+        }
+        return ws;
+      };
+
+      // Append exactly 8 worksheets
+      XLSX.utils.book_append_sheet(wb, createWorksheet(leadsSheetData), "Leads");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(applicationDoneItems), "Application Done");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(interviewScheduledItems), "Interview Scheduled");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(interviewDoneItems), "Interview Done");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(selectionLetterItems), "Selection Letter");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(admissionDoneItems), "Admission Done");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(cancellationItems), "Cancellation");
+      XLSX.utils.book_append_sheet(wb, createWorksheet(retainedItems), "Retained");
+
+      const dateStamp = new Date().toISOString().split("T")[0];
+      const fileName = `Admission_Pipeline_Funnel_${dateStamp}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success("Exported 8-stage Admission Pipeline Funnel Excel workbook successfully!");
+    } catch (err) {
+      console.error("Failed to export pipeline Excel workbook:", err);
+      toast.error("Failed to export Admission Pipeline Excel workbook.");
+    } finally {
+      setIsExportingPipeline(false);
+    }
   };
 
   if (initialLoading) {
     return (
-      <div className="space-y-6 animate-pulse p-6">
-        <div className="h-10 w-48 bg-neutral-200 rounded-lg"></div>
-        <div className="h-32 w-full bg-neutral-200 rounded-xl"></div>
-        <div className="h-64 w-full bg-neutral-200 rounded-xl"></div>
+      <div className="space-y-6">
+        <PageLoadingState
+          message="Loading CRM Reports..."
+          description="Fetching teams, member rosters, colleges, and pipeline statuses"
+          minHeight="min-h-[420px]"
+        />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <PageErrorState
+          title="Unable to load CRM Reports"
+          message={loadError}
+          onRetry={loadInitialData}
+          minHeight="min-h-[380px]"
+        />
       </div>
     );
   }
@@ -456,11 +771,29 @@ export const ManagerReportsView = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs">
-        <h1 className="text-2xl font-bold text-text-primary">Manager Reports</h1>
-        <p className="mt-1 text-xs text-text-secondary">
-          Generate detailed reports for your team's leads, conversions and performance.
-        </p>
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{headerTitle}</h1>
+          <p className="mt-1 text-xs text-text-secondary">{subtitle}</p>
+        </div>
+
+        <button
+          onClick={handleExportPipelineExcel}
+          disabled={isExportingPipeline}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-10"
+        >
+          {isExportingPipeline ? (
+            <>
+              <RefreshCw size={14} className="animate-spin" />
+              Exporting Pipeline...
+            </>
+          ) : (
+            <>
+              <FileSpreadsheet size={16} />
+              Export Pipeline Excel
+            </>
+          )}
+        </button>
       </div>
 
       {/* REPORT FILTERS SECTION */}
@@ -506,7 +839,7 @@ export const ManagerReportsView = () => {
               disabled
               className="w-full h-10 rounded-lg border border-border bg-neutral-100 px-3 text-xs font-medium text-text-primary cursor-not-allowed opacity-90"
             >
-              <option value="ALL_TEAM">All Team Leads</option>
+              <option value="ALL_TEAM">{leadScopeLabel}</option>
             </select>
           </div>
 
@@ -578,7 +911,13 @@ export const ManagerReportsView = () => {
           <div className="space-y-1.5 flex-1 max-w-xs">
             <label className="text-xs font-semibold text-text-secondary">Lead Stage</label>
             <select
-              value={selectedStatusId}
+              value={
+                statuses.find(
+                  (s) =>
+                    s.id.toString() === selectedStatusId ||
+                    s.name.toUpperCase() === selectedStatusId.toUpperCase()
+                )?.id.toString() || selectedStatusId
+              }
               onChange={(e) => setSelectedStatusId(e.target.value)}
               className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500 transition"
             >
@@ -664,8 +1003,6 @@ export const ManagerReportsView = () => {
             </div>
           </div>
 
-
-
           {/* COLLEGE-WISE & MEMBER-WISE REPORTS GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* COLLEGE-WISE REPORT */}
@@ -694,7 +1031,7 @@ export const ManagerReportsView = () => {
                       </tr>
                     ) : (
                       collegeWiseData.map((c, i) => (
-                        <tr key={i} className="hover:bg-neutral-50/50">
+                        <tr key={c.id || i} className="hover:bg-neutral-50/50">
                           <td className="px-3 py-2.5 font-semibold text-text-primary">{c.name}</td>
                           <td className="px-3 py-2.5 text-center text-text-secondary">{c.leads}</td>
                           <td className="px-3 py-2.5 text-center text-indigo-600 font-medium">{c.apps}</td>
@@ -733,7 +1070,7 @@ export const ManagerReportsView = () => {
                       </tr>
                     ) : (
                       memberWiseData.map((m, i) => (
-                        <tr key={i} className="hover:bg-neutral-50/50">
+                        <tr key={m.id || i} className="hover:bg-neutral-50/50">
                           <td className="px-3 py-2.5 font-semibold text-text-primary">{m.name}</td>
                           <td className="px-3 py-2.5 text-center text-text-secondary">{m.leads}</td>
                           <td className="px-3 py-2.5 text-center text-indigo-600 font-medium">{m.apps}</td>
@@ -752,7 +1089,7 @@ export const ManagerReportsView = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
               <div>
                 <h3 className="text-sm font-bold text-text-primary">
-                  Filtered Lead Dataset ({searchFilteredLeads.length})
+                  Filtered Lead Dataset ({totalFilteredCount})
                 </h3>
                 <p className="text-xs text-text-secondary mt-0.5">
                   Detailed table representing exact exported dataset.
@@ -766,18 +1103,35 @@ export const ManagerReportsView = () => {
                     type="text"
                     placeholder="Search lead name, phone, email..."
                     value={tableSearch}
-                    onChange={(e) => {
-                      setTableSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="w-full h-9 rounded-lg border border-border bg-surface pl-9 pr-3 text-xs outline-none focus:border-primary-500"
                   />
                 </div>
 
                 <button
-                  onClick={handleExportExcel}
-                  disabled={isExporting || searchFilteredLeads.length === 0}
+                  onClick={handleExportPipelineExcel}
+                  disabled={isExportingPipeline}
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-9"
+                  title="Export all 8 pipeline stages as separate worksheets into one Excel workbook"
+                >
+                  {isExportingPipeline ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Exporting Pipeline...
+                    </>
+                  ) : (
+                    <>
+                      <FileSpreadsheet size={15} />
+                      Export Pipeline Excel
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleExportExcel}
+                  disabled={isExporting || totalFilteredCount === 0}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-text-secondary hover:bg-neutral-50 transition shadow-2xs shrink-0 disabled:opacity-50 h-9"
+                  title="Export filtered table dataset"
                 >
                   {isExporting ? (
                     <>
@@ -787,7 +1141,7 @@ export const ManagerReportsView = () => {
                   ) : (
                     <>
                       <Download size={15} />
-                      Export Excel
+                      Export Table
                     </>
                   )}
                 </button>
@@ -807,15 +1161,24 @@ export const ManagerReportsView = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {paginatedLeads.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-text-muted">
-                        No leads match the filter or search criteria.
-                      </td>
-                    </tr>
+                  {isGenerating ? (
+                    <SectionLoadingState
+                      isTableRow
+                      colSpan={6}
+                      message="Generating report dataset..."
+                      description="Filtering lead records and matching college applications"
+                    />
+                  ) : leadDataset.length === 0 ? (
+                    <PageEmptyState
+                      isTableRow
+                      colSpan={6}
+                      title="No leads match the filter or search criteria"
+                      description="Try selecting different dates, colleges, or pipeline stages."
+                    />
                   ) : (
-                    paginatedLeads.map((lead) => {
-                      const assignedUser = lead.assignments?.find((a) => a.status === "ACTIVE")?.user || lead.createdBy;
+                    leadDataset.map((lead) => {
+                      const assignedUser =
+                        lead.assignments?.find((a) => a.status === "ACTIVE")?.user || lead.createdBy;
 
                       return (
                         <tr key={lead.id} className="hover:bg-neutral-50/50 transition">
@@ -828,7 +1191,9 @@ export const ManagerReportsView = () => {
                           </td>
                           <td className="px-4 py-3.5 text-text-secondary">{getCollegesAppliedTo(lead)}</td>
                           <td className="px-4 py-3.5 font-medium text-text-primary">
-                            {assignedUser ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim() : "Unassigned"}
+                            {assignedUser
+                              ? `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim()
+                              : "Unassigned"}
                           </td>
                           <td className="px-4 py-3.5">
                             <span
@@ -841,7 +1206,7 @@ export const ManagerReportsView = () => {
                               {lead.status?.name || "N/A"}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-right text-text-muted">
+                          <td className="px-4 py-3.5 text-text-muted text-right">
                             {new Date(lead.createdAt).toLocaleDateString()}
                           </td>
                         </tr>
@@ -856,20 +1221,20 @@ export const ManagerReportsView = () => {
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-4 border-t border-border text-xs">
                 <span className="text-text-muted">
-                  Page {currentPage} of {totalPages} ({searchFilteredLeads.length} total records)
+                  Page {currentPage} of {totalPages} ({totalFilteredCount} total records)
                 </span>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium"
+                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium cursor-pointer"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium"
+                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium cursor-pointer"
                   >
                     Next
                   </button>

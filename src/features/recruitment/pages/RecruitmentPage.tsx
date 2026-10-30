@@ -9,6 +9,11 @@ import AddCandidateModal from "../components/AddCandidateModal";
 import AddPositionModal from "../components/AddPositionModal";
 import EditInterviewModal from "../components/EditInterviewModal";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const RecruitmentPage = () => {
   const { accessToken } = useAuth();
@@ -25,6 +30,7 @@ const RecruitmentPage = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
 
   const [isAddPositionOpen, setIsAddPositionOpen] = useState(false);
@@ -34,6 +40,7 @@ const RecruitmentPage = () => {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [posData, candData, intData] = await Promise.all([
         fetchPositions(accessToken || undefined),
@@ -43,8 +50,9 @@ const RecruitmentPage = () => {
       setPositions(posData);
       setCandidates(candData);
       setInterviews(intData);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load recruitment data:", err);
+      setError(err.message || "Failed to load recruitment data");
     } finally {
       setLoading(false);
     }
@@ -182,9 +190,13 @@ const RecruitmentPage = () => {
 
       {/* Tab Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-sm text-text-muted">
-          Loading recruitment records...
-        </div>
+        <PageLoadingState message="Loading recruitment records..." />
+      ) : error ? (
+        <PageErrorState
+          title="Failed to load recruitment data"
+          message={error}
+          onRetry={loadData}
+        />
       ) : activeTab === "positions" ? (
         /* Job Positions Table */
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -211,11 +223,15 @@ const RecruitmentPage = () => {
               </thead>
               <tbody>
                 {positions.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-text-muted">
-                      No job positions posted yet. Click "Post New Position" to create one.
-                    </td>
-                  </tr>
+                  <PageEmptyState
+                    isTableRow
+                    colSpan={5}
+                    icon={Briefcase}
+                    title="No job positions posted yet"
+                    message="Click 'Post New Position' to create one."
+                    actionText="Post New Position"
+                    onAction={() => setIsAddPositionOpen(true)}
+                  />
                 ) : (
                   positions.map((pos) => (
                     <tr key={pos.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
@@ -292,11 +308,15 @@ const RecruitmentPage = () => {
               </thead>
               <tbody>
                 {candidates.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-text-muted">
-                      No candidate profiles found. Click "Add Candidate" to register an applicant.
-                    </td>
-                  </tr>
+                  <PageEmptyState
+                    isTableRow
+                    colSpan={5}
+                    icon={Users}
+                    title="No candidate profiles found"
+                    message="Click 'Add Candidate' to register an applicant."
+                    actionText="Add Candidate"
+                    onAction={() => setIsAddCandidateOpen(true)}
+                  />
                 ) : (
                   candidates.map((cand) => (
                     <tr key={cand.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
@@ -415,11 +435,15 @@ const RecruitmentPage = () => {
 
                   if (filteredInterviews.length === 0) {
                     return (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-8 text-center text-sm text-text-muted">
-                          No interview rounds scheduled matching filters.
-                        </td>
-                      </tr>
+                      <PageEmptyState
+                        isTableRow
+                        colSpan={6}
+                        icon={CalendarCheck}
+                        title="No interview rounds found"
+                        message="No interview rounds scheduled matching filters."
+                        actionText="Schedule Interview"
+                        onAction={() => setIsScheduleInterviewOpen(true)}
+                      />
                     );
                   }
 

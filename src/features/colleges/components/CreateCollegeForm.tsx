@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { createCollege, type CreateCollegePayload } from "../../../services/collegeService";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 type CreateCollegeFormProps = {
   onSuccess?: () => void;
@@ -26,18 +27,47 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
     isActive: true,
   });
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const validateCollegeField = (name: string, value: any): string | null => {
+    if (name === "name" && !String(value || "").trim()) {
+      return "College name is required";
+    }
+    if (name === "description" && !String(value || "").trim()) {
+      return "College description is required";
+    }
+    if (name === "email" && String(value || "").trim()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim())) {
+        return "Please enter a valid email address";
+      }
+    }
+    return null;
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const err = validateCollegeField(name, (formData as any)[name]);
+    setErrors((prev) => ({ ...prev, [name]: err }));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
+    let nextVal: any = value;
     if (type === "checkbox") {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      nextVal = (e.target as HTMLInputElement).checked;
+    }
+    const nextData = { ...formData, [name]: nextVal };
+    setFormData(nextData);
+
+    if (touched[name]) {
+      const err = validateCollegeField(name, nextVal);
+      setErrors((prev) => ({ ...prev, [name]: err }));
     }
   };
 
@@ -45,25 +75,27 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
     e.preventDefault();
     if (!accessToken) return;
 
-    // Client-side validation
-    if (!formData.name.trim()) {
-      const msg = "College name is required";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    const allFields = ["name", "description", "contactPerson", "phone", "email", "website", "address", "city", "state", "admissionProcess"];
+    const newTouched: Record<string, boolean> = {};
+    const newErrors: Record<string, string | null> = {};
+    let hasError = false;
 
-    if (!formData.description.trim()) {
-      const msg = "College description is required";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    allFields.forEach((f) => {
+      newTouched[f] = true;
+      const err = validateCollegeField(f, (formData as any)[f]);
+      newErrors[f] = err;
+      if (err) hasError = true;
+    });
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      const msg = "Please enter a valid email address";
-      setErrorMsg(msg);
-      toast.error(msg);
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (hasError) {
+      const firstErr = Object.values(newErrors).find(Boolean);
+      if (firstErr) {
+        setErrorMsg(firstErr);
+        toast.error(firstErr);
+      }
       return;
     }
 
@@ -101,7 +133,7 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} noValidate className="space-y-8">
       {errorMsg && (
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
           {errorMsg}
@@ -125,36 +157,29 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="name"
             value={formData.name}
             onChange={handleChange}
+            onBlur={() => handleBlur("name")}
+            touched={touched.name}
+            error={errors.name}
             placeholder="e.g. Apex Institute of Technology"
             required
           />
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-text-primary">
-              Description <span className="text-danger-500">*</span>
+            <label className="mb-2 block text-xs font-semibold text-text-secondary">
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
+              onBlur={() => handleBlur("description")}
               placeholder="Provide a brief overview of the college..."
               rows={3}
-              required
-              className="
-                w-full
-                rounded-lg
-                border border-border
-                bg-surface
-                p-4
-                text-sm text-text-primary
-                outline-none
-                transition
-                placeholder:text-text-muted
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-              "
+              className={getFieldValidationClass(touched.description, errors.description, "w-full rounded-lg border bg-surface p-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted")}
             />
+            {touched.description && errors.description && (
+              <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.description}</p>
+            )}
           </div>
 
           <Input
@@ -162,6 +187,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="website"
             value={formData.website}
             onChange={handleChange}
+            onBlur={() => handleBlur("website")}
+            touched={touched.website}
+            error={errors.website}
             placeholder="e.g. https://apex.edu.in"
           />
         </div>
@@ -184,6 +212,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="contactPerson"
             value={formData.contactPerson}
             onChange={handleChange}
+            onBlur={() => handleBlur("contactPerson")}
+            touched={touched.contactPerson}
+            error={errors.contactPerson}
             placeholder="e.g. Dr. Rajesh Sharma"
           />
 
@@ -192,6 +223,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="phone"
             value={formData.phone}
             onChange={handleChange}
+            onBlur={() => handleBlur("phone")}
+            touched={touched.phone}
+            error={errors.phone}
             placeholder="e.g. +91 9876543210"
           />
 
@@ -201,6 +235,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={() => handleBlur("email")}
+            touched={touched.email}
+            error={errors.email}
             placeholder="e.g. admissions@apex.edu.in"
           />
         </div>
@@ -223,6 +260,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             name="address"
             value={formData.address}
             onChange={handleChange}
+            onBlur={() => handleBlur("address")}
+            touched={touched.address}
+            error={errors.address}
             placeholder="Campus address..."
           />
 
@@ -232,6 +272,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
               name="city"
               value={formData.city}
               onChange={handleChange}
+              onBlur={() => handleBlur("city")}
+              touched={touched.city}
+              error={errors.city}
               placeholder="e.g. Bhopal"
             />
 
@@ -240,6 +283,9 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
               name="state"
               value={formData.state}
               onChange={handleChange}
+              onBlur={() => handleBlur("state")}
+              touched={touched.state}
+              error={errors.state}
               placeholder="e.g. Madhya Pradesh"
             />
           </div>
@@ -259,29 +305,17 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
 
         <div className="space-y-5">
           <div>
-            <label className="mb-2 block text-sm font-medium text-text-primary">
+            <label className="mb-2 block text-xs font-semibold text-text-secondary">
               Admission Process Details
             </label>
             <textarea
               name="admissionProcess"
               value={formData.admissionProcess}
               onChange={handleChange}
+              onBlur={() => handleBlur("admissionProcess")}
               placeholder="Describe eligibility criteria, counseling rounds, entrance exam preferences..."
               rows={3}
-              className="
-                w-full
-                rounded-lg
-                border border-border
-                bg-surface
-                p-4
-                text-sm text-text-primary
-                outline-none
-                transition
-                placeholder:text-text-muted
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-              "
+              className={getFieldValidationClass(touched.admissionProcess, errors.admissionProcess, "w-full rounded-lg border bg-surface p-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted")}
             />
           </div>
 
@@ -344,6 +378,9 @@ type InputProps = {
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
+  touched?: boolean;
+  error?: string | null;
   placeholder?: string;
   type?: string;
   required?: boolean;
@@ -354,15 +391,24 @@ const Input = ({
   name,
   value,
   onChange,
+  onBlur,
+  touched,
+  error,
   placeholder,
   type = "text",
   required,
 }: InputProps) => {
+  const inputClass = getFieldValidationClass(
+    touched,
+    error,
+    "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted"
+  );
+
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-text-primary">
+      <label className="mb-2 block text-xs font-semibold text-text-secondary">
         {label}
-        {required && <span className="ml-1 text-danger-500">*</span>}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
 
       <input
@@ -370,24 +416,13 @@ const Input = ({
         name={name}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         placeholder={placeholder}
-        required={required}
-        className="
-          h-11
-          w-full
-          rounded-lg
-          border border-border
-          bg-surface
-          px-4
-          text-sm text-text-primary
-          outline-none
-          transition
-          placeholder:text-text-muted
-          focus:border-primary-500
-          focus:ring-2
-          focus:ring-primary-100
-        "
+        className={inputClass}
       />
+      {touched && error && (
+        <p className="mt-1 text-xs text-red-500 dark:text-red-400">{error}</p>
+      )}
     </div>
   );
 };

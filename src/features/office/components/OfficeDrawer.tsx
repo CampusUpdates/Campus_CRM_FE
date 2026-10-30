@@ -536,12 +536,13 @@ const OfficeDrawer = ({
 
               {/* Search Results Dropdown */}
               {showResults && searchResults.length > 0 && (
-                <ul className="absolute z-[120] left-0 right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto text-xs divide-y divide-border">
+                <ul className="absolute z-[120] left-0 right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto text-xs divide-y divide-border crm-dropdown-menu" role="listbox">
                   {searchResults.map((res) => (
                     <li
                       key={res.place_id}
                       onClick={() => handleSelectSearchResult(res)}
-                      className="p-2.5 hover:bg-primary-50 cursor-pointer text-text-primary transition flex items-start gap-2"
+                      className="p-2.5 hover:bg-surface-hover crm-dropdown-item cursor-pointer text-text-primary transition flex items-start gap-2"
+                      role="option"
                     >
                       <MapPin size={14} className="text-primary-600 shrink-0 mt-0.5" />
                       <span className="line-clamp-2">{res.display_name}</span>
@@ -651,8 +652,8 @@ const OfficeDrawer = ({
                   ? "Saving Changes..."
                   : "Save Changes"
                 : loading
-                ? "Creating Office..."
-                : "Create Office"}
+                  ? "Creating Office..."
+                  : "Create Office"}
             </button>
           </div>
         </form>

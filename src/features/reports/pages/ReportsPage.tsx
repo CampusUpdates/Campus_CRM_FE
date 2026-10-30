@@ -18,6 +18,7 @@ import {
   type HRReportFilterParams,
 } from "../../../services/hrReportService";
 import { ManagerReportsView } from "../components/ManagerReportsView";
+import { DashboardDropdown, PageLoadingState, PageErrorState, PageEmptyState } from "../../../components/common";
 
 const HRReportsView = () => {
   const { accessToken } = useAuth();
@@ -28,6 +29,7 @@ const HRReportsView = () => {
 
   const [reportData, setReportData] = useState<HRReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const getFilterParams = (): HRReportFilterParams => {
     const params: HRReportFilterParams = {};
@@ -52,12 +54,15 @@ const HRReportsView = () => {
 
   const loadReport = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchHRReport(accessToken || undefined, getFilterParams());
       setReportData(data);
     } catch (err: any) {
       console.error("Failed to load HR report data:", err);
-      toast.showToast("Failed to load HR report metrics", "error");
+      const msg = err.message || "Failed to load HR report metrics";
+      setError(msg);
+      toast.showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -142,50 +147,60 @@ const HRReportsView = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-text-secondary">Period:</label>
-            <select
+            <DashboardDropdown
+              label="Period:"
               value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-text-primary outline-none focus:border-primary-500"
-            >
-              <option value="ALL">All Time</option>
-              <option value="30_DAYS">Last 30 Days</option>
-              <option value="90_DAYS">Last 90 Days</option>
-              <option value="THIS_YEAR">This Year</option>
-            </select>
+              onChange={(val) => setPeriodFilter(val)}
+              options={[
+                { value: "ALL", label: "All Time" },
+                { value: "30_DAYS", label: "Last 30 Days" },
+                { value: "90_DAYS", label: "Last 90 Days" },
+                { value: "THIS_YEAR", label: "This Year" },
+              ]}
+              minWidth="140px"
+            />
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-text-secondary">Department:</label>
-            <select
+            <DashboardDropdown
+              label="Department:"
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-text-primary outline-none focus:border-primary-500"
-            >
-              <option value="">All Departments</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Product">Product</option>
-              <option value="Design">Design</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Sales">Sales</option>
-              <option value="Operations">Operations</option>
-              <option value="Human Resources">Human Resources</option>
-            </select>
+              onChange={(val) => setSelectedDept(val)}
+              options={[
+                { value: "", label: "All Departments" },
+                { value: "Engineering", label: "Engineering" },
+                { value: "Product", label: "Product" },
+                { value: "Design", label: "Design" },
+                { value: "Marketing", label: "Marketing" },
+                { value: "Sales", label: "Sales" },
+                { value: "Operations", label: "Operations" },
+                { value: "Human Resources", label: "Human Resources" },
+              ]}
+              minWidth="160px"
+            />
           </div>
         </div>
       </div>
 
       {loading && !reportData ? (
-        <div className="space-y-6 animate-pulse">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-28 rounded-xl bg-neutral-200" />
-            ))}
-          </div>
-          <div className="h-64 rounded-xl bg-neutral-200" />
-        </div>
+        <PageLoadingState
+          message="Loading HR Recruitment Reports..."
+          description="Aggregating recruitment velocity, interviewer evaluations, and vacancy metrics"
+          minHeight="min-h-[420px]"
+        />
+      ) : error && !reportData ? (
+        <PageErrorState
+          title="Unable to load HR Report"
+          message={error}
+          onRetry={loadReport}
+          minHeight="min-h-[380px]"
+        />
       ) : !reportData ? (
-        <div className="p-8 text-center text-xs text-text-muted">No report data available.</div>
+        <PageEmptyState
+          title="No report data available"
+          description="Try adjusting your department or period filters."
+          minHeight="min-h-[360px]"
+        />
       ) : (
         <div className="space-y-6">
           {/* Executive Summary Cards */}
@@ -283,12 +298,37 @@ const HRReportsView = () => {
 
 const ReportsPage = () => {
   const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole(["SUPER_ADMIN"]);
+  const isManager = hasRole(["MANAGER"]);
+  const isTeamLead = hasRole(["TEAM_LEAD"]);
   const isHRRole = hasRole(["HR"]);
-  const isManagerOrAdmin = hasRole(["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]);
+  const isManagerOrAdmin = hasRole(["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"]);
 
-  const [activeReportType, setActiveReportType] = useState<"manager" | "hr">(
-    isManagerOrAdmin || !isHRRole ? "manager" : "hr"
+  const [activeReportType, setActiveReportType] = useState<"crm" | "hr">(
+    isManagerOrAdmin || !isHRRole ? "crm" : "hr"
   );
+
+  let headerTitle = "CRM Reports";
+  let subtitle = "Generate detailed reports across authorized CRM data.";
+  let leadScopeLabel = "Authorized Leads";
+
+  if (isSuperAdmin) {
+    headerTitle = "Super Admin Reports";
+    subtitle = "Generate detailed reports across the entire CRM.";
+    leadScopeLabel = "All CRM Leads";
+  } else if (isManager) {
+    headerTitle = "Manager Reports";
+    subtitle = "Generate detailed performance & funnel reports across your managed teams.";
+    leadScopeLabel = "All Team Leads";
+  } else if (isTeamLead) {
+    headerTitle = "Team Lead Reports";
+    subtitle = "Generate detailed reports for your own leads and supervised Program Advisors.";
+    leadScopeLabel = "Supervised Team Leads";
+  } else {
+    headerTitle = "Advisor Reports";
+    subtitle = "Generate detailed reports for your authorized leads.";
+    leadScopeLabel = "My Authorized Leads";
+  }
 
   return (
     <div className="space-y-6">
@@ -296,15 +336,15 @@ const ReportsPage = () => {
       {(isHRRole && isManagerOrAdmin) && (
         <div className="flex items-center gap-3 border-b border-border pb-3">
           <button
-            onClick={() => setActiveReportType("manager")}
+            onClick={() => setActiveReportType("crm")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
-              activeReportType === "manager"
+              activeReportType === "crm"
                 ? "bg-primary-500 text-white shadow-2xs"
                 : "border border-border bg-surface text-text-secondary hover:bg-neutral-50"
             }`}
           >
             <FileSpreadsheet size={16} />
-            Manager Reports
+            {headerTitle}
           </button>
 
           <button
@@ -322,7 +362,15 @@ const ReportsPage = () => {
       )}
 
       {/* Render Active View */}
-      {activeReportType === "manager" ? <ManagerReportsView /> : <HRReportsView />}
+      {activeReportType === "crm" ? (
+        <ManagerReportsView
+          headerTitle={headerTitle}
+          subtitle={subtitle}
+          leadScopeLabel={leadScopeLabel}
+        />
+      ) : (
+        <HRReportsView />
+      )}
     </div>
   );
 };

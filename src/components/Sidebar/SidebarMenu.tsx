@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useSidebar } from "../../context/SidebarContext";
+import { useNotification } from "../../context/NotificationContext";
 import { getNavigationForRole, type NavigationItem } from "../../config/navigationConfig";
 
 const checkIsChildActive = (childPath: string, pathname: string, search: string) => {
@@ -29,9 +31,29 @@ const checkIsChildActive = (childPath: string, pathname: string, search: string)
 
 const SidebarMenu = () => {
   const { user } = useAuth();
+  const { closeSidebar } = useSidebar();
+  const { sidebarIndicators } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const menuItems = user ? getNavigationForRole(user.roleCode) : [];
+
+  const getItemBadgeCount = (item: NavigationItem) => {
+    if (item.title === "Leads") {
+      return sidebarIndicators.leadsUnread || 0;
+    }
+    if (item.title === "College Counselling") {
+      return sidebarIndicators.counsellingUnread;
+    }
+    if (item.title === "Colleges") {
+      return sidebarIndicators.collegesUnread;
+    }
+    if (item.title === "Notifications") {
+      return typeof sidebarIndicators.notificationsUnread === "number"
+        ? sidebarIndicators.notificationsUnread
+        : (sidebarIndicators.notificationsUnread as any)?.count || 0;
+    }
+    return 0;
+  };
 
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
@@ -59,6 +81,7 @@ const SidebarMenu = () => {
 
     if (!isCurrentlyExpanded && item.children && item.children.length > 0) {
       navigate(item.children[0].path);
+      closeSidebar();
     }
   };
 
@@ -69,6 +92,7 @@ const SidebarMenu = () => {
           const Icon = item.icon;
           const hasChildren = Boolean(item.children && item.children.length > 0);
           const isExpanded = expandedItems[item.title];
+          const badgeCount = getItemBadgeCount(item);
 
           if (hasChildren) {
             const isAnyChildActive = item.children?.some((child) =>
@@ -80,22 +104,29 @@ const SidebarMenu = () => {
                 <button
                   type="button"
                   onClick={() => toggleExpand(item)}
-                  className={`group flex w-full items-center justify-between gap-4 rounded-md px-4 py-3 text-lg transition-all duration-200 ${
+                  className={`group flex w-full items-center justify-between gap-3 rounded-md px-3 py-3 text-sm transition-all duration-200 cursor-pointer ${
                     isAnyChildActive
                       ? "text-text-primary font-medium hover:bg-primary-25"
                       : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
                   }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <Icon size={22} strokeWidth={1.8} className="shrink-0" />
-                    <span>{item.title}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon size={20} strokeWidth={1.8} className="shrink-0" />
+                    <span className="min-w-0 truncate">{item.title}</span>
                   </div>
-                  <ChevronDown
-                    size={18}
-                    className={`transition-transform duration-200 ${
-                      isExpanded ? "rotate-180 text-text-primary" : "text-text-muted"
-                    }`}
-                  />
+                  <div className="flex items-center gap-2">
+                    {badgeCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-bold text-white bg-rose-600 rounded-full shadow-xs">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180 text-text-primary" : "text-text-muted"
+                      }`}
+                    />
+                  </div>
                 </button>
 
                 {isExpanded && item.children && (
@@ -112,16 +143,17 @@ const SidebarMenu = () => {
                         <li key={child.path}>
                           <NavLink
                             to={child.path}
-                            className={`group flex items-center gap-3 rounded-md px-4 py-2.5 text-base transition-all duration-200 ${
+                            onClick={closeSidebar}
+                            className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-all duration-200 ${
                               isChildActive
                                 ? "bg-primary-500 text-white font-medium shadow-xs"
                                 : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
                             }`}
                           >
                             {ChildIcon && (
-                              <ChildIcon size={18} strokeWidth={1.8} className="shrink-0" />
+                              <ChildIcon size={16} strokeWidth={1.8} className="shrink-0" />
                             )}
-                            <span>{child.title}</span>
+                            <span className="min-w-0 truncate">{child.title}</span>
                           </NavLink>
                         </li>
                       );
@@ -136,15 +168,23 @@ const SidebarMenu = () => {
             <li key={item.path}>
               <NavLink
                 to={item.path}
+                onClick={closeSidebar}
                 className={({ isActive }) =>
-                  `group flex items-center gap-4 rounded-md px-4 py-3 text-lg transition-all duration-200 ${isActive
+                  `group flex items-center justify-between gap-3 rounded-md px-3 py-3 text-sm transition-all duration-200 ${isActive
                     ? "bg-sidebar-active text-success-900 font-medium"
                     : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
                   }`
                 }
               >
-                <Icon size={22} strokeWidth={1.8} className="shrink-0" />
-                <span>{item.title}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon size={20} strokeWidth={1.8} className="shrink-0" />
+                  <span className="min-w-0 truncate">{item.title}</span>
+                </div>
+                {badgeCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-bold text-white bg-rose-600 rounded-full shadow-xs">
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
               </NavLink>
             </li>
           );

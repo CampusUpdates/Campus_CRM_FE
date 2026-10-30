@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { Search, Check, RefreshCw, Users, Clock, X, ChevronDown, ChevronUp, CheckSquare, Square } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchUsers, type UserItem } from "../../../services/userService";
+import { type UserItem } from "../../../services/userService";
 import {
   assignTpc,
   fetchTpcsForLead,
+  fetchTpcUsers,
   type TPCUserItem,
 } from "../../../services/tpcService";
 import { fetchLeads, type LeadItem } from "../../../services/leadService";
@@ -70,9 +71,10 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
       try {
         setLoadingOptions(true);
         const [userData, tpcData] = await Promise.all([
-          fetchUsers(accessToken),
+          fetchTpcUsers(accessToken),
           selectedLead ? fetchTpcsForLead(accessToken, selectedLead.id) : Promise.resolve(null),
         ]);
+        console.log("DEBUG_TPC_USERS:", userData);
         setUsers(userData);
         if (tpcData?.assignments) {
           setExistingAssignments(tpcData.assignments);
@@ -193,12 +195,12 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
           </label>
 
           {selectedLead ? (
-            <div className="rounded-lg border border-primary-300 bg-primary-50/40 p-3 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-text-primary text-sm">
+            <div className="rounded-lg border border-primary-300 bg-primary-50/40 p-3 flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-text-primary text-sm truncate">
                   {selectedLead.firstName} {selectedLead.lastName || ""}
                 </p>
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-text-secondary truncate mt-0.5">
                   {selectedLead.phone} • {selectedLead.courseInterested || "N/A"} ({selectedLead.city || "N/A"})
                 </p>
               </div>
@@ -209,7 +211,7 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                   setSelectedUserIds([]);
                   setExistingAssignments([]);
                 }}
-                className="text-xs font-medium text-primary-700 hover:underline"
+                className="text-xs font-medium text-primary-700 hover:underline shrink-0"
               >
                 Change Lead
               </button>
@@ -261,16 +263,16 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
         </div>
       ) : (
         /* Lead Info Banner (when pre-selected) */
-        <div className="rounded-lg border border-border bg-neutral-50 p-4 space-y-1">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-text-primary text-sm">
+        <div className="rounded-lg border border-border bg-neutral-50 dark:bg-neutral-800/40 p-3.5 sm:p-4 space-y-1.5">
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            <span className="font-semibold text-text-primary text-sm truncate">
               {selectedLead?.firstName} {selectedLead?.lastName || ""}
             </span>
-            <span className="bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded text-xs font-mono font-medium">
+            <span className="bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded text-xs font-mono font-medium shrink-0">
               {selectedLead?.phone}
             </span>
           </div>
-          <p className="text-xs text-text-secondary">
+          <p className="text-xs text-text-secondary break-words">
             Course: <span className="font-medium text-text-primary">{selectedLead?.courseInterested || "N/A"}</span> • Location: <span className="font-medium text-text-primary">{selectedLead?.city || "N/A"}</span>
           </p>
         </div>
@@ -298,8 +300,8 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                   </div>
                   <span
                     className={`px-2 py-0.5 rounded text-[11px] font-medium border ${a.status === "COMPLETED"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}
                   >
                     {a.status}
@@ -314,11 +316,11 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
       {/* Multi-Select Dropdown for TPC Users */}
       {selectedLead && (
         <div className="space-y-1.5" ref={dropdownRef}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="block text-sm font-medium text-text-primary">
               Assign TPC Users <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {selectedUserIds.length > 0 && (
                 <button
                   type="button"
@@ -357,11 +359,11 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
                     key={u.id}
                     className="
                       inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-                      bg-primary-50 text-primary-700 border border-primary-200 shadow-sm
-                      transition-all animate-in fade-in zoom-in-95
+                      bg-primary-50 text-primary-700 border border-primary-200 shadow-xs
+                      transition-all animate-in fade-in zoom-in-95 max-w-full
                     "
                   >
-                    <span className="max-w-[140px] truncate">{userName}</span>
+                    <span className="max-w-[120px] sm:max-w-[160px] truncate">{userName}</span>
                     <button
                       type="button"
                       onClick={(e) => handleRemovePill(u.id, e)}
@@ -505,14 +507,14 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
       )}
 
       {/* Form Action Buttons */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-4 border-t border-border">
         <button
           type="button"
           onClick={onSuccess}
           disabled={loading}
           className="
-            rounded-lg border border-border px-4 py-2.5
-            text-sm font-medium text-text-secondary
+            w-full sm:w-auto rounded-lg border border-border px-4 py-2.5
+            text-sm font-medium text-text-secondary text-center
             hover:bg-neutral-100 transition disabled:opacity-50
           "
         >
@@ -523,9 +525,9 @@ const TPCForm = ({ lead: initialLead, onSuccess }: TPCFormProps) => {
           type="submit"
           disabled={loading || loadingOptions || !selectedLead || selectedUserIds.length === 0}
           className="
-            flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5
+            w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5
             text-sm font-medium text-white hover:bg-primary-600
-            transition disabled:opacity-50 shadow-sm
+            transition disabled:opacity-50 shadow-xs
           "
         >
           {loading ? "Assigning..." : `Assign TPC (${selectedUserIds.length})`}

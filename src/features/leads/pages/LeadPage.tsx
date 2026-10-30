@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Plus,
@@ -15,40 +15,182 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Eye,
+  ChevronDown,
+  Building2,
+  UserCircle,
+  Download,
+  Copy,
+  Share2,
+  CheckCircle2,
+  Check
 } from "lucide-react";
 
 import { ROUTES } from "../../../app/router/routes";
+import { Tooltip } from "../../../components/Tooltip";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 import CreateLeadModal from "../components/CreateLeadModal";
 import EditLeadModal from "../components/EditLeadModal";
 import ChangeStatusModal from "../components/ChangeStatusModal";
 import TPCModal from "../components/TPCModal";
+import ShareLeadModal from "../components/ShareLeadModal";
+import ShareHistoryDrawer from "../components/ShareHistoryDrawer";
+import { CollegesPitchedCell } from "../components/CollegesPitchedCell";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
-import { fetchLeads, fetchLeadStatuses, createLeadClaimRequest, type LeadItem, type LeadStatusItem } from "../../../services/leadService";
+import { useNotification } from "../../../context/NotificationContext";
+import {
+  fetchLeads,
+  fetchLeadStatuses,
+  createLeadClaimRequest,
+  exportLeadsExcel,
+  acknowledgeLead,
+  type LeadItem,
+  type LeadStatusItem,
+  type LeadAcknowledgementItem,
+} from "../../../services/leadService";
+import { fetchActiveColleges, type College } from "../../../services/collegeService";
+import { fetchUsers, type UserItem } from "../../../services/userService";
 
 export type StatusTabType = "ALL" | "LEAD" | "INTERESTED" | "ADMISSION" | "CLOSED";
 
-function formatExpiryTime(expiresAtStr?: string): string {
-  if (!expiresAtStr) return "";
-  const expiry = new Date(expiresAtStr).getTime();
-  const now = Date.now();
-  const diffMs = expiry - now;
-  if (diffMs <= 0) return "Expired";
-  const hoursLeft = Math.ceil(diffMs / (1000 * 60 * 60));
-  if (hoursLeft < 24) return `${hoursLeft}h left`;
-  const daysLeft = Math.floor(hoursLeft / 24);
-  return `${daysLeft}d ${hoursLeft % 24}h left`;
+
+function getRoleDisplay(ackBy?: LeadAcknowledgementItem["acknowledgedBy"]): "Manager" | "Team Lead" {
+  if (!ackBy) return "Manager";
+  const roleObj = typeof ackBy.role === "object" ? ackBy.role : null;
+  const roleStr = typeof ackBy.role === "string" ? ackBy.role : roleObj?.name || "";
+  const upper = roleStr.toUpperCase();
+  if (
+    upper.includes("TEAM_LEAD") ||
+    upper.includes("TEAM LEAD") ||
+    (ackBy.teamLeads && ackBy.teamLeads.length > 0)
+  ) {
+    return "Team Lead";
+  }
+  return "Manager";
 }
+
+const MultiSelectDropdown = ({
+  icon: Icon,
+  label,
+  options,
+  selected,
+  onChange
+}: {
+  icon: any,
+  label: string,
+  options: { id: string, label: string }[],
+  selected: string[],
+  onChange: (val: string[]) => void
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const toggleSelection = (id: string) => {
+    if (selected.includes(id)) onChange(selected.filter(i => i !== id));
+    else onChange([...selected, id]);
+  };
+
+  return (
+    <div className="relative w-full sm:w-auto" ref={popoverRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="
+          flex items-center justify-between w-full sm:w-auto min-w-[140px] h-11 px-3.5
+          rounded-xl border border-border bg-surface text-sm font-medium text-text-primary
+          hover:bg-neutral-50 transition focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500
+        "
+      >
+        <div className="flex items-center gap-2">
+          <Icon size={16} className="text-text-muted" />
+          <span className="truncate max-w-[100px]">
+            {selected.length === 0 ? label : `${selected.length} Selected`}
+          </span>
+        </div>
+        <ChevronDown size={16} className="text-text-muted ml-2 shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-[220px] bg-surface rounded-xl shadow-lg border border-border z-50 max-h-[300px] overflow-y-auto py-1 crm-dropdown-menu" role="listbox">
+          {options.length === 0 && <div className="p-3 text-xs text-text-muted text-center">No options available</div>}
+          {options.map((opt) => (
+            <label key={opt.id} className="flex items-center gap-3 px-3 py-2 hover:bg-surface-hover crm-dropdown-item cursor-pointer text-text-primary transition" role="option">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt.id)}
+                onChange={() => toggleSelection(opt.id)}
+                className="rounded text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-text-primary truncate">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const LeadPage = () => {
   const { accessToken, user } = useAuth();
+  const { markModuleSeen } = useNotification();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const isSuperAdminOrManager = user?.roleCode === "SUPER_ADMIN" || user?.roleCode === "MANAGER";
+  useEffect(() => {
+    markModuleSeen("LEADS");
+  }, [markModuleSeen]);
+
+  const isSuperAdmin =
+    user?.roleCode === "SUPER_ADMIN" ||
+    user?.roleId === 1 ||
+    (user as any)?.roleName?.toUpperCase() === "SUPER_ADMIN" ||
+    (user as any)?.role?.name?.toUpperCase() === "SUPER_ADMIN";
+
+  const isManager =
+    user?.roleCode === "MANAGER" ||
+    (user as any)?.roleName?.toUpperCase() === "MANAGER" ||
+    (user as any)?.role?.name?.toUpperCase() === "MANAGER";
+
+  const isTeamLead =
+    user?.roleCode === "TEAM_LEAD" ||
+    (user as any)?.roleName?.toUpperCase() === "TEAM_LEAD" ||
+    (user as any)?.roleName?.toUpperCase() === "TEAM LEAD" ||
+    (user as any)?.role?.name?.toUpperCase() === "TEAM_LEAD" ||
+    (user as any)?.role?.name?.toUpperCase() === "TEAM LEAD";
+
+  const isProgramAdvisor =
+    user?.roleCode === "PROGRAM_ADVISOR" ||
+    (user as any)?.roleName?.toUpperCase() === "PA" ||
+    (user as any)?.roleName?.toUpperCase() === "PROGRAM_ADVISOR" ||
+    (user as any)?.roleName?.toUpperCase() === "PROGRAM ADVISOR" ||
+    (user as any)?.role?.name?.toUpperCase() === "PROGRAM_ADVISOR" ||
+    (user as any)?.role?.name?.toUpperCase() === "PROGRAM ADVISOR" ||
+    (!isSuperAdmin && !isManager && !isTeamLead && user?.roleCode !== "HR");
+
+  const isSuperAdminOrManager = isSuperAdmin || isManager || isTeamLead;
+
+  const isAuthorizedToAcknowledge =
+    !isProgramAdvisor && (isSuperAdmin || isManager || isTeamLead);
+
+  const canFilterByOwner =
+    !isProgramAdvisor &&
+    (isSuperAdmin || isManager || isTeamLead || user?.roleCode === "HR");
 
   const paramDate = searchParams.get("date");
   const paramStatus = searchParams.get("status");
@@ -62,14 +204,14 @@ const LeadPage = () => {
 
   const hasActiveUrlFilters = Boolean(
     paramDate ||
-      paramStatus ||
-      paramTeamId ||
-      paramAssignedToId ||
-      paramAdmissionDueDate ||
-      paramAdmissionOverdue ||
-      paramTime ||
-      paramFromDate ||
-      paramToDate
+    paramStatus ||
+    paramTeamId ||
+    (canFilterByOwner && paramAssignedToId) ||
+    paramAdmissionDueDate ||
+    paramAdmissionOverdue ||
+    paramTime ||
+    paramFromDate ||
+    paramToDate
   );
 
   const ITEMS_PER_PAGE = 10;
@@ -81,6 +223,7 @@ const LeadPage = () => {
   const [dbStatuses, setDbStatuses] = useState<LeadStatusItem[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
@@ -97,37 +240,80 @@ const LeadPage = () => {
   const [fromDate, setFromDate] = useState<string>(() => searchParams.get("fromDate") || "");
   const [toDate, setToDate] = useState<string>(() => searchParams.get("toDate") || "");
 
+  const [selectedColleges, setSelectedColleges] = useState<string[]>([]);
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [collegesList, setCollegesList] = useState<College[]>([]);
+  const [usersList, setUsersList] = useState<UserItem[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
   // Custom Range Modal state
   const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false);
   const [pickerFromDate, setPickerFromDate] = useState<string>(fromDate);
   const [pickerToDate, setPickerToDate] = useState<string>(toDate);
 
   useEffect(() => {
-    async function loadStatuses() {
+    async function loadFilterData() {
       if (!accessToken) return;
       try {
-        const data = await fetchLeadStatuses(accessToken);
-        setDbStatuses(data);
+        const [statusesData, collegesData, usersData] = await Promise.all([
+          fetchLeadStatuses(accessToken),
+          fetchActiveColleges(accessToken),
+          canFilterByOwner ? fetchUsers(accessToken) : Promise.resolve([]),
+        ]);
+        setDbStatuses(statusesData);
+        setCollegesList(collegesData);
+        if (canFilterByOwner) {
+          setUsersList(usersData);
+        } else {
+          setUsersList([]);
+        }
       } catch (err) {
-        console.error("Failed to fetch lead statuses", err);
+        console.error("Failed to fetch filter data", err);
       }
     }
-    loadStatuses();
-  }, [accessToken]);
+    loadFilterData();
+  }, [accessToken, canFilterByOwner]);
 
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
 
-  // Debounce search term changes by 300ms
+  // Request sequencing and in-flight cancellation guards against stale API responses
+  const latestRequestIdRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Unmount cleanup: cancel any pending request
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Debounce search term changes by 250ms and synchronize page reset
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-    }, 300);
+      setCurrentPage(1);
+    }, 250);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
+  const handleSearchChange = (val: string) => {
+    setSearchTerm(val);
+    if (!val.trim()) {
+      setDebouncedSearch("");
+      setCurrentPage(1);
+    }
+  };
+
+  const handleClearSearch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setSearchTerm("");
+    setDebouncedSearch("");
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  };
 
   const handleStatusChange = (newStatus: string) => {
     setSelectedStatus(newStatus);
@@ -198,6 +384,8 @@ const LeadPage = () => {
     setToDate("");
     setSearchTerm("");
     setDebouncedSearch("");
+    setSelectedColleges([]);
+    setSelectedOwners([]);
     setCurrentPage(1);
   };
 
@@ -207,6 +395,102 @@ const LeadPage = () => {
   const [tpcLead, setTpcLead] = useState<LeadItem | null>(null);
   const [claimingLeadId, setClaimingLeadId] = useState<string | null>(null);
   const [pendingClaimLeadIds, setPendingClaimLeadIds] = useState<Set<string>>(new Set());
+
+  // Lead Sharing Workflow States
+  const [copiedLeadId, setCopiedLeadId] = useState<string | null>(null);
+  const [acknowledgingLeadId, setAcknowledgingLeadId] = useState<string | null>(null);
+  const [sharingLead, setSharingLead] = useState<LeadItem | null>(null);
+  const [shareHistoryLead, setShareHistoryLead] = useState<LeadItem | null>(null);
+
+  const handleCopyLead = async (lead: LeadItem) => {
+    const studentName = `${lead.firstName} ${lead.lastName || ""}`.trim();
+    const phone = lead.phone || "N/A";
+    const email = lead.email || "N/A";
+    const course = lead.courseInterested || (lead as any).courseInterestedOther || "N/A";
+    const location = [lead.city, lead.state].filter(Boolean).join(", ") || "N/A";
+
+    const pitchedColleges = (lead.collegeApplications || [])
+      .filter((ca: any) => ca.approvalStatus !== "REJECTED" && ca.cancellationReason == null)
+      .map((ca: any) => ca.college?.name)
+      .filter(Boolean);
+    const collegeInfo = pitchedColleges.length > 0 ? pitchedColleges.join(", ") : "None";
+    const prefLocation = [lead.preferredCity, lead.preferredState].filter(Boolean).join(", ");
+    const budget = lead.preferredBudget != null ? `₹${Number(lead.preferredBudget).toLocaleString("en-IN")}` : null;
+    const sourceInfo = lead.source === "REFERENCE"
+      ? `Reference${lead.referredBy ? ` (by ${lead.referredBy})` : ""}`
+      : lead.source;
+
+    const textToCopy = [
+      `Campus CRM — Lead Details`,
+      `Student Name: ${studentName}`,
+      `Phone: ${phone}`,
+      `Email: ${email}`,
+      `Course Interested: ${course}`,
+      `Location: ${location}`,
+      prefLocation ? `Preferred Location: ${prefLocation}` : null,
+      budget ? `Preferred Budget: ${budget}` : null,
+      sourceInfo ? `Lead Source: ${sourceInfo}` : null,
+      `Colleges Pitched: ${collegeInfo}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedLeadId(lead.id);
+      toast.success(`Copied details for ${studentName} to clipboard`);
+      setTimeout(() => {
+        setCopiedLeadId((prev) => (prev === lead.id ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.error("Clipboard copy error:", err);
+      toast.error("Failed to copy lead details to clipboard");
+    }
+  };
+
+  const handleShareSuccess = (newShare: LeadAcknowledgementItem) => {
+    setLeads((prevLeads) =>
+      prevLeads.map((l) => {
+        if (l.id !== newShare.leadId) return l;
+        const existingAcks = l.acknowledgements || [];
+        return {
+          ...l,
+          acknowledgements: [newShare, ...existingAcks],
+        };
+      })
+    );
+  };
+
+  const handleAcknowledgeSuccess = (updatedAck: LeadAcknowledgementItem) => {
+    setLeads((prevLeads) =>
+      prevLeads.map((l) => {
+        if (l.id !== updatedAck.leadId) return l;
+        const existingAcks = l.acknowledgements || [];
+        const exists = existingAcks.some((a) => a.id === updatedAck.id);
+        const updated = exists
+          ? existingAcks.map((a) => (a.id === updatedAck.id ? { ...a, ...updatedAck } : a))
+          : [updatedAck, ...existingAcks];
+        return {
+          ...l,
+          acknowledgements: updated,
+        };
+      })
+    );
+  };
+
+  const handleAcknowledge = async (leadId: string) => {
+    if (!accessToken || !isAuthorizedToAcknowledge) return;
+    setAcknowledgingLeadId(leadId);
+    try {
+      const res = await acknowledgeLead(accessToken, leadId);
+      toast.success("Lead receipt acknowledged successfully");
+      handleAcknowledgeSuccess(res.acknowledgement);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to acknowledge lead receipt");
+    } finally {
+      setAcknowledgingLeadId(null);
+    }
+  };
 
   const handleClaimLead = async (leadId: string) => {
     if (!accessToken) return;
@@ -227,22 +511,44 @@ const LeadPage = () => {
 
   const loadLeads = useCallback(async () => {
     if (!accessToken) return;
+
+    // Abort any pending in-flight request before dispatching a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const currentRequestId = ++latestRequestIdRef.current;
     setLoading(true);
+    setError(null);
+
     try {
-      const res = await fetchLeads(accessToken, {
-        search: debouncedSearch,
-        status: selectedStatus,
-        time: selectedTime,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
-        page: currentPage,
-        limit: ITEMS_PER_PAGE,
-        date: paramDate || undefined,
-        teamId: paramTeamId || undefined,
-        assignedToId: paramAssignedToId || undefined,
-        admissionDueDate: paramAdmissionDueDate || undefined,
-        admissionOverdue: paramAdmissionOverdue || undefined,
-      });
+      const res = await fetchLeads(
+        accessToken,
+        {
+          search: debouncedSearch,
+          status: selectedStatus,
+          time: selectedTime,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          colleges: selectedColleges.length > 0 ? selectedColleges : undefined,
+          ownerId: (canFilterByOwner && selectedOwners.length > 0) ? selectedOwners : undefined,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          date: paramDate || undefined,
+          teamId: paramTeamId || undefined,
+          assignedToId: (canFilterByOwner && paramAssignedToId) ? paramAssignedToId : undefined,
+          admissionDueDate: paramAdmissionDueDate || undefined,
+          admissionOverdue: paramAdmissionOverdue || undefined,
+        },
+        controller.signal
+      );
+
+      // Stale response guard: ignore if a newer request has already been initiated
+      if (currentRequestId !== latestRequestIdRef.current) {
+        return;
+      }
 
       if (Array.isArray(res)) {
         setLeads(res);
@@ -253,10 +559,18 @@ const LeadPage = () => {
         setTotalLeads(res.total || 0);
         setTotalPages(res.totalPages || 1);
       }
-    } catch (err) {
-      console.error("Failed to load leads:", err);
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        return;
+      }
+      if (currentRequestId === latestRequestIdRef.current) {
+        console.error("Failed to load leads:", err);
+        setError(err.message || "Failed to load lead pipeline records.");
+      }
     } finally {
-      setLoading(false);
+      if (currentRequestId === latestRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [
     accessToken,
@@ -265,6 +579,8 @@ const LeadPage = () => {
     selectedTime,
     fromDate,
     toDate,
+    selectedColleges,
+    selectedOwners,
     currentPage,
     paramDate,
     paramTeamId,
@@ -277,34 +593,37 @@ const LeadPage = () => {
     loadLeads();
   }, [loadLeads]);
 
+  const handleExportExcel = async () => {
+    if (!accessToken) return;
+    setIsExporting(true);
+    try {
+      await exportLeadsExcel(accessToken, {
+        search: debouncedSearch,
+        status: selectedStatus,
+        time: selectedTime,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+        colleges: selectedColleges.length > 0 ? selectedColleges : undefined,
+        ownerId: (canFilterByOwner && selectedOwners.length > 0) ? selectedOwners : undefined,
+        date: paramDate || undefined,
+        teamId: paramTeamId || undefined,
+        assignedToId: (canFilterByOwner && paramAssignedToId) ? paramAssignedToId : undefined,
+        admissionDueDate: paramAdmissionDueDate || undefined,
+        admissionOverdue: paramAdmissionOverdue || undefined,
+      });
+      toast.success("Export successful!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to export leads.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
   const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + leads.length, totalLeads);
   const paginatedLeads = leads;
-
-
-  const getStatusBadgeStyle = (statusName?: string) => {
-    const name = (statusName || "LEAD").toUpperCase();
-    if (name.includes("ADMISSION") || name.includes("ENROLLED") || name.includes("HIRED")) {
-      return "bg-emerald-100 text-emerald-800 border-emerald-300";
-    }
-    if (name.includes("LETTER_OUT") || name.includes("OFFER")) {
-      return "bg-pink-100 text-pink-800 border-pink-300";
-    }
-    if (name.includes("INTERVIEW_DONE") || name.includes("PASSED")) {
-      return "bg-purple-100 text-purple-800 border-purple-300";
-    }
-    if (name.includes("INTERVIEW_SCHEDULED") || name.includes("SCHEDULED")) {
-      return "bg-orange-100 text-orange-800 border-orange-300";
-    }
-    if (name.includes("APPLICATION") || name.includes("APPLIED")) {
-      return "bg-amber-100 text-amber-800 border-amber-300";
-    }
-    if (name.includes("CLOSE") || name.includes("CANCEL") || name.includes("REJECT")) {
-      return "bg-rose-100 text-rose-800 border-rose-300";
-    }
-    return "bg-blue-100 text-blue-800 border-blue-300";
-  };
 
   return (
     <div className="space-y-6">
@@ -369,7 +688,7 @@ const LeadPage = () => {
                 Team #{paramTeamId}
               </span>
             )}
-            {paramAssignedToId && (
+            {paramAssignedToId && canFilterByOwner && (
               <span className="px-2 py-0.5 rounded-md bg-surface border border-primary-200 font-semibold text-primary-800">
                 Advisor #{paramAssignedToId}
               </span>
@@ -402,7 +721,7 @@ const LeadPage = () => {
             type="text"
             placeholder="Search leads by name, email, phone number, course interested, or city..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="
               h-11
               w-full
@@ -423,8 +742,9 @@ const LeadPage = () => {
           {searchTerm && (
             <button
               type="button"
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
+              onClick={handleClearSearch}
+              title="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md transition"
             >
               <X size={16} />
             </button>
@@ -432,7 +752,7 @@ const LeadPage = () => {
         </div>
 
         {/* Status Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[190px]">
+        <div className="relative w-full sm:w-auto sm:min-w-[150px]">
           <div className="relative">
             <Filter
               size={16}
@@ -481,7 +801,7 @@ const LeadPage = () => {
         </div>
 
         {/* Time Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[180px]">
+        <div className="relative w-full sm:w-auto sm:min-w-[140px]">
           <div className="relative">
             <Clock
               size={16}
@@ -536,6 +856,54 @@ const LeadPage = () => {
             />
           </div>
         </div>
+
+        <MultiSelectDropdown
+          icon={Building2}
+          label="College"
+          options={collegesList.map(c => ({ id: c.id, label: c.name }))}
+          selected={selectedColleges}
+          onChange={(val) => {
+            setSelectedColleges(val);
+            setCurrentPage(1);
+          }}
+        />
+
+        {canFilterByOwner && (
+          <MultiSelectDropdown
+            icon={UserCircle}
+            label="Owner"
+            options={[
+              { id: "UNASSIGNED", label: "Unassigned" },
+              ...usersList.map(u => ({ id: u.id, label: u.firstName + (u.lastName ? ` ${u.lastName}` : "") }))
+            ]}
+            selected={selectedOwners}
+            onChange={(val) => {
+              setSelectedOwners(val);
+              setCurrentPage(1);
+            }}
+          />
+        )}
+
+        <button
+          onClick={handleExportExcel}
+          disabled={isExporting}
+          className="
+            flex items-center justify-center gap-2
+            w-full sm:w-auto h-11
+            rounded-xl
+            border border-primary-500
+            bg-primary-50 text-primary-700
+            px-4
+            text-sm font-bold
+            transition
+            hover:bg-primary-100
+            shadow-sm
+            disabled:opacity-50
+          "
+        >
+          <Download size={16} className={isExporting ? "animate-bounce" : ""} />
+          <span className="whitespace-nowrap">{isExporting ? "Exporting..." : "Export Excel"}</span>
+        </button>
       </div>
 
       {/* Custom Date Range Picker Modal */}
@@ -604,22 +972,31 @@ const LeadPage = () => {
       {/* Leads Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
         {loading ? (
-          <div className="flex items-center justify-center p-12 text-sm text-text-secondary">
-            <RefreshCw className="animate-spin mr-2" size={18} />
-            Loading lead pipeline records...
-          </div>
+          <PageLoadingState
+            message="Loading lead pipeline records..."
+            description="Fetching leads, applications, and assignment details"
+            minHeight="min-h-[360px]"
+          />
+        ) : error ? (
+          <PageErrorState
+            title="Unable to load leads"
+            message={error}
+            onRetry={loadLeads}
+            minHeight="min-h-[360px]"
+          />
         ) : leads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
-              <Users size={24} />
-            </div>
-            <h3 className="text-base font-semibold text-text-primary">No leads found</h3>
-            <p className="text-sm text-text-secondary mt-1 max-w-sm">
-              {searchTerm
-                ? "No leads matched your search query."
-                : "No lead records match this status pipeline tab."}
-            </p>
-          </div>
+          <PageEmptyState
+            icon={Users}
+            title={searchTerm ? "No matching leads found" : "No leads found"}
+            description={
+              searchTerm
+                ? `No leads matched your search query "${searchTerm}".`
+                : "No lead records match this status pipeline tab."
+            }
+            actionText={searchTerm ? "Clear Search" : undefined}
+            onAction={searchTerm ? handleClearSearch : undefined}
+            minHeight="min-h-[360px]"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -638,7 +1015,7 @@ const LeadPage = () => {
                     <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
                       Course & Location
                     </th>
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[200px] max-w-[280px]">
                       Colleges Pitched
                     </th>
                     {isSuperAdminOrManager && (
@@ -646,10 +1023,6 @@ const LeadPage = () => {
                         Current Owner / Claimed By
                       </th>
                     )}
-
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
-                      Status
-                    </th>
 
                     <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
                       Actions
@@ -660,7 +1033,41 @@ const LeadPage = () => {
                 <tbody>
                   {paginatedLeads.map((lead) => {
                     const fullName = `${lead.firstName} ${lead.lastName || ""}`.trim();
-                    const shortId = `LD${lead.id.slice(0, 4).toUpperCase()}`;
+
+                    const acknowledgedAck = lead.acknowledgements?.find((ack) => Boolean(ack.acknowledgedAt));
+                    const isAcknowledged = Boolean(acknowledgedAck);
+
+                    let acknowledgedByName = "Authorized User";
+                    let acknowledgedRole: "Manager" | "Team Lead" = "Manager";
+                    let acknowledgedDateFormatted = "";
+
+                    if (acknowledgedAck) {
+                      if (acknowledgedAck.acknowledgedBy) {
+                        const fn = acknowledgedAck.acknowledgedBy.firstName || "";
+                        const ln = acknowledgedAck.acknowledgedBy.lastName || "";
+                        acknowledgedByName = `${fn} ${ln}`.trim() || "Authorized User";
+                        acknowledgedRole = getRoleDisplay(acknowledgedAck.acknowledgedBy);
+                      } else if (acknowledgedAck.recipient) {
+                        const fn = acknowledgedAck.recipient.firstName || "";
+                        const ln = acknowledgedAck.recipient.lastName || "";
+                        acknowledgedByName = `${fn} ${ln}`.trim() || "Recipient";
+                        acknowledgedRole = "Manager";
+                      }
+
+                      if (acknowledgedAck.acknowledgedAt) {
+                        acknowledgedDateFormatted = new Date(acknowledgedAck.acknowledgedAt).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        });
+                      }
+                    }
+
+                    const createdDateFormatted = lead.createdAt
+                      ? new Date(lead.createdAt).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      : "";
 
                     const statusName = lead.status?.name || "LEAD";
                     const isAdmissionDone = statusName === "ADMISSION_DONE";
@@ -697,7 +1104,7 @@ const LeadPage = () => {
                       lead.assignments.length > 0;
 
                     const actionsDisabled =
-                      isAssignmentExpired && user?.roleCode !== "SUPER_ADMIN";
+                      isAssignmentExpired && !isSuperAdminOrManager;
 
                     const isSuperAdminUser = user?.roleCode === "SUPER_ADMIN";
 
@@ -705,22 +1112,61 @@ const LeadPage = () => {
                       <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition">
                         <td className="px-5 py-4">
                           <div>
-                            {isSuperAdminUser ? (
-                              <Link
-                                to={`/leads/${lead.id}`}
-                                className="text-sm font-semibold text-primary-700 hover:text-primary-900 hover:underline transition cursor-pointer"
-                                title="View Super Admin Lead 360 Profile"
-                              >
-                                {fullName}
-                              </Link>
-                            ) : (
-                              <p className="text-sm font-semibold text-text-primary">
-                                {fullName}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {isSuperAdminUser ? (
+                                <Link
+                                  to={`/leads/${lead.id}`}
+                                  className="text-sm font-semibold text-primary-700 hover:text-primary-900 hover:underline transition cursor-pointer"
+                                  title="View Super Admin Lead 360 Profile"
+                                >
+                                  {fullName}
+                                </Link>
+                              ) : (
+                                <span className="text-sm font-semibold text-text-primary">
+                                  {fullName}
+                                </span>
+                              )}
+
+                              {isAcknowledged && (
+                                <Tooltip
+                                  className="w-max max-w-[280px] bg-neutral-900 border border-neutral-700 text-neutral-100 p-2.5 rounded-lg text-xs shadow-xl cursor-auto"
+                                  content={
+                                    <div className="flex flex-col gap-1 text-left">
+                                      <div className="flex items-center gap-1.5 font-semibold text-emerald-400">
+                                        <CheckCircle2 size={13} className="shrink-0" />
+                                        <span>Acknowledged</span>
+                                      </div>
+                                      <div className="text-[11px] text-neutral-200">
+                                        <span className="text-neutral-400">By: </span>
+                                        <span className="font-medium text-white">{acknowledgedByName}</span>
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-[10px] font-medium text-emerald-300">
+                                          {acknowledgedRole}
+                                        </span>
+                                      </div>
+                                      {acknowledgedDateFormatted && (
+                                        <div className="text-[10px] text-neutral-400">
+                                          <span>{acknowledgedDateFormatted}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  }
+                                >
+                                  <button
+                                    type="button"
+                                    aria-label={`Acknowledged by ${acknowledgedByName} (${acknowledgedRole})${acknowledgedDateFormatted ? ` on ${acknowledgedDateFormatted}` : ""}`}
+                                    className="inline-flex items-center text-emerald-600 hover:text-emerald-700 cursor-pointer focus:outline-none"
+                                  >
+                                    <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+                                  </button>
+                                </Tooltip>
+                              )}
+                            </div>
+
+                            {createdDateFormatted && (
+                              <p className="text-xs text-text-muted mt-0.5">
+                                {createdDateFormatted}
                               </p>
                             )}
-                            <p className="text-xs text-text-muted font-mono">
-                              #{shortId}
-                            </p>
                           </div>
                         </td>
 
@@ -742,39 +1188,20 @@ const LeadPage = () => {
                                 {lead.city}{lead.state ? `, ${lead.state}` : ""}
                               </p>
                             )}
+                            {(lead.preferredCity || lead.preferredState) && (
+                              <p className="text-[11px] text-text-muted/80">
+                                Pref: {[lead.preferredCity, lead.preferredState].filter(Boolean).join(", ")}
+                                {lead.preferredBudget != null && ` • ₹${Number(lead.preferredBudget).toLocaleString("en-IN")}`}
+                              </p>
+                            )}
                           </div>
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-text-secondary">
-                          {lead.collegeApplications && lead.collegeApplications.length > 0 ? (
-                            <div className="flex flex-col gap-1.5 items-start max-w-[240px]">
-                              {lead.collegeApplications.map((app) => {
-                                const rawColor = app.status?.color || "#3b82f6";
-                                return (
-                                  <span
-                                    key={app.id}
-                                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium max-w-full transition-all"
-                                    style={{
-                                      backgroundColor: `color-mix(in srgb, ${rawColor} 12%, transparent)`,
-                                      borderColor: `color-mix(in srgb, ${rawColor} 30%, transparent)`,
-                                      color: `color-mix(in srgb, ${rawColor} 90%, #ffffff)`,
-                                    }}
-                                    title={`${app.college?.name || "College"}${app.status?.name ? ` (${app.status.name})` : ""}`}
-                                  >
-                                    <span
-                                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                                      style={{ backgroundColor: rawColor }}
-                                    />
-                                    <span className="truncate">
-                                      {app.college?.name || "College"}
-                                    </span>
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-text-muted">None</span>
-                          )}
+                        <td className="px-5 py-4 text-sm text-text-secondary min-w-[200px] max-w-[280px]">
+                          <CollegesPitchedCell
+                            collegeApplications={lead.collegeApplications}
+                            negativeColleges={lead.negativeColleges}
+                          />
                         </td>
 
                         {isSuperAdminOrManager && (
@@ -823,51 +1250,67 @@ const LeadPage = () => {
                           </td>
                         )}
 
-
-
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col items-start gap-1">
-                            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeStyle(statusName)}`}>
-                              {statusName.replace(/_/g, " ")}
-                            </span>
-
-                            {isAdmissionDone ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold">
-                                Admission Done (Locked)
-                              </span>
-                            ) : hasActiveWindow ? (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold"
-                                title={`Active 4-day window assigned to ${activeAssignment?.user?.firstName || 'User'}`}
-                              >
-                                <Clock size={10} />
-                                Active ({formatExpiryTime(activeAssignment?.expiresAt)})
-                              </span>
-                            ) : isClaimRequestPending ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 pl-0.5">
-                                <Clock size={11} className="shrink-0 text-amber-500" />
-                                <span>Claim request pending</span>
-                              </span>
-                            ) : isProtected ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-semibold">
-                                Pipeline Protected
-                              </span>
-                            ) : isClaimable ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold">
-                                Claimable
-                              </span>
-                            ) : (
-                              <span className="inline-flex rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                                Expired
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Actions Column: 1. Claim Lead, 2. Edit Lead, 3. Change Status, 4. TPC */}
+                        {/* Actions Column */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Claim Lead / View Request / Pending Approval */}
+                            {/* Role-based Lead Acknowledgement (Managers, Team Leads, Super Admin only - never PA) */}
+                            {isAuthorizedToAcknowledge && !isAcknowledged && (
+                              <button
+                                type="button"
+                                onClick={() => handleAcknowledge(lead.id)}
+                                disabled={acknowledgingLeadId === lead.id}
+                                title={acknowledgingLeadId === lead.id ? "Acknowledging lead..." : "Acknowledge Lead"}
+                                className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition shrink-0 cursor-pointer disabled:opacity-50"
+                                aria-label="Acknowledge Lead"
+                              >
+                                <CheckCircle2 size={16} className={acknowledgingLeadId === lead.id ? "animate-spin text-emerald-600" : "text-emerald-600"} />
+                              </button>
+                            )}
+
+                            {/* Share on WhatsApp (Authorized Managers / Team Leads only) */}
+                            {isAuthorizedToAcknowledge && (
+                              <button
+                                type="button"
+                                onClick={() => setSharingLead(lead)}
+                                title="Share on WhatsApp"
+                                className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition shrink-0 cursor-pointer"
+                                aria-label="Share on WhatsApp"
+                              >
+                                <Share2 size={16} className="text-emerald-600" />
+                              </button>
+                            )}
+
+                            {/* Share & Acknowledgement History (Authorized Managers / Team Leads only) */}
+                            {isAuthorizedToAcknowledge && (
+                              <button
+                                type="button"
+                                onClick={() => setShareHistoryLead(lead)}
+                                title="View Share & Acknowledgement History"
+                                className="p-1.5 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-neutral-100 transition shrink-0 cursor-pointer"
+                                aria-label="View Share & Acknowledgement History"
+                              >
+                                <Clock size={16} className="text-text-muted" />
+                              </button>
+                            )}
+
+                            {/* Copy Lead details (Authorized Managers / Team Leads only) */}
+                            {isAuthorizedToAcknowledge && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyLead(lead)}
+                                title={copiedLeadId === lead.id ? "Copied to clipboard!" : "Copy lead details"}
+                                className="p-1.5 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-neutral-100 transition shrink-0 cursor-pointer"
+                                aria-label="Copy lead details"
+                              >
+                                {copiedLeadId === lead.id ? (
+                                  <Check size={16} className="text-emerald-600" />
+                                ) : (
+                                  <Copy size={16} className="text-text-muted" />
+                                )}
+                              </button>
+                            )}
+
+                            {/* Claim Lead / View Request */}
                             {isClaimRequestPending ? (
                               isSuperAdminUser ? (
                                 <Link
@@ -878,15 +1321,7 @@ const LeadPage = () => {
                                   <Eye size={13} className="shrink-0" />
                                   <span>View Request</span>
                                 </Link>
-                              ) : (
-                                <span
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/80 bg-neutral-100/70 text-text-muted dark:border-neutral-700/60 dark:bg-neutral-800/50 text-xs font-medium select-none shrink-0"
-                                  title="Claim request submitted and awaiting Super Admin approval"
-                                >
-                                  <Clock size={12} className="shrink-0 text-amber-500" />
-                                  <span>Pending Approval</span>
-                                </span>
-                              )
+                              ) : null
                             ) : (
                               <button
                                 onClick={() => isClaimable && handleClaimLead(lead.id)}
@@ -1028,6 +1463,31 @@ const LeadPage = () => {
           lead={tpcLead}
           onClose={() => setTpcLead(null)}
           onSuccess={loadLeads}
+        />
+      )}
+
+      {/* 4. Share Lead via WhatsApp Modal */}
+      {sharingLead && (
+        <ShareLeadModal
+          lead={sharingLead}
+          users={usersList}
+          onClose={() => setSharingLead(null)}
+          onSuccess={handleShareSuccess}
+        />
+      )}
+
+      {/* 5. Share & Acknowledgement History Drawer */}
+      {shareHistoryLead && (
+        <ShareHistoryDrawer
+          lead={shareHistoryLead}
+          currentUserId={user?.sub || (user as any)?.id}
+          onClose={() => setShareHistoryLead(null)}
+          onOpenNewShare={() => {
+            const targetLead = shareHistoryLead;
+            setShareHistoryLead(null);
+            setSharingLead(targetLead);
+          }}
+          onAcknowledgeSuccess={handleAcknowledgeSuccess}
         />
       )}
     </div>

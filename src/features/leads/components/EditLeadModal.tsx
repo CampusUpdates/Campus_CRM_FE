@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Pencil, RefreshCw } from "lucide-react";
 import CreateLeadForm from "./CreateLeadForm";
 import { fetchLeadById, type LeadItem } from "../../../services/leadService";
+import { fetchCounsellingByLead } from "../../../services/counsellingService";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -22,8 +23,23 @@ const EditLeadModal = ({ lead, onClose, onSuccess }: EditLeadModalProps) => {
   useEffect(() => {
     if (accessToken && lead.id) {
       setLoading(true);
-      fetchLeadById(accessToken, lead.id)
-        .then((data) => setFreshLead(data))
+      Promise.all([
+        fetchLeadById(accessToken, lead.id),
+        fetchCounsellingByLead(accessToken, lead.id).catch((err) => {
+          console.warn("Failed to load counselling requests for lead:", err);
+          return [];
+        }),
+      ])
+        .then(([data, counselling]) => {
+          const combinedRequests =
+            data.counsellingRequests && data.counsellingRequests.length > 0
+              ? data.counsellingRequests
+              : counselling;
+          setFreshLead({
+            ...data,
+            counsellingRequests: combinedRequests,
+          });
+        })
         .catch((err) => {
           console.error("Failed to fetch current lead details:", err);
           toast.error("Could not load latest lead data");
@@ -59,21 +75,21 @@ const EditLeadModal = ({ lead, onClose, onSuccess }: EditLeadModalProps) => {
       {/* Drawer */}
       <div
         onAnimationEnd={handleAnimationEnd}
-        className={`fixed right-0 top-0 h-[100dvh] w-[40vw] min-w-[480px] bg-surface shadow-2xl flex flex-col ${
+        className={`fixed right-0 top-0 h-[100dvh] w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[45vw] max-w-full bg-surface shadow-2xl flex flex-col ${
           isClosing ? "animate-slide-out" : "animate-slide-in"
         }`}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold">
-              <Pencil size={20} />
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 sm:px-6 py-4 sm:py-5 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold shrink-0">
+              <Pencil size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold text-text-primary truncate">
                 Edit Lead: {fullName}
               </h2>
-              <p className="text-xs text-text-muted">
+              <p className="text-xs text-text-muted truncate">
                 Update details for lead #{lead.id.slice(0, 6)}
               </p>
             </div>
@@ -82,14 +98,16 @@ const EditLeadModal = ({ lead, onClose, onSuccess }: EditLeadModalProps) => {
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg p-2 text-text-secondary transition hover:bg-neutral-100 hover:text-text-primary"
+            className="rounded-lg p-1.5 sm:p-2 text-text-secondary transition hover:bg-neutral-100 hover:text-text-primary shrink-0 cursor-pointer"
+            title="Close"
+            aria-label="Close modal"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Body invoking CreateLeadForm in Edit Mode with fresh database state */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 custom-scrollbar">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-sm text-text-secondary">
               <RefreshCw className="animate-spin mr-2" size={18} />

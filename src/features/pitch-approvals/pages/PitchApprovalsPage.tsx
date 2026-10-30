@@ -1,14 +1,21 @@
 import { useState, useEffect } from "react";
-import { Clock, CheckCircle2, XCircle, AlertCircle, Loader2, User, MapPin, Phone, Mail } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, User, MapPin, Phone, Mail, ChevronDown } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext";
 import {
   fetchPitchApprovals,
   processPitchApproval,
   type PitchApprovalItem,
 } from "../../../services/pitchApprovalService";
+import {
+  SectionLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const PitchApprovalsPage = () => {
   const { accessToken } = useAuth();
+  const toast = useToast();
   const [approvals, setApprovals] = useState<PitchApprovalItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +33,9 @@ const PitchApprovalsPage = () => {
       );
       setApprovals(data);
     } catch (err: any) {
-      setError(err.message || "Failed to load college approvals");
+      const msg = err.message || "Failed to load college approvals";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -44,9 +53,12 @@ const PitchApprovalsPage = () => {
     try {
       setProcessingId(pitchId);
       await processPitchApproval(accessToken, pitchId, action);
+      toast.success(
+        `College pitch request ${action === "APPROVED" ? "approved" : "rejected"} successfully.`
+      );
       await loadApprovals();
     } catch (err: any) {
-      alert(err.message || `Failed to ${action.toLowerCase()} college approval`);
+      toast.error(err.message || `Failed to ${action.toLowerCase()} college approval`);
     } finally {
       setProcessingId(null);
     }
@@ -91,30 +103,25 @@ const PitchApprovalsPage = () => {
           </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-1">
-          {["PENDING", "APPROVED", "REJECTED", "ALL"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                statusFilter === st
-                  ? "bg-white text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              {st}
-            </button>
-          ))}
+        {/* Status Filter Dropdown */}
+        <div className="relative inline-flex items-center">
+          <select
+            id="pitch-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 appearance-none rounded-lg border border-slate-700/80 bg-slate-900/95 pl-3 pr-8 text-xs font-semibold text-slate-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition"
+          >
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="ALL">All</option>
+          </select>
+          <ChevronDown
+            size={14}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+          />
         </div>
       </div>
-
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">
-          <AlertCircle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
 
       {/* College Approvals Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
@@ -141,20 +148,28 @@ const PitchApprovalsPage = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-text-secondary">
-                    <div className="flex items-center justify-center gap-2 text-sm">
-                      <Loader2 className="animate-spin text-primary" size={20} />
-                      Loading college approvals...
-                    </div>
-                  </td>
-                </tr>
+                <SectionLoadingState
+                  isTableRow
+                  colSpan={5}
+                  message="Loading college approvals..."
+                  description="Retrieving pending and processed approval requests"
+                />
+              ) : error ? (
+                <PageErrorState
+                  isTableRow
+                  colSpan={5}
+                  title="Unable to load college approvals"
+                  message={error}
+                  onRetry={loadApprovals}
+                />
               ) : approvals.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-text-muted text-sm">
-                    No college approvals found for filter "{statusFilter}".
-                  </td>
-                </tr>
+                <PageEmptyState
+                  isTableRow
+                  colSpan={5}
+                  icon={Clock}
+                  title="No college approvals found"
+                  description={`No college pitch approvals found for filter "${statusFilter}".`}
+                />
               ) : (
                 approvals.map((item) => {
                   const studentName = [item.lead?.firstName, item.lead?.lastName]

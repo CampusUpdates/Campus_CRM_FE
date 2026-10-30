@@ -1,18 +1,43 @@
 import {
   Users,
   CheckCircle2,
+  PhoneCall,
   Clock,
   TrendingUp,
   Building2,
   Headphones,
 } from "lucide-react";
-import type { AdvisorKPIs } from "../../../../services/advisorDashboardService";
+import type { AdvisorKPIs, AdvisorDateFilter } from "../../../../services/advisorDashboardService";
 
 type AdvisorKpiSectionProps = {
   kpis: AdvisorKPIs;
+  filter?: AdvisorDateFilter;
 };
 
-const AdvisorKpiSection = ({ kpis }: AdvisorKpiSectionProps) => {
+/** Returns a human-readable label for the Calls card based on the active period */
+function getCallsCardTitle(filter?: AdvisorDateFilter): string {
+  if (!filter) return "Calls Today";
+  switch (filter.period) {
+    case "today":      return "Calls Today";
+    case "this_week":  return "Calls This Week";
+    case "this_month": return "Calls This Month";
+    case "custom":     return "Calls in Period";
+    default:           return "Calls Today";
+  }
+}
+
+/** Returns a human-readable subtext for the Calls card */
+function getCallsCardSubtext(filter?: AdvisorDateFilter): string {
+  if (!filter || filter.period === "today") return "Daily Telephony Output";
+  if (filter.period === "this_week")  return "Weekly Telephony Output";
+  if (filter.period === "this_month") return "Monthly Telephony Output";
+  if (filter.period === "custom" && filter.startDate && filter.endDate) {
+    return `${filter.startDate} → ${filter.endDate}`;
+  }
+  return "Telephony Output";
+}
+
+const AdvisorKpiSection = ({ kpis, filter }: AdvisorKpiSectionProps) => {
   const cards = [
     {
       title: "My Total Leads",
@@ -27,6 +52,13 @@ const AdvisorKpiSection = ({ kpis }: AdvisorKpiSectionProps) => {
       subtext: `${kpis.conversionRate}% Conversion Rate`,
       icon: CheckCircle2,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    },
+    {
+      title: getCallsCardTitle(filter),
+      value: (kpis.callsTodayCount ?? 0).toLocaleString(),
+      subtext: getCallsCardSubtext(filter),
+      icon: PhoneCall,
+      color: "text-cyan-600 bg-cyan-50 border-cyan-200",
     },
     {
       title: "Applications In Progress",
@@ -59,28 +91,28 @@ const AdvisorKpiSection = ({ kpis }: AdvisorKpiSectionProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
           <div
             key={idx}
-            className="rounded-2xl border border-border bg-surface p-5 shadow-2xs hover:shadow-md transition-shadow space-y-3"
+            className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md transition-shadow space-y-2.5 sm:space-y-3 w-full min-w-0 flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold text-text-secondary uppercase tracking-normal sm:tracking-wider truncate">
                 {card.title}
               </span>
-              <div className={`p-2 rounded-xl border ${card.color}`}>
-                <Icon size={18} />
+              <div className={`p-1.5 sm:p-2 rounded-xl border shrink-0 ${card.color}`}>
+                <Icon size={16} />
               </div>
             </div>
 
             <div>
-              <p className="text-2xl font-bold text-text-primary tracking-tight">
+              <p className="text-xl sm:text-2xl font-semibold sm:font-bold text-text-primary tracking-tight">
                 {card.value}
               </p>
-              <p className="text-xs text-text-muted mt-1 font-medium">
+              <p className="text-[10px] sm:text-xs text-text-muted mt-0.5 sm:mt-1 font-medium truncate">
                 {card.subtext}
               </p>
             </div>

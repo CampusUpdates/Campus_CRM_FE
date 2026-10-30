@@ -20,6 +20,11 @@ import {
 } from "../../../services/teamService";
 import CreateTeamModal from "../components/CreateTeamModal";
 import DeleteTeamDrawer from "../components/DeleteTeamDrawer";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const TeamsPage = () => {
   const navigate = useNavigate();
@@ -28,6 +33,7 @@ const TeamsPage = () => {
 
   const [teams, setTeams] = useState<TeamItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<TeamItem | null>(null);
@@ -40,11 +46,13 @@ const TeamsPage = () => {
   const loadTeams = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchTeams(accessToken);
       setTeams(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load teams:", err);
+      setError(err.message || "Failed to load teams");
     } finally {
       setLoading(false);
     }
@@ -182,61 +190,25 @@ const TeamsPage = () => {
 
       {/* Teams Card Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs animate-pulse space-y-4"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-neutral-200" />
-                  <div className="space-y-1.5">
-                    <div className="h-4 w-32 rounded bg-neutral-200" />
-                  </div>
-                </div>
-                <div className="h-5 w-16 rounded-full bg-neutral-200" />
-              </div>
-
-              <div className="space-y-2">
-                <div className="h-3.5 w-full rounded bg-neutral-200" />
-                <div className="h-3.5 w-2/3 rounded bg-neutral-200" />
-              </div>
-
-              <div className="rounded-lg border border-border-light bg-neutral-50/60 p-3 space-y-2">
-                <div className="h-2.5 w-14 rounded bg-neutral-200" />
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-full bg-neutral-200" />
-                  <div className="space-y-1 flex-1">
-                    <div className="h-3.5 w-28 rounded bg-neutral-200" />
-                    <div className="h-3 w-36 rounded bg-neutral-200" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-4 w-24 rounded bg-neutral-200" />
-
-              <div className="pt-3 border-t border-border-light flex items-center justify-between">
-                <div className="h-3.5 w-20 rounded bg-neutral-200" />
-                <div className="h-7 w-24 rounded-lg bg-neutral-200" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <PageLoadingState message="Loading teams..." />
+      ) : error ? (
+        <PageErrorState
+          title="Failed to load teams"
+          message={error}
+          onRetry={loadTeams}
+        />
       ) : filteredTeams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface p-12 text-center shadow-xs">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-text-muted">
-            <Shield size={24} />
-          </div>
-          <h3 className="text-base font-semibold text-text-primary">
-            No teams found
-          </h3>
-          <p className="mt-1 max-w-sm text-sm text-text-secondary">
-            {searchTerm
+        <PageEmptyState
+          icon={Shield}
+          title="No teams found"
+          message={
+            searchTerm
               ? "No teams matched your search criteria."
-              : "Create your first team to get started."}
-          </p>
-        </div>
+              : "Create your first team to get started."
+          }
+          actionText={!searchTerm && canManageTeam ? "Create Team" : undefined}
+          onAction={!searchTerm && canManageTeam ? () => setIsCreateModalOpen(true) : undefined}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTeams.map((team) => {

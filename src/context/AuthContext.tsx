@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { getRoleCode, getRoleLabel, type RoleCode } from "../utils/roleUtils";
 
@@ -8,7 +8,9 @@ export interface JwtRawPayload {
   username: string;
   firstName?: string;
   lastName?: string | null;
-  roleId: number;
+  roleId: number | string;
+  roleName?: string;
+  role?: { id: number; name: string };
   teamId?: number | null;
   type?: string;
 }
@@ -31,10 +33,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const parseUserToken = (token: string): User | null => {
   try {
     const raw = jwtDecode<JwtRawPayload>(token);
+    const roleName = raw.roleName || raw.role?.name;
+    const numRoleId = Number(raw.roleId);
     return {
       ...raw,
-      roleCode: getRoleCode(raw.roleId),
-      roleLabel: getRoleLabel(raw.roleId),
+      roleId: numRoleId,
+      roleCode: getRoleCode(numRoleId, roleName),
+      roleLabel: getRoleLabel(numRoleId, roleName),
     };
   } catch {
     return null;
@@ -63,11 +68,22 @@ export const AuthProvider = ({
     setUser(parsedUser);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem("accessToken");
     setAccessToken(null);
     setUser(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [logout]);
 
   const hasRole = (allowedRoles: RoleCode[]): boolean => {
     if (!user) return false;

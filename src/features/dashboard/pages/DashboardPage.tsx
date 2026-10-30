@@ -10,6 +10,7 @@ import {
 import {
   fetchAdvisorDashboardStats,
   type AdvisorDashboardData,
+  type AdvisorDateFilter,
 } from "../../../services/advisorDashboardService";
 import HRChartsSection from "../components/hr/HRChartsSection";
 import HRKpiSection from "../components/hr/HRKpiSection";
@@ -20,6 +21,8 @@ import RecentAdvisorActivity from "../components/advisor/RecentAdvisorActivity";
 import TodayTodosSection from "../components/TodayTodosSection";
 import ManagerDashboardView from "../components/manager/ManagerDashboardView";
 import SuperAdminDashboardView from "../components/superadmin/SuperAdminDashboardView";
+import DateRangeFilter from "../components/advisor/DateRangeFilter";
+import { PageLoadingState, PageErrorState } from "../../../components/common";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -30,26 +33,34 @@ const DashboardPage = () => {
   const [hrData, setHrData] = useState<HRDashboardData | null>(null);
   const [advisorData, setAdvisorData] = useState<AdvisorDashboardData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Date filter state — default to "today"
+  const [advisorFilter, setAdvisorFilter] = useState<AdvisorDateFilter>({ period: "today" });
 
   const loadHRStats = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchHRDashboardStats(accessToken || undefined);
       setHrData(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load HR dashboard stats:", err);
+      setError(err.message || "Failed to load HR dashboard statistics.");
     } finally {
       setLoading(false);
     }
   }, [accessToken]);
 
-  const loadAdvisorStats = useCallback(async () => {
+  const loadAdvisorStats = useCallback(async (filter?: AdvisorDateFilter) => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await fetchAdvisorDashboardStats(accessToken || undefined);
+      const data = await fetchAdvisorDashboardStats(accessToken || undefined, filter);
       setAdvisorData(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load Program Advisor stats:", err);
+      setError(err.message || "Failed to load Program Advisor statistics.");
     } finally {
       setLoading(false);
     }
@@ -63,9 +74,19 @@ const DashboardPage = () => {
       roleCode === "ADVISOR" ||
       roleCode.includes("SALES")
     ) {
-      loadAdvisorStats();
+      loadAdvisorStats(advisorFilter);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleCode, accessToken, loadHRStats, loadAdvisorStats]);
+
+  // Re-fetch when the filter changes (only for advisor role)
+  const handleAdvisorFilterChange = useCallback(
+    (newFilter: AdvisorDateFilter) => {
+      setAdvisorFilter(newFilter);
+      loadAdvisorStats(newFilter);
+    },
+    [loadAdvisorStats],
+  );
 
   // 1. SUPER_ADMIN Dashboard
   if (roleCode === "SUPER_ADMIN") {
@@ -77,34 +98,52 @@ const DashboardPage = () => {
     return <ManagerDashboardView />;
   }
 
-  // 3. HR Dashboard
+  // 3. TEAM_LEAD Dashboard
+  if (roleCode === "TEAM_LEAD" || roleCode === "TEAMLEAD" || roleCode.includes("LEAD")) {
+    return <ManagerDashboardView isTeamLeadView={true} />;
+  }
+
+  // 4. HR Dashboard
   if (roleCode === "HR") {
     return (
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+        <div className="border-b border-border pb-4 sm:pb-5">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">
-              HR Analytics & Workforce Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              Dynamic HR insights, recruitment pipelines, interview results, and employee statistics.
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+                Dashboard
+              </h1>
+              <button
+                onClick={loadHRStats}
+                disabled={loading}
+                title="Refresh dashboard data"
+                aria-label="Refresh dashboard data"
+                className="inline-flex items-center justify-center p-1.5 sm:p-2 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 transition shadow-2xs disabled:opacity-50 shrink-0 cursor-pointer"
+              >
+                <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              HR analytics, workforce metrics, recruitment pipelines, and employee statistics.
             </p>
           </div>
-          <button
-            onClick={loadHRStats}
-            title="Refresh HR metrics"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs flex items-center gap-2 text-xs font-semibold"
-          >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
         </div>
 
         {loading || !hrData ? (
-          <div className="flex items-center justify-center py-16 text-sm text-text-muted">
-            <RefreshCw size={18} className="animate-spin mr-2" />
-            Loading dynamic HR analytics & visualizations...
-          </div>
+          error ? (
+            <PageErrorState
+              title="Unable to load HR dashboard"
+              message={error}
+              onRetry={loadHRStats}
+              minHeight="min-h-[380px]"
+            />
+          ) : (
+            <PageLoadingState
+              message="Loading HR analytics & visualizations..."
+              description="Aggregating workforce metrics, candidate pipelines, and employee statistics"
+              minHeight="min-h-[380px]"
+            />
+          )
         ) : (
           <div className="space-y-8">
             <HRKpiSection kpis={hrData.kpis} />
@@ -131,62 +170,107 @@ const DashboardPage = () => {
     );
   }
 
-  // 4. PROGRAM_ADVISOR / Default Advisor Dashboard
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            Program Advisor Performance Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Dynamic personal performance insights, lead pipeline stages, conversion rates, and TPC logs.
-          </p>
-        </div>
+  // 5. PROGRAM_ADVISOR Dashboard
+  if (
+    roleCode === "PROGRAM_ADVISOR" ||
+    roleCode === "ADVISOR" ||
+    roleCode.includes("ADVISOR") ||
+    roleCode.includes("SALES")
+  ) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="border-b border-border pb-4 sm:pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            {/* Title & Description */}
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+                Dashboard
+              </h1>
+              <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+                Personal performance insights, lead pipeline stages, conversion rates, and call logs.
+              </p>
+            </div>
 
-        <div className="flex items-center gap-3">
+            {/* Action Controls: Open Call Workspace, Date Filter, Refresh */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Desktop: Open Call Workspace */}
+              <button
+                onClick={() => navigate(ROUTES.CALLS)}
+                className="hidden sm:flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 h-9 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer shrink-0"
+              >
+                <PhoneCall size={15} />
+                Open Call Workspace
+              </button>
+
+              {/* Date range filter */}
+              <DateRangeFilter
+                filter={advisorFilter}
+                onChange={handleAdvisorFilterChange}
+                disabled={loading}
+              />
+
+              {/* Refresh button */}
+              <button
+                onClick={() => loadAdvisorStats(advisorFilter)}
+                disabled={loading}
+                title="Refresh dashboard data"
+                aria-label="Refresh dashboard data"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 transition shadow-2xs disabled:opacity-50 shrink-0 cursor-pointer"
+              >
+                <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile: Open Call Workspace (full width below controls) */}
           <button
             onClick={() => navigate(ROUTES.CALLS)}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs"
+            className="flex sm:hidden items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 h-9 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs w-full cursor-pointer mt-2.5"
           >
             <PhoneCall size={15} />
             Open Call Workspace
           </button>
-
-          <button
-            onClick={loadAdvisorStats}
-            title="Refresh advisor dashboard metrics"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
         </div>
-      </div>
 
-      {loading || !advisorData ? (
-        <div className="flex items-center justify-center py-16 text-sm text-text-muted">
-          <RefreshCw size={18} className="animate-spin mr-2" />
-          Loading personal Program Advisor insights...
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <AdvisorKpiSection kpis={advisorData.kpis} />
-          <AdvisorChartsSection data={advisorData} />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2">
-              <RecentAdvisorActivity
-                leads={advisorData.recentLeads}
-                onRefresh={loadAdvisorStats}
-              />
-            </div>
-            <div className="lg:col-span-1">
-              <TodayTodosSection />
+        {loading || !advisorData ? (
+          error ? (
+            <PageErrorState
+              title="Unable to load Advisor insights"
+              message={error}
+              onRetry={() => loadAdvisorStats(advisorFilter)}
+              minHeight="min-h-[380px]"
+            />
+          ) : (
+            <PageLoadingState
+              message="Loading personal Program Advisor insights..."
+              description="Fetching lead allocations, conversions, call stats, and pending follow-ups"
+              minHeight="min-h-[380px]"
+            />
+          )
+        ) : (
+          <div className="space-y-8">
+            <AdvisorKpiSection kpis={advisorData.kpis} filter={advisorFilter} />
+            <AdvisorChartsSection data={advisorData} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2">
+                <RecentAdvisorActivity
+                  leads={advisorData.recentLeads}
+                  onRefresh={() => loadAdvisorStats(advisorFilter)}
+                />
+              </div>
+              <div className="lg:col-span-1">
+                <TodayTodosSection />
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  }
+
+  // Safe Fallback: Default to Team Lead / Manager view for unclassified organizational roles
+  return <ManagerDashboardView isTeamLeadView={true} />;
 };
 
 export default DashboardPage;

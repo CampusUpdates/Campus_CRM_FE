@@ -4,12 +4,10 @@ import {
   Users,
   UserCheck,
   PhoneCall,
-  AlertCircle,
   RefreshCw,
   Calendar,
   ArrowRight,
   TrendingUp,
-  AlertTriangle,
   BarChart2,
   Activity,
   Layers,
@@ -33,7 +31,9 @@ import {
   type ManagerDashboardData,
 } from "../../../../services/managerDashboardService";
 import { ROUTES } from "../../../../app/router/routes";
-import ActivityList from "../ActivityList";
+import { DashboardDropdown, PageLoadingState, PageErrorState } from "../../../../components/common";
+import StudentMetricDrawer from "../StudentMetricDrawer";
+import TeamMemberCallPerformanceTable from "../TeamMemberCallPerformanceTable";
 
 
 // Utility function for relative time string
@@ -72,8 +72,13 @@ function getStatusBadgeStyle(statusName?: string): string {
   return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
 }
 
-const ManagerDashboardView = () => {
-  const { accessToken } = useAuth();
+type ManagerDashboardViewProps = {
+  isTeamLeadView?: boolean;
+};
+
+const ManagerDashboardView = ({ isTeamLeadView }: ManagerDashboardViewProps) => {
+  const { accessToken, user } = useAuth();
+  const isTL = isTeamLeadView || user?.roleCode === "TEAM_LEAD";
 
 
   // Filters State
@@ -97,6 +102,14 @@ const ManagerDashboardView = () => {
   const [data, setData] = useState<ManagerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Right-Side Student Metric Drawer State
+  const [selectedDrawerMetric, setSelectedDrawerMetric] = useState<{
+    metric: string;
+    title: string;
+    description?: string;
+    icon?: React.ReactNode;
+  } | null>(null);
 
   // Compute startDate & endDate strings based on preset
   const getFilterDates = useCallback(() => {
@@ -159,32 +172,25 @@ const ManagerDashboardView = () => {
 
   if (loading && !data) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-12 w-full bg-neutral-200/60 rounded-xl"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-28 bg-neutral-200/60 rounded-xl"></div>
-          ))}
-        </div>
-        <div className="h-72 bg-neutral-200/60 rounded-xl"></div>
-        <div className="h-72 bg-neutral-200/60 rounded-xl"></div>
+      <div className="space-y-6 sm:space-y-8 pb-8">
+        <PageLoadingState
+          message="Loading Manager Dashboard..."
+          description="Gathering team performance, lead pipeline, and assignment metrics"
+          minHeight="min-h-[420px]"
+        />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 rounded-xl border border-rose-200 bg-rose-50 text-center">
-        <AlertCircle size={36} className="text-rose-600 mb-3" />
-        <h3 className="text-base font-semibold text-rose-900">Failed to Load Dashboard</h3>
-        <p className="text-xs text-rose-700 mt-1 max-w-md">{error}</p>
-        <button
-          onClick={loadDashboard}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-medium text-white hover:bg-rose-700 transition"
-        >
-          <RefreshCw size={14} />
-          Retry Request
-        </button>
+      <div className="space-y-6 sm:space-y-8 pb-8">
+        <PageErrorState
+          title="Failed to Load Manager Dashboard"
+          message={error}
+          onRetry={loadDashboard}
+          minHeight="min-h-[380px]"
+        />
       </div>
     );
   }
@@ -195,10 +201,8 @@ const ManagerDashboardView = () => {
     leadsTodayList = [],
     leadPipeline = [],
     memberPerformance = [],
+    advisorPerformance = [],
     tpcOverview,
-    attentionRequired,
-    attendance,
-    recentActivity = [],
   } = data || {};
 
   const isNoTeams = managedTeams.length === 0;
@@ -214,82 +218,91 @@ const ManagerDashboardView = () => {
   const tpcPieData = allTpcStatuses.filter((item) => item.value > 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
+      {/* Dashboard Page Header */}
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+              Dashboard
+            </h1>
+            <button
+              onClick={loadDashboard}
+              disabled={loading}
+              title="Refresh dashboard data"
+              aria-label="Refresh dashboard data"
+              className="inline-flex items-center justify-center p-1.5 sm:p-2 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 transition shadow-2xs disabled:opacity-50 shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+          <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+            {isTL
+              ? "Team Lead overview of assigned program advisors, team performance, and call activity."
+              : "Manager overview of managed teams, member performance, and call activity."}
+          </p>
+        </div>
+      </div>
+
       {/* Dynamic Filters Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-surface shadow-2xs">
-        <div className="flex flex-wrap items-center gap-3 flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border border-border bg-surface shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1">
           {/* Team Filter Dropdown */}
           <div className="flex items-center gap-2">
-            <Shield size={16} className="text-primary-600 shrink-0" />
-            <label className="text-xs font-semibold uppercase text-text-secondary tracking-wider">
-              Team:
-            </label>
-            <select
+            <DashboardDropdown
+              label="Team:"
+              icon={Shield}
               value={selectedTeamId}
-              onChange={(e) => setSelectedTeamId(e.target.value)}
+              onChange={(val) => setSelectedTeamId(val)}
               disabled={loading || isNoTeams}
-              className="h-9 rounded-lg border border-border bg-white dark:bg-neutral-800 px-3 text-xs font-semibold text-neutral-900 dark:text-neutral-100 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 cursor-pointer"
-            >
-              <option value="all" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">
-                All Managed Teams ({managedTeams.length})
-              </option>
-              {managedTeams.map((t) => (
-                <option
-                  key={t.id}
-                  value={t.id.toString()}
-                  className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium"
-                >
-                  {t.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                {
+                  value: "all",
+                  label: `${isTL ? "All Assigned Teams" : "All Managed Teams"} (${managedTeams.length})`,
+                },
+                ...managedTeams.map((t) => ({
+                  value: t.id.toString(),
+                  label: t.name,
+                })),
+              ]}
+              minWidth="180px"
+            />
           </div>
 
           {/* Date Range Preset Selector */}
           <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-primary-600 shrink-0" />
-            <label className="text-xs font-semibold uppercase text-text-secondary tracking-wider">
-              Period:
-            </label>
-            <div className="flex items-center rounded-lg border border-border bg-neutral-100 dark:bg-neutral-800 p-0.5">
-              {(["all", "today", "week", "month", "custom"] as const).map((preset) => (
-                <button
-                  key={preset}
-                  onClick={() => setDateRangePreset(preset)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${dateRangePreset === preset
-                      ? "bg-primary-500 text-white shadow-2xs font-semibold"
-                      : "text-text-secondary hover:text-text-primary"
-                    }`}
-                >
-                  {preset === "all"
-                    ? "All Time"
-                    : preset === "today"
-                      ? "Today"
-                      : preset === "week"
-                        ? "7 Days"
-                        : preset === "month"
-                          ? "This Month"
-                          : "Custom"}
-                </button>
-              ))}
-            </div>
+            <DashboardDropdown
+              label="Period:"
+              icon={Calendar}
+              value={dateRangePreset}
+              onChange={(val) => setDateRangePreset(val as "all" | "today" | "week" | "month" | "custom")}
+              disabled={loading}
+              options={[
+                { value: "all", label: "All Time" },
+                { value: "today", label: "Today" },
+                { value: "week", label: "7 Days" },
+                { value: "month", label: "This Month" },
+                { value: "custom", label: "Custom" },
+              ]}
+              minWidth="140px"
+            />
           </div>
 
           {/* Custom Date Inputs */}
           {dateRangePreset === "custom" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-150">
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="h-8 rounded-md border border-border bg-white dark:bg-neutral-800 px-2 text-xs text-neutral-900 dark:text-neutral-100 font-medium"
+                className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
               />
-              <span className="text-xs text-text-muted">to</span>
+              <span className="text-xs text-text-muted font-medium">to</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="h-8 rounded-md border border-border bg-white dark:bg-neutral-800 px-2 text-xs text-neutral-900 dark:text-neutral-100 font-medium"
+                className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
               />
             </div>
           )}
@@ -299,9 +312,9 @@ const ManagerDashboardView = () => {
         <button
           onClick={loadDashboard}
           disabled={loading}
-          className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-neutral-50 hover:text-text-primary transition shadow-2xs disabled:opacity-50 shrink-0"
+          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 h-9 text-xs font-semibold text-text-primary hover:bg-surface-hover hover:border-neutral-300 dark:hover:border-slate-600 transition shadow-xs disabled:opacity-50 shrink-0 cursor-pointer"
         >
-          <RefreshCw size={14} className={loading ? "animate-spin text-primary-600" : ""} />
+          <RefreshCw size={14} className={loading ? "animate-spin text-primary-600" : "text-primary-600"} />
           Refresh
         </button>
       </div>
@@ -327,115 +340,263 @@ const ManagerDashboardView = () => {
       ) : (
         <>
           {/* TOP SECTION — OVERVIEW / STAT CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
 
             {/* 1. Leads Today Card */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "LEADS_TODAY",
+                  title: "Leads Today",
+                  description: "Leads created/posted today by team members",
+                  icon: <TrendingUp size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "LEADS_TODAY",
+                  title: "Leads Today",
+                  description: "Leads created/posted today by team members",
+                  icon: <TrendingUp size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-blue-600 transition truncate">
                   Leads Today
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <TrendingUp size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <TrendingUp size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-text-primary">
-                {overview?.leadsToday ?? 0}
-              </p>
-              <p className="mt-1 text-[11px] text-text-muted">Leads created/added today</p>
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-text-primary group-hover:text-blue-600 transition">
+                  {overview?.leadsToday ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">Leads created/added today • Click to view records</p>
             </div>
 
             {/* 2. Monthly Conversions Card */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "MONTHLY_CONVERSIONS",
+                  title: "Monthly Conversions",
+                  description: "Admissions completed this month",
+                  icon: <UserCheck size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "MONTHLY_CONVERSIONS",
+                  title: "Monthly Conversions",
+                  description: "Admissions completed this month",
+                  icon: <UserCheck size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-emerald-600 transition truncate">
                   Monthly Conversions
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <UserCheck size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <UserCheck size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-emerald-700">
-                {overview?.monthlyConversions ?? 0}
-              </p>
-              <p className="mt-1 text-[11px] text-text-muted">Admissions done this month</p>
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-emerald-700">
+                  {overview?.monthlyConversions ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">Admissions done this month • Click to view records</p>
             </div>
 
             {/* 3. Today's Applications Card */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "TODAYS_APPLICATIONS",
+                  title: "Today's Applications",
+                  description: "Applications pitched today",
+                  icon: <Activity size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "TODAYS_APPLICATIONS",
+                  title: "Today's Applications",
+                  description: "Applications pitched today",
+                  icon: <Activity size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-amber-600 transition truncate">
                   Today's Applications
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Activity size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <Activity size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-text-primary">
-                {overview?.todaysApplications ?? 0}
-              </p>
-              <p className="mt-1 text-[11px] text-text-muted">Pitched applications today</p>
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-text-primary group-hover:text-amber-600 transition">
+                  {overview?.todaysApplications ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-amber-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">Pitched applications today • Click to view records</p>
             </div>
 
             {/* 4. Ongoing Processes Card */}
-            <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "ONGOING_PROCESSES",
+                  title: "Ongoing Processes",
+                  description: "Leads in application to pre-admission stage",
+                  icon: <Layers size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "ONGOING_PROCESSES",
+                  title: "Ongoing Processes",
+                  description: "Leads in application to pre-admission stage",
+                  icon: <Layers size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-purple-600 transition truncate">
                   Ongoing Processes
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <Layers size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <Layers size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-purple-700">
-                {overview?.ongoingProcesses ?? 0}
-              </p>
-              <p className="mt-1 text-[11px] text-text-muted">Leads in application to pre-admission stage</p>
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-purple-700">
+                  {overview?.ongoingProcesses ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-purple-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">Leads in application to pre-admission stage • Click to view records</p>
             </div>
 
             {/* 5. LETTER OUT — LAST DATE TODAY */}
-            <Link
-              to={`${ROUTES.LEADS}?status=LETTER_OUT&date=today`}
-              className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition group cursor-pointer block"
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "LETTER_OUT_TODAY",
+                  title: "Letter Out — Last Date Today",
+                  description: "Leads whose letter-out deadline is today",
+                  icon: <FileText size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "LETTER_OUT_TODAY",
+                  title: "Letter Out — Last Date Today",
+                  description: "Leads whose letter-out deadline is today",
+                  icon: <FileText size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary group-hover:text-primary-600 transition">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-pink-600 transition truncate">
                   Letter Out — Last Date Today
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center">
-                  <FileText size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-pink-50 text-pink-600 group-hover:bg-pink-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <FileText size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-pink-700">
-                {overview?.letterOutToday ?? 0}
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-pink-700">
+                  {overview?.letterOutToday ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-pink-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
+                Leads whose letter-out deadline is today • Click to view records
               </p>
-              <p className="mt-1 text-[11px] text-text-muted flex items-center gap-1">
-                <span>Leads whose letter-out deadline is today</span>
-                <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition -translate-x-1 group-hover:translate-x-0 text-pink-600 shrink-0" />
-              </p>
-            </Link>
+            </div>
 
             {/* 6. INTERVIEW SCHEDULED — TODAY */}
-            <Link
-              to={`${ROUTES.LEADS}?status=INTERVIEW_SCHEDULED&date=today`}
-              className="rounded-xl border border-border bg-surface p-5 shadow-2xs hover:shadow-xs transition group cursor-pointer block"
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setSelectedDrawerMetric({
+                  metric: "INTERVIEW_SCHEDULED_TODAY",
+                  title: "Interview Scheduled — Today",
+                  description: "Leads with an interview scheduled today",
+                  icon: <Calendar size={20} />,
+                })
+              }
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") &&
+                setSelectedDrawerMetric({
+                  metric: "INTERVIEW_SCHEDULED_TODAY",
+                  title: "Interview Scheduled — Today",
+                  description: "Leads with an interview scheduled today",
+                  icon: <Calendar size={20} />,
+                })
+              }
+              className="group cursor-pointer rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary group-hover:text-primary-600 transition">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-orange-600 transition truncate">
                   Interview Scheduled — Today
                 </p>
-                <div className="h-9 w-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
-                  <Calendar size={18} />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-orange-50 text-orange-600 group-hover:bg-orange-600 group-hover:text-white flex items-center justify-center transition shrink-0">
+                  <Calendar size={16} />
                 </div>
               </div>
-              <p className="mt-3 text-3xl font-bold text-orange-700">
-                {overview?.interviewScheduledToday ?? 0}
+              <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+                <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-orange-700">
+                  {overview?.interviewScheduledToday ?? 0}
+                </p>
+                <span className="text-[11px] sm:text-xs font-semibold text-orange-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                  View Students <ArrowRight size={12} className="-translate-x-1 group-hover:translate-x-0 transition" />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
+                Leads with an interview scheduled today • Click to view records
               </p>
-              <p className="mt-1 text-[11px] text-text-muted flex items-center gap-1">
-                <span>Leads with an interview scheduled today</span>
-                <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition -translate-x-1 group-hover:translate-x-0 text-orange-600 shrink-0" />
-              </p>
-            </Link>
+            </div>
 
           </div>
 
@@ -453,8 +614,8 @@ const ManagerDashboardView = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full min-w-[650px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
                     <th className="px-6 py-3.5">Lead Name</th>
@@ -542,27 +703,18 @@ const ManagerDashboardView = () => {
 
                 <div className="flex items-center gap-3 flex-wrap">
                   {/* Period Filter for Lead Pipeline */}
-                  <div className="flex items-center rounded-lg border border-border bg-neutral-100 dark:bg-neutral-800 p-0.5">
-                    {(["today", "week", "month", "all"] as const).map((period) => (
-                      <button
-                        key={period}
-                        onClick={() => setPipelinePeriod(period)}
-                        disabled={pipelineLoading}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${pipelinePeriod === period
-                            ? "bg-primary-500 text-white shadow-2xs font-semibold"
-                            : "text-text-secondary hover:text-text-primary"
-                          }`}
-                      >
-                        {period === "today"
-                          ? "Today"
-                          : period === "week"
-                            ? "This Week"
-                            : period === "month"
-                              ? "This Month"
-                              : "All Time"}
-                      </button>
-                    ))}
-                  </div>
+                  <DashboardDropdown
+                    value={pipelinePeriod}
+                    onChange={(val) => setPipelinePeriod(val as "today" | "week" | "month" | "all")}
+                    disabled={pipelineLoading}
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This Week" },
+                      { value: "month", label: "This Month" },
+                      { value: "all", label: "All Time" },
+                    ]}
+                    minWidth="120px"
+                  />
 
                   <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium bg-neutral-50 dark:bg-neutral-800/60 px-2.5 py-1 rounded-md border border-border">
                     <BarChart2 size={16} className="text-primary-600" />
@@ -636,18 +788,19 @@ const ManagerDashboardView = () => {
               <div className="flex items-center justify-between border-b border-border pb-4 gap-2">
                 <h2 className="text-base font-bold text-text-primary">TPC Status Distribution</h2>
                 <div className="flex items-center gap-2">
-                  <PhoneCall size={16} className="text-purple-600 shrink-0" />
-                  <select
+                  <DashboardDropdown
+                    icon={PhoneCall}
                     value={tpcPeriod}
-                    onChange={(e) => setTpcPeriod(e.target.value as "today" | "week" | "month" | "all")}
+                    onChange={(val) => setTpcPeriod(val as "today" | "week" | "month" | "all")}
                     disabled={tpcLoading}
-                    className="h-8 rounded-lg border border-border bg-white dark:bg-neutral-800 px-2 text-xs font-semibold text-neutral-900 dark:text-neutral-100 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 cursor-pointer shadow-2xs"
-                  >
-                    <option value="today" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">Today</option>
-                    <option value="week" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">This Week</option>
-                    <option value="month" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">This Month</option>
-                    <option value="all" className="text-neutral-900 bg-white dark:text-neutral-100 dark:bg-neutral-800 font-medium">All Time</option>
-                  </select>
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This Week" },
+                      { value: "month", label: "This Month" },
+                      { value: "all", label: "All Time" },
+                    ]}
+                    minWidth="120px"
+                  />
                 </div>
               </div>
 
@@ -707,6 +860,9 @@ const ManagerDashboardView = () => {
             </div>
           </div>
 
+          {/* TEAM MEMBER CALL PERFORMANCE SECTION */}
+          <TeamMemberCallPerformanceTable data={advisorPerformance} />
+
           {/* SECTION 4 & 5 — MEMBER PERFORMANCE & DISTRIBUTION TABLE */}
           <div className="rounded-xl border border-border bg-surface shadow-2xs overflow-hidden">
             <div className="border-b border-border px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -720,21 +876,20 @@ const ManagerDashboardView = () => {
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Single Period Filter Dropdown */}
                 <div className="flex items-center gap-2">
-                  <label htmlFor="member-period-select" className="text-xs font-semibold text-text-secondary">
-                    Period:
-                  </label>
-                  <select
+                  <DashboardDropdown
+                    label="Period:"
                     id="member-period-select"
                     value={memberPeriod}
-                    onChange={(e) => setMemberPeriod(e.target.value as "today" | "week" | "month" | "all")}
+                    onChange={(val) => setMemberPeriod(val as "today" | "week" | "month" | "all")}
                     disabled={memberLoading || loading}
-                    className="h-8 rounded-lg border border-border bg-white dark:bg-neutral-800 px-3 text-xs font-semibold text-neutral-900 dark:text-neutral-100 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 cursor-pointer shadow-2xs"
-                  >
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="all">All Time</option>
-                  </select>
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This Week" },
+                      { value: "month", label: "This Month" },
+                      { value: "all", label: "All Time" },
+                    ]}
+                    minWidth="125px"
+                  />
                 </div>
 
                 <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
@@ -743,7 +898,7 @@ const ManagerDashboardView = () => {
               </div>
             </div>
 
-            <div className="relative overflow-x-auto min-h-[160px]">
+            <div className="relative overflow-x-auto custom-scrollbar min-h-[160px]">
               {(memberLoading || loading) && (
                 <div className="absolute inset-0 bg-surface/70 backdrop-blur-[1px] z-10 flex items-center justify-center">
                   <div className="flex items-center gap-2 text-xs font-semibold text-primary-600 bg-surface px-3 py-1.5 rounded-md border border-border shadow-xs">
@@ -753,7 +908,7 @@ const ManagerDashboardView = () => {
                 </div>
               )}
 
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[700px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider text-[11px]">
                     <th className="px-6 py-3.5">Member</th>
@@ -824,181 +979,20 @@ const ManagerDashboardView = () => {
             </div>
           </div>
 
-          {/* SECTION 7 & 8 — ATTENTION REQUIRED & TODAY'S ATTENDANCE */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* SECTION 8 — ATTENTION REQUIRED CARDS */}
-            <div className="lg:col-span-2 rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <div>
-                  <h2 className="text-base font-bold text-text-primary">Attention Required</h2>
-                  <p className="text-xs text-text-secondary mt-0.5">
-                    Real database records requiring managerial follow-up.
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md">
-                  <AlertTriangle size={15} />
-                  <span>
-                    {(attentionRequired?.uncontactedLeadsCount || 0) +
-                      (attentionRequired?.pendingTpcsCount || 0) +
-                      (attentionRequired?.pendingPitchesCount || 0) +
-                      (attentionRequired?.inactiveMembersCount || 0)}{" "}
-                    Alerts
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Uncontacted Leads Card */}
-                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                      Uncontacted Leads
-                    </span>
-                    <span className="text-xs font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">
-                      {attentionRequired?.uncontactedLeadsCount || 0}
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-800">Assigned leads with zero logged interactions.</p>
-                  <div className="space-y-1 pt-1">
-                    {(attentionRequired?.uncontactedLeads || []).map((l) => (
-                      <div key={l.id} className="text-xs text-amber-950 flex justify-between font-medium">
-                        <span className="truncate max-w-[140px]">{l.name}</span>
-                        <span className="text-amber-700 text-[11px] truncate">({l.assignedTo})</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link
-                    to={ROUTES.LEADS}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-900 hover:underline"
-                  >
-                    View Leads <ArrowRight size={13} />
-                  </Link>
-                </div>
-
-                {/* Pending TPCs Card */}
-                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-                      Pending TPCs
-                    </span>
-                    <span className="text-xs font-bold bg-indigo-200/80 text-indigo-900 px-2 py-0.5 rounded-full">
-                      {attentionRequired?.pendingTpcsCount || 0}
-                    </span>
-                  </div>
-                  <p className="text-xs text-indigo-800">Telephonic pitch calls awaiting action.</p>
-                  <div className="space-y-1 pt-1">
-                    {(attentionRequired?.pendingTpcs || []).map((t) => (
-                      <div key={t.id} className="text-xs text-indigo-950 flex justify-between font-medium">
-                        <span className="truncate max-w-[140px]">{t.leadName}</span>
-                        <span className="text-indigo-700 text-[11px] truncate">({t.assignedTo})</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link
-                    to={ROUTES.TPC}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-900 hover:underline"
-                  >
-                    View TPCs <ArrowRight size={13} />
-                  </Link>
-                </div>
-
-                {/* Pending Pitches Card */}
-                <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/50 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-purple-900">
-                      Pending College Approvals
-                    </span>
-                    <span className="text-xs font-bold bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full">
-                      {attentionRequired?.pendingPitchesCount || 0}
-                    </span>
-                  </div>
-                  <p className="text-xs text-purple-800">College pitches awaiting manager review.</p>
-                  <div className="space-y-1 pt-1">
-                    {(attentionRequired?.pendingPitches || []).map((p) => (
-                      <div key={p.id} className="text-xs text-purple-950 flex justify-between font-medium">
-                        <span className="truncate max-w-[140px]">{p.leadName}</span>
-                        <span className="text-purple-700 text-[11px] truncate">({p.collegeName})</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link
-                    to={ROUTES.PITCH_APPROVALS}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-purple-900 hover:underline"
-                  >
-                    Review Pitches <ArrowRight size={13} />
-                  </Link>
-                </div>
-
-                {/* Inactive Members Card */}
-                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-rose-900">
-                      Inactive Members (7 Days)
-                    </span>
-                    <span className="text-xs font-bold bg-rose-200/80 text-rose-900 px-2 py-0.5 rounded-full">
-                      {attentionRequired?.inactiveMembersCount || 0}
-                    </span>
-                  </div>
-                  <p className="text-xs text-rose-800">Team members with no logged activity past 7 days.</p>
-                  <div className="space-y-1 pt-1">
-                    {(attentionRequired?.inactiveMembers || []).map((m) => (
-                      <div key={m.id} className="text-xs text-rose-950 flex justify-between font-medium">
-                        <span>{m.name}</span>
-                        <span className="text-rose-700 text-[11px]">No recent log</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 9 — TODAY'S ATTENDANCE SUMMARY */}
-            <div className="lg:col-span-1 rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <div>
-                  <h2 className="text-base font-bold text-text-primary">Today's Attendance</h2>
-                  <p className="text-xs text-text-secondary mt-0.5">Team members' check-in status.</p>
-                </div>
-                <Calendar size={16} className="text-emerald-600" />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 text-emerald-900">
-                  <span className="text-xs font-semibold">Present</span>
-                  <span className="text-base font-bold">{attendance?.present ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-rose-50 text-rose-900">
-                  <span className="text-xs font-semibold">Absent</span>
-                  <span className="text-base font-bold">{attendance?.absent ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 text-amber-900">
-                  <span className="text-xs font-semibold">Half Day</span>
-                  <span className="text-base font-bold">{attendance?.halfDay ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-indigo-50 text-indigo-900">
-                  <span className="text-xs font-semibold">On Leave</span>
-                  <span className="text-base font-bold">{attendance?.leave ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-100 text-neutral-800">
-                  <span className="text-xs font-semibold">Unmarked</span>
-                  <span className="text-base font-bold">{attendance?.unmarked ?? 0}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RECENT TEAM ACTIVITY */}
-          <div>
-            <ActivityList
-              title="Recent Team Activity"
-              subtitle="Real-time activity logs and logged interactions for managed team members"
-              items={recentActivity}
-              onRefresh={loadDashboard}
-              isLoading={loading}
-            />
-          </div>
         </>
       )}
+
+      {/* Right-Side Student Details Drawer */}
+      <StudentMetricDrawer
+        isOpen={Boolean(selectedDrawerMetric)}
+        onClose={() => setSelectedDrawerMetric(null)}
+        metric={selectedDrawerMetric?.metric || null}
+        metricTitle={selectedDrawerMetric?.title || ""}
+        metricDescription={selectedDrawerMetric?.description}
+        metricIcon={selectedDrawerMetric?.icon}
+        token={accessToken}
+        teamId={selectedTeamId}
+      />
     </div>
   );
 };

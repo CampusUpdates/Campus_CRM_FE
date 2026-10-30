@@ -10,6 +10,11 @@ export interface MockCallQueueStudentItem {
   city?: string;
   state?: string;
   createdAt: string;
+  isCompleted?: boolean;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
   upload?: {
     id: string;
     fileName: string;
@@ -26,6 +31,8 @@ export interface MockCallQueueStudentItem {
 export interface MockCallQueueResponse {
   items: MockCallQueueStudentItem[];
   totalAssigned: number;
+  completedCount?: number;
+  initialIndex?: number;
 }
 
 export interface MockCallSession {
@@ -128,6 +135,151 @@ export async function getMockCallStatus(
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.message || "Failed to fetch call status");
+  }
+  return data;
+}
+
+export interface CreateCallOutcomePayload {
+  studentDataId: string;
+  leadId?: string;
+  outcome: string;
+  notes?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationSeconds?: number;
+}
+
+export async function recordCallOutcome(
+  token: string,
+  payload: CreateCallOutcomePayload
+): Promise<any> {
+  const response = await fetch(`${API_URL}/calls/outcome`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to record call outcome");
+  }
+  return data;
+}
+
+export interface CallRecordItem {
+  id: string;
+  studentDataId: string;
+  leadId?: string | null;
+  createdById: string;
+  outcome: string;
+  notes?: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  durationSeconds?: number | null;
+  createdAt: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+  };
+  studentData?: {
+    id: string;
+    firstName: string;
+    lastName?: string | null;
+    phone: string;
+    category?: {
+      id: string;
+      name: string;
+    } | null;
+    upload?: {
+      id: string;
+      fileName: string;
+    } | null;
+  } | null;
+}
+
+export async function fetchCallHistory(
+  token: string,
+  studentDataId: string
+): Promise<CallRecordItem[]> {
+  const response = await fetch(`${API_URL}/calls/history/${studentDataId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch call history");
+  }
+  return data;
+}
+
+export interface CallLogItem {
+  studentDataId: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName?: string | null;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  uploadFileName: string;
+  totalCalls: number;
+  latestCall?: {
+    id: string;
+    outcome: string;
+    notes?: string | null;
+    startedAt?: string | null;
+    endedAt?: string | null;
+    durationSeconds?: number | null;
+    createdAt: string;
+    createdBy?: {
+      id: string;
+      firstName: string;
+      lastName?: string | null;
+    };
+  } | null;
+  isBookmarked: boolean;
+  bookmarkExpiresAt?: string | null;
+}
+
+export interface CallLogsResponse {
+  data: CallLogItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  bookmarkedCount?: number;
+}
+
+export async function fetchCallLogs(
+  token: string,
+  params: { page?: number; limit?: number; search?: string; bookmarkedOnly?: boolean } = {}
+): Promise<CallLogsResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.search) queryParams.append("search", params.search);
+  if (params.bookmarkedOnly) queryParams.append("bookmarkedOnly", "true");
+
+  const response = await fetch(`${API_URL}/calls/logs?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch call logs");
   }
   return data;
 }

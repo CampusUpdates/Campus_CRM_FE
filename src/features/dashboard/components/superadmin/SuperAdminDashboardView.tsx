@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TrendingUp,
@@ -9,12 +9,10 @@ import {
   Database,
   ArrowRight,
   RefreshCw,
-  AlertTriangle,
   Shield,
   Layers,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   Activity,
   FileCheck,
 } from "lucide-react";
@@ -28,12 +26,16 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
+import { getCompactPageNumbers } from "../../../../utils/paginationUtils";
 import { useAuth } from "../../../../context/AuthContext";
 import { ROUTES } from "../../../../app/router/routes";
 import {
   fetchSuperAdminDashboardStats,
   type SuperAdminDashboardData,
 } from "../../../../services/superAdminDashboardService";
+import StudentMetricDrawer from "../StudentMetricDrawer";
+import TeamMemberCallPerformanceTable from "../TeamMemberCallPerformanceTable";
+import { PageLoadingState, PageErrorState } from "../../../../components/common";
 
 function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return "Not Available";
@@ -49,6 +51,18 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function isTodayDate(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 const SuperAdminDashboardView = () => {
   const navigate = useNavigate();
   const { accessToken } = useAuth();
@@ -57,53 +71,98 @@ const SuperAdminDashboardView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityPage, setActivityPage] = useState(1);
+
+  // Right-Side Student Details Drawer State
+  const [selectedDrawerMetric, setSelectedDrawerMetric] = useState<{
+    metric: string;
+    title: string;
+    description?: string;
+    icon?: React.ReactNode;
+  } | null>(null);
   const ACTIVITY_PAGE_SIZE = 5;
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (isSilent = false) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
       const res = await fetchSuperAdminDashboardStats(accessToken);
       setData(res);
     } catch (err: any) {
       console.error("Failed to load Super Admin dashboard:", err);
-      setError(err.message || "Failed to load dashboard metrics");
+      if (!isSilent) setError(err.message || "Failed to load dashboard metrics");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [accessToken]);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(false);
+    const timer = setInterval(() => {
+      loadDashboard(true);
+    }, 5000);
+    return () => clearInterval(timer);
   }, [loadDashboard]);
+
+  // Dynamic Retained stage calculation for Lead Pipeline Stages chart: Retained = Admission Done - Cancelled
+  // Declared at top level above any early returns to satisfy React Rules of Hooks
+  const chartPipeline = useMemo(() => {
+    const leadPipeline = data?.leadPipeline || [];
+    if (!leadPipeline || leadPipeline.length === 0) return [];
+
+    const admissionDoneStage = leadPipeline.find(
+      (s) =>
+        s.name?.toUpperCase() === "ADMISSION_DONE" ||
+        s.name?.toUpperCase() === "ADMISSION DONE" ||
+        s.name?.toUpperCase() === "ADMISSION"
+    );
+    const cancelledStage = leadPipeline.find(
+      (s) =>
+        s.name?.toUpperCase() === "CANCELLED" ||
+        s.name?.toUpperCase() === "CANCELED"
+    );
+
+    const admissionDoneCount = admissionDoneStage?.count || 0;
+    const cancelledCount = cancelledStage?.count || 0;
+    const retainedCount = Math.max(0, admissionDoneCount - cancelledCount);
+
+    const totalLeads = leadPipeline.reduce((sum, s) => sum + (s.count || 0), 0);
+    const percentage = totalLeads > 0 ? Math.round((retainedCount / totalLeads) * 100) : 0;
+
+    const retainedStage = {
+      id: "retained" as any,
+      name: "Retained",
+      color: "#0D9488",
+      description: "Admissions retained after cancellations",
+      count: retainedCount,
+      percentage,
+    };
+
+    return [...leadPipeline, retainedStage];
+  }, [data?.leadPipeline]);
+
 
   if (loading && !data) {
     return (
-      <div className="space-y-6 animate-pulse p-2">
-        <div className="h-28 w-full bg-neutral-200/60 rounded-2xl"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 bg-neutral-200/60 rounded-2xl"></div>
-          ))}
-        </div>
-        <div className="h-72 bg-neutral-200/60 rounded-2xl"></div>
+      <div className="space-y-6 sm:space-y-8 pb-8">
+        <PageLoadingState
+          message="Loading Super Admin Dashboard..."
+          description="Gathering live metrics across leads, calls, attendance, and admissions"
+          minHeight="min-h-[420px]"
+        />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 rounded-2xl border border-rose-200 bg-rose-50 text-center">
-        <AlertTriangle size={36} className="text-rose-600 mb-3" />
-        <h3 className="text-base font-bold text-rose-900">Failed to Load Super Admin Dashboard</h3>
-        <p className="text-xs text-rose-700 mt-1 max-w-md">{error}</p>
-        <button
-          onClick={loadDashboard}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
-        >
-          <RefreshCw size={14} /> Retry Loading
-        </button>
+      <div className="space-y-6 sm:space-y-8 pb-8">
+        <PageErrorState
+          title="Failed to Load Super Admin Dashboard"
+          message={error}
+          onRetry={() => loadDashboard()}
+          minHeight="min-h-[380px]"
+        />
       </div>
     );
   }
@@ -123,22 +182,23 @@ const SuperAdminDashboardView = () => {
       selectionLettersTodayCount: 0,
       admissionsDueTodayCount: 0,
       availableDataCount: 0,
+      dataUploadedTodayCount: 0,
       expiredDataCount: 0,
       activeAssignmentsCount: 0,
     },
     dailyTeamReport = [],
     advisorPerformance = [],
     leadPipeline = [],
-
-    attentionRequired = {
-      admissionsDueTodayCount: 0,
-      overdueAdmissionsCount: 0,
-      pendingTpcsCount: 0,
-      unassignedDataCount: 0,
-      zeroCallAdvisorsCount: 0,
-    },
+    interviewsList = [],
     recentActivity = [],
   } = data || {};
+
+  // Strictly filter interviewsList to only students with interviews scheduled for today's calendar date
+  const todaysInterviewsList = interviewsList.filter((i) => isTodayDate(i.interviewTime));
+  const todaysInterviewsCount = todaysInterviewsList.length || kpis.interviewsTodayCount || 0;
+  const todaysSchCount = todaysInterviewsList.filter((i) => i.status === "SCHEDULED").length;
+  const todaysDoneCount = todaysInterviewsList.filter((i) => i.status === "COMPLETED" || i.result === "PASSED" || i.result === "FAILED").length;
+  const todaysPendCount = todaysInterviewsList.filter((i) => i.result === "PENDING" || i.status === "PENDING").length;
 
   const totalActivityPages = Math.ceil(recentActivity.length / ACTIVITY_PAGE_SIZE) || 1;
   const currentActivityPage = Math.min(activityPage, totalActivityPages);
@@ -165,57 +225,73 @@ const SuperAdminDashboardView = () => {
   };
 
   return (
-    <div className="space-y-8 pb-8">
-      {/* Super Admin Top Control & Sync Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-primary-200 bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 text-white shadow-lg">
+    <div className="space-y-6 sm:space-y-8 pb-8">
+      {/* Dashboard Page Header */}
+      <div className="border-b border-border pb-4 sm:pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <Shield className="text-primary-300" size={24} />
-            <h2 className="text-xl font-bold tracking-tight">Super Admin Executive Dashboard</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+              Dashboard
+            </h1>
+            <button
+              onClick={() => loadDashboard()}
+              disabled={loading}
+              title="Refresh dashboard data"
+              aria-label="Refresh dashboard data"
+              className="inline-flex items-center justify-center p-1.5 sm:p-2 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 transition shadow-2xs disabled:opacity-50 shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
-          <p className="text-xs text-primary-200 mt-1 max-w-xl">
-            Live interactive entry point to all CRM records. Click any metric or table row to drill down into source CRM records.
+          <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+            Overview of team performance, metrics, call activity, and lead status.
           </p>
         </div>
-
-        <button
-          onClick={loadDashboard}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 text-xs font-semibold text-white border border-white/20 transition shadow-sm self-start sm:self-auto"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Refresh Dashboard Data
-        </button>
       </div>
 
       {/* 1. TOP INTERACTIVE KPI CARDS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
 
         {/* 1. LEADS TODAY KPI CARD */}
         <div
-          onClick={() => navigate(`${ROUTES.LEADS}?date=today`)}
+          onClick={() =>
+            setSelectedDrawerMetric({
+              metric: "LEADS_TODAY",
+              title: "Leads Today",
+              description: "All leads created today across the CRM",
+              icon: <TrendingUp size={20} />,
+            })
+          }
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}?date=today`)}
-          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-5 shadow-2xs hover:shadow-md hover:border-primary-400 transition-all duration-200"
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") &&
+            setSelectedDrawerMetric({
+              metric: "LEADS_TODAY",
+              title: "Leads Today",
+              description: "All leads created today across the CRM",
+              icon: <TrendingUp size={20} />,
+            })
+          }
+          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary truncate">
               Leads Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition">
-              <TrendingUp size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center group-hover:text-white transition shrink-0">
+              <TrendingUp size={16} />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <p className="text-3xl font-bold text-text-primary group-hover:text-primary-600 transition">
+          <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-text-primary group-hover:text-primary-600 transition">
               {kpis.leadsTodayCount}
             </p>
-            <span className="text-xs font-semibold text-primary-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              View Leads <ChevronRight size={14} />
+            <span className="text-[11px] sm:text-xs font-semibold text-primary-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+              View Students <ChevronRight size={14} />
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-text-muted">
+          <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
             Created today • Click to view records
           </p>
         </div>
@@ -225,64 +301,66 @@ const SuperAdminDashboardView = () => {
           onClick={() => navigate(`${ROUTES.CALLS}?date=today`)}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.CALLS}?date=today`)}
-          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-5 shadow-2xs hover:shadow-md hover:border-emerald-400 transition-all duration-200"
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") && navigate(`${ROUTES.CALLS}?date=today`)
+          }
+          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary truncate">
               Calls Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition">
-              <PhoneCall size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition shrink-0">
+              <PhoneCall size={16} />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <p className="text-3xl font-bold text-emerald-700">
+          <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-emerald-700">
               {kpis.callsTodayCount}
             </p>
-            <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+            <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
               View Calls <ChevronRight size={14} />
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-text-muted">
+          <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
             Persisted call & interaction logs today
           </p>
         </div>
 
         {/* 3. ATTENDANCE TODAY KPI CARD */}
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-indigo-400 transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:border-indigo-400 transition-all duration-200 w-full min-w-0 flex flex-col justify-between space-y-2.5 sm:space-y-3">
           <div
             onClick={() => navigate(`${ROUTES.ATTENDANCE}?date=today`)}
-            className="flex items-center justify-between cursor-pointer group"
+            className="flex items-center justify-between cursor-pointer group gap-2"
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary truncate">
               Attendance Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition">
-              <UserCheck size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition shrink-0">
+              <UserCheck size={16} />
             </div>
           </div>
 
           <div
             onClick={() => navigate(`${ROUTES.ATTENDANCE}?date=today`)}
-            className="cursor-pointer group flex items-baseline justify-between"
+            className="cursor-pointer group flex items-baseline justify-between gap-2"
           >
-            <p className="text-3xl font-bold text-indigo-700">
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-indigo-700">
               {kpis.attendancePresent} / {kpis.attendanceTotal}
             </p>
-            <span className="text-[11px] text-text-muted group-hover:text-indigo-600 font-semibold transition">
+            <span className="text-[10px] sm:text-[11px] text-text-muted group-hover:text-indigo-600 font-semibold transition shrink-0">
               Click total →
             </span>
           </div>
 
           {/* Sub-values Drill-Down */}
-          <div className="flex items-center justify-between gap-1 pt-2 border-t border-border text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-border text-xs">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 navigate(`${ROUTES.ATTENDANCE}?date=today&status=PRESENT`);
               }}
-              className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-emerald-100 transition shrink-0 cursor-pointer"
               title="Filter today's Present employees"
             >
               Present: {kpis.attendancePresent}
@@ -293,7 +371,7 @@ const SuperAdminDashboardView = () => {
                 e.stopPropagation();
                 navigate(`${ROUTES.ATTENDANCE}?date=today&status=ABSENT`);
               }}
-              className="px-2 py-1 rounded-md bg-rose-50 text-rose-800 border border-rose-200 font-bold hover:bg-rose-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-rose-50 text-rose-800 border border-rose-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-rose-100 transition shrink-0 cursor-pointer"
               title="Filter today's Absent employees"
             >
               Absent: {kpis.attendanceAbsent}
@@ -304,7 +382,7 @@ const SuperAdminDashboardView = () => {
                 e.stopPropagation();
                 navigate(`${ROUTES.ATTENDANCE}?date=today&status=LEAVE`);
               }}
-              className="px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold hover:bg-amber-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-amber-100 transition shrink-0 cursor-pointer"
               title="Filter today's Leave employees"
             >
               Leave: {kpis.attendanceLeave}
@@ -313,329 +391,343 @@ const SuperAdminDashboardView = () => {
         </div>
 
         {/* 4. INTERVIEWS TODAY KPI CARD */}
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-purple-400 transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between space-y-2.5 sm:space-y-3">
           <div
-            onClick={() => navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today`)}
-            className="flex items-center justify-between cursor-pointer group"
+            onClick={() =>
+              setSelectedDrawerMetric({
+                metric: "INTERVIEWS_TODAY",
+                title: "Interviews Scheduled — Today",
+                description: "Students with interview scheduled for today",
+                icon: <CalendarCheck size={20} />,
+              })
+            }
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") &&
+              setSelectedDrawerMetric({
+                metric: "INTERVIEWS_TODAY",
+                title: "Interviews Scheduled — Today",
+                description: "Students with interview scheduled for today",
+                icon: <CalendarCheck size={20} />,
+              })
+            }
+            className="flex items-center justify-between cursor-pointer group gap-2"
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-purple-600 transition truncate">
               Interviews Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition">
-              <CalendarCheck size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition shrink-0">
+              <CalendarCheck size={16} />
             </div>
           </div>
 
           <div
-            onClick={() => navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today`)}
-            className="cursor-pointer group flex items-baseline justify-between"
+            onClick={() =>
+              setSelectedDrawerMetric({
+                metric: "INTERVIEWS_TODAY",
+                title: "Interviews Scheduled — Today",
+                description: "Students with interview scheduled for today",
+                icon: <CalendarCheck size={20} />,
+              })
+            }
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") &&
+              setSelectedDrawerMetric({
+                metric: "INTERVIEWS_TODAY",
+                title: "Interviews Scheduled — Today",
+                description: "Students with interview scheduled for today",
+                icon: <CalendarCheck size={20} />,
+              })
+            }
+            className="cursor-pointer group flex items-baseline justify-between gap-2"
           >
-            <p className="text-3xl font-bold text-purple-700">
-              {kpis.interviewsTodayCount}
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-purple-700">
+              {todaysInterviewsCount}
             </p>
-            <span className="text-[11px] text-text-muted group-hover:text-purple-600 font-semibold transition">
-              Click total →
+            <span className="text-[10px] sm:text-[11px] text-purple-600 font-semibold transition flex items-center gap-1 shrink-0">
+              View Students <ChevronRight size={14} />
             </span>
           </div>
 
           {/* Sub-values Drill-Down */}
-          <div className="flex items-center justify-between gap-1 pt-2 border-t border-border text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-border text-xs">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=SCHEDULED`);
+                setSelectedDrawerMetric({
+                  metric: "INTERVIEWS_TODAY",
+                  title: "Scheduled Interviews — Today",
+                  description: "Interviews scheduled for today",
+                  icon: <CalendarCheck size={20} />,
+                });
               }}
-              className="px-2 py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 font-bold hover:bg-purple-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-purple-100 transition cursor-pointer shrink-0"
+              title="Open scheduled interviews drawer"
             >
-              Sch: {kpis.interviewsScheduledCount}
+              Sch: {todaysSchCount}
             </button>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=COMPLETED`);
+                setSelectedDrawerMetric({
+                  metric: "INTERVIEWS_TODAY",
+                  title: "Completed Interviews — Today",
+                  description: "Interviews completed today",
+                  icon: <CalendarCheck size={20} />,
+                });
               }}
-              className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-emerald-100 transition cursor-pointer shrink-0"
+              title="Open completed interviews drawer"
             >
-              Done: {kpis.interviewsCompletedCount}
+              Done: {todaysDoneCount}
             </button>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`${ROUTES.RECRUITMENT}?tab=interviews&date=today&status=PENDING`);
+                setSelectedDrawerMetric({
+                  metric: "INTERVIEWS_TODAY",
+                  title: "Pending Interviews — Today",
+                  description: "Pending interview decisions today",
+                  icon: <CalendarCheck size={20} />,
+                });
               }}
-              className="px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold hover:bg-amber-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] sm:text-[11px] font-semibold sm:font-bold hover:bg-amber-100 transition cursor-pointer shrink-0"
+              title="Open pending interviews drawer"
             >
-              Pend: {kpis.interviewsPendingCount}
+              Pend: {todaysPendCount}
             </button>
           </div>
         </div>
 
         {/* 5. SELECTION LETTERS TODAY CARD */}
         <div
-          onClick={() => navigate(`${ROUTES.LEADS}?status=LETTER_OUT&date=today`)}
+          onClick={() =>
+            setSelectedDrawerMetric({
+              metric: "SELECTION_LETTERS_TODAY",
+              title: "Selection Letters Today",
+              description: "Selection letters issued today",
+              icon: <FileCheck size={20} />,
+            })
+          }
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}?status=LETTER_OUT&date=today`)}
-          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-5 shadow-2xs hover:shadow-md hover:border-amber-400 transition-all duration-200"
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") &&
+            setSelectedDrawerMetric({
+              metric: "SELECTION_LETTERS_TODAY",
+              title: "Selection Letters Today",
+              description: "Selection letters issued today",
+              icon: <FileCheck size={20} />,
+            })
+          }
+          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-amber-600 transition truncate">
               Selection Letters Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition">
-              <FileCheck size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition shrink-0">
+              <FileCheck size={16} />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <p className="text-3xl font-bold text-amber-700">
+          <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-amber-700">
               {kpis.selectionLettersTodayCount}
             </p>
-            <span className="text-xs font-semibold text-amber-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              View Letters <ChevronRight size={14} />
+            <span className="text-[11px] sm:text-xs font-semibold text-amber-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+              View Students <ChevronRight size={14} />
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-text-muted">
-            Selection letters issued today
+          <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
+            Selection letters issued today • Click to view records
           </p>
         </div>
 
         {/* 6. ADMISSIONS DUE TODAY CARD */}
         <div
-          onClick={() => navigate(`${ROUTES.LEADS}?admissionDueDate=today`)}
+          onClick={() =>
+            setSelectedDrawerMetric({
+              metric: "ADMISSIONS_DUE_TODAY",
+              title: "Admissions Due Today",
+              description: "Leads with admission attention due today",
+              icon: <Clock size={20} />,
+            })
+          }
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}?admissionDueDate=today`)}
-          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-5 shadow-2xs hover:shadow-md hover:border-rose-400 transition-all duration-200"
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") &&
+            setSelectedDrawerMetric({
+              metric: "ADMISSIONS_DUE_TODAY",
+              title: "Admissions Due Today",
+              description: "Leads with admission attention due today",
+              icon: <Clock size={20} />,
+            })
+          }
+          className="group relative cursor-pointer rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-rose-600 transition truncate">
               Admissions Due Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition">
-              <Clock size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition shrink-0">
+              <Clock size={16} />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <p className="text-3xl font-bold text-rose-700">
+          <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-rose-700">
               {kpis.admissionsDueTodayCount}
             </p>
-            <span className="text-xs font-semibold text-rose-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              View Admissions <ChevronRight size={14} />
+            <span className="text-[11px] sm:text-xs font-semibold text-rose-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+              View Students <ChevronRight size={14} />
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-text-muted">
-            Leads needing attention today
+          <p className="mt-1 text-[10px] sm:text-[11px] text-text-muted leading-tight">
+            Leads needing attention today • Click to view records
           </p>
         </div>
 
-        {/* 7. AVAILABLE DATA DATASETS CARD */}
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-2xs space-y-3 hover:border-cyan-400 transition-all duration-200">
+        {/* 7. DATA UPLOADED TODAY CARD */}
+        <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs hover:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-500/50 transition-all duration-200 w-full min-w-0 flex flex-col justify-between space-y-2.5 sm:space-y-3">
           <div
-            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
-            className="flex items-center justify-between cursor-pointer group"
+            onClick={() =>
+              setSelectedDrawerMetric({
+                metric: "DATA_UPLOADED_TODAY",
+                title: "Data Uploaded Today",
+                description: "Raw student data records uploaded today",
+                icon: <Database size={20} />,
+              })
+            }
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") &&
+              setSelectedDrawerMetric({
+                metric: "DATA_UPLOADED_TODAY",
+                title: "Data Uploaded Today",
+                description: "Raw student data records uploaded today",
+                icon: <Database size={20} />,
+              })
+            }
+            className="flex items-center justify-between cursor-pointer group gap-2"
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-              Available Data
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-text-secondary group-hover:text-cyan-600 transition truncate">
+              Data Uploaded Today
             </p>
-            <div className="h-9 w-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition">
-              <Database size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition shrink-0">
+              <Database size={16} />
             </div>
           </div>
 
           <div
-            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
-            className="cursor-pointer group flex items-baseline justify-between"
+            onClick={() =>
+              setSelectedDrawerMetric({
+                metric: "DATA_UPLOADED_TODAY",
+                title: "Data Uploaded Today",
+                description: "Raw student data records uploaded today",
+                icon: <Database size={20} />,
+              })
+            }
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") &&
+              setSelectedDrawerMetric({
+                metric: "DATA_UPLOADED_TODAY",
+                title: "Data Uploaded Today",
+                description: "Raw student data records uploaded today",
+                icon: <Database size={20} />,
+              })
+            }
+            className="cursor-pointer group flex items-baseline justify-between gap-2"
           >
-            <p className="text-3xl font-bold text-cyan-700">
-              {kpis.availableDataCount}
+            <p className="text-xl sm:text-3xl font-semibold sm:font-bold text-cyan-700">
+              {kpis.dataUploadedTodayCount ?? 0}
             </p>
-            <span className="text-[11px] text-text-muted group-hover:text-cyan-600 font-semibold transition">
-              Data Workspace →
+            <span className="text-[10px] sm:text-[11px] text-text-muted group-hover:text-cyan-600 font-semibold transition shrink-0">
+              View Students →
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-1 pt-2 border-t border-border text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-border text-xs">
             <button
-              onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=EXPIRED`)}
-              className="px-2 py-1 rounded-md bg-neutral-100 text-text-secondary hover:bg-neutral-200 font-semibold transition"
+              onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-neutral-100 text-text-secondary hover:bg-neutral-200 text-[10px] sm:text-[11px] font-semibold transition cursor-pointer shrink-0"
             >
-              Expired: {kpis.expiredDataCount}
+              Available: {kpis.availableDataCount}
             </button>
             <button
               onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=ACTIVE`)}
-              className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 transition"
+              className="px-2 py-0.5 sm:py-1 rounded-md bg-emerald-50 text-emerald-800 text-[10px] sm:text-[11px] font-semibold hover:bg-emerald-100 transition cursor-pointer shrink-0"
             >
               Active: {kpis.activeAssignmentsCount}
             </button>
           </div>
         </div>
 
-        {/* 8. QUICK LINK TO ALL LEADS PIPELINE CARD */}
+        {/* 8. LEADS TODAY OVERVIEW CARD */}
         <div
-          onClick={() => navigate(`${ROUTES.LEADS}`)}
+          onClick={() => navigate(`${ROUTES.LEADS}?date=today`)}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}`)}
-          className="group cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-neutral-50 to-primary-50/30 p-5 shadow-2xs hover:shadow-md hover:border-primary-300 transition-all duration-200 flex flex-col justify-between"
+          onKeyDown={(e) => e.key === "Enter" && navigate(`${ROUTES.LEADS}?date=today`)}
+          className="group cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-neutral-50 to-primary-50/30 dark:from-neutral-900 dark:to-primary-950/30 p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-primary-300 transition-all duration-200 flex flex-col justify-between w-full min-w-0"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary-900">
-              All CRM Leads
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] sm:text-xs font-semibold sm:font-bold uppercase tracking-normal sm:tracking-wider text-primary-900 dark:text-primary-300 truncate">
+              Leads Today Overview
             </p>
-            <div className="h-9 w-9 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition">
-              <Layers size={18} />
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-primary-100 text-primary-700 dark:bg-primary-900/60 dark:text-primary-300 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition shrink-0">
+              <Layers size={16} />
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-sm font-semibold text-text-primary">
-              Full Master Lead Pipeline
+          <div className="mt-2 min-w-0">
+            <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">
+              Today's Lead Pipeline ({kpis.leadsTodayCount})
             </p>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Access all student leads, status stages, & filter options
+            <p className="text-[10px] sm:text-xs text-text-secondary mt-0.5 leading-snug">
+              Access student leads created or updated today
             </p>
           </div>
-          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary-700 group-hover:translate-x-1 transition-transform">
-            Open Leads Module <ArrowRight size={14} />
+          <div className="mt-2.5 sm:mt-3 inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold sm:font-bold text-primary-700 dark:text-primary-400 group-hover:translate-x-1 transition-transform">
+            Open Today's Leads <ArrowRight size={14} />
           </div>
         </div>
       </div>
 
-      {/* 2. ATTENTION REQUIRED ALERTS SECTION */}
-      <div className="rounded-2xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div>
-            <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-              <AlertTriangle className="text-rose-600" size={20} />
-              Attention Required
-            </h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Operational bottlenecks requiring executive attention.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1 rounded-lg">
-            System Alerts Active
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-
-          {/* Alert 1: Admissions Due Today */}
-          <div
-            onClick={() => navigate(`${ROUTES.LEADS}?admissionDueDate=today`)}
-            className="cursor-pointer p-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100/60 transition group space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-900">🔴 Admissions Due</span>
-              <span className="text-xs font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
-                {attentionRequired.admissionsDueTodayCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-rose-800">Due today for follow-up</p>
-            <span className="text-[11px] font-bold text-rose-900 flex items-center gap-1 pt-1 group-hover:underline">
-              Inspect →
-            </span>
-          </div>
-
-          {/* Alert 2: Overdue Admissions */}
-          <div
-            onClick={() => navigate(`${ROUTES.LEADS}?admissionOverdue=true`)}
-            className="cursor-pointer p-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100/60 transition group space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-900">🔴 Overdue</span>
-              <span className="text-xs font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
-                {attentionRequired.overdueAdmissionsCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-rose-800">Passed admission date</p>
-            <span className="text-[11px] font-bold text-rose-900 flex items-center gap-1 pt-1 group-hover:underline">
-              Inspect →
-            </span>
-          </div>
-
-          {/* Alert 3: Pending TPCs */}
-          <div
-            onClick={() => navigate(`${ROUTES.TPC}?status=PENDING`)}
-            className="cursor-pointer p-4 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/60 transition group space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-900">🟠 Pending TPCs</span>
-              <span className="text-xs font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
-                {attentionRequired.pendingTpcsCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-amber-800">Telephonic pitch calls</p>
-            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1 pt-1 group-hover:underline">
-              Inspect →
-            </span>
-          </div>
-
-          {/* Alert 4: Unassigned Data Records */}
-          <div
-            onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?status=AVAILABLE`)}
-            className="cursor-pointer p-4 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/60 transition group space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-900">🟠 Unassigned Data</span>
-              <span className="text-xs font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
-                {attentionRequired.unassignedDataCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-amber-800">Available data pool</p>
-            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1 pt-1 group-hover:underline">
-              Inspect →
-            </span>
-          </div>
-
-          {/* Alert 5: Advisors with Zero Calls Today */}
-          <div
-            onClick={() => navigate(`${ROUTES.USERS}?noCallsToday=true`)}
-            className="cursor-pointer p-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100/60 transition group space-y-1"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-900">🔴 Zero Calls</span>
-              <span className="text-xs font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
-                {attentionRequired.zeroCallAdvisorsCount}
-              </span>
-            </div>
-            <p className="text-[11px] text-rose-800">Advisors with no calls today</p>
-            <span className="text-[11px] font-bold text-rose-900 flex items-center gap-1 pt-1 group-hover:underline">
-              Inspect →
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. DAILY TEAM REPORT SECTION */}
+      {/* 2. DAILY TEAM REPORT SECTION */}
       <div className="rounded-2xl border border-border bg-surface shadow-2xs overflow-hidden">
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+        <div className="border-b border-border px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div>
             <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-              <Shield className="text-primary-600" size={18} />
-              Daily Team Report
+              <Shield className="text-primary-600 shrink-0" size={18} />
+              <span>Daily Team Report</span>
             </h2>
             <p className="text-xs text-text-secondary mt-0.5">
               Click team row for Team Details workspace. Click individual cell numbers to drill down into records.
             </p>
           </div>
-          <span className="text-xs font-semibold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg">
+          <span className="text-xs font-semibold text-primary-700 bg-primary-50 dark:bg-primary-950/50 dark:text-primary-300 px-3 py-1 rounded-lg shrink-0 self-start sm:self-auto">
             {dailyTeamReport.length} Active Team(s)
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto custom-scrollbar w-full">
+          <table className="w-full min-w-[680px] text-left text-xs">
             <thead>
-              <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
-                <th className="px-6 py-3.5">Team</th>
-                <th className="px-6 py-3.5">Manager</th>
-                <th className="px-6 py-3.5">Members</th>
-                <th className="px-6 py-3.5">Leads Today</th>
-                <th className="px-6 py-3.5">Calls Today</th>
-                <th className="px-6 py-3.5">Admissions</th>
-                <th className="px-6 py-3.5 text-right">Attendance Today</th>
+              <tr className="border-b border-border bg-neutral-50/80 dark:bg-slate-800/60 text-text-secondary font-semibold uppercase tracking-wider text-[11px]">
+                <th className="px-4 sm:px-6 py-3.5">Team</th>
+                <th className="px-4 sm:px-6 py-3.5">Manager</th>
+                <th className="px-4 sm:px-6 py-3.5">Members</th>
+                <th className="px-4 sm:px-6 py-3.5">Leads Today</th>
+                <th className="px-4 sm:px-6 py-3.5">Calls Today</th>
+                <th className="px-4 sm:px-6 py-3.5">Admissions</th>
+                <th className="px-4 sm:px-6 py-3.5 text-right">Attendance Today</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -650,62 +742,70 @@ const SuperAdminDashboardView = () => {
                   <tr
                     key={team.teamId}
                     onClick={() => navigate(`/teams/${team.teamId}`)}
-                    className="hover:bg-neutral-50/80 transition cursor-pointer group"
+                    className="hover:bg-neutral-50/80 dark:hover:bg-slate-800/40 transition cursor-pointer"
                   >
-                    <td className="px-6 py-4 font-bold text-text-primary group-hover:text-primary-600 transition flex items-center gap-1.5">
-                      {team.teamName}
-                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition" />
+                    <td className="px-4 sm:px-6 py-4 font-bold text-text-primary">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/teams/${team.teamId}`)}
+                        className="hover:text-primary-600 hover:underline text-left block truncate max-w-[170px]"
+                        title={team.teamName}
+                      >
+                        {team.teamName}
+                      </button>
                     </td>
-                    <td className="px-6 py-4 text-text-secondary font-medium">
-                      {team.managerName}
+                    <td className="px-4 sm:px-6 py-4 text-text-secondary font-medium">
+                      <span className="block truncate max-w-[140px]" title={team.managerName}>
+                        {team.managerName}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-text-primary">
+                    <td className="px-4 sm:px-6 py-4 font-semibold text-text-primary">
                       {team.membersCount}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`${ROUTES.LEADS}?teamId=${team.teamId}&date=today`);
                         }}
-                        className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-800 font-bold hover:bg-blue-100 hover:underline transition"
+                        className="px-2.5 py-1 rounded-md font-bold hover:underline transition"
                       >
                         {team.leadsTodayCount}
                       </button>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`${ROUTES.CALLS}?teamId=${team.teamId}&date=today`);
                         }}
-                        className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 font-bold hover:bg-emerald-100 hover:underline transition"
+                        className="px-2.5 py-1 rounded-md font-bold hover:underline transition"
                       >
                         {team.callsTodayCount}
                       </button>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`${ROUTES.LEADS}?teamId=${team.teamId}&status=ADMISSION_DONE&date=today`);
                         }}
-                        className="px-2.5 py-1 rounded-md bg-purple-50 text-purple-800 font-bold hover:bg-purple-100 hover:underline transition"
+                        className="px-2.5 py-1 rounded-md font-bold hover:underline transition text-text-primary"
                       >
                         {team.admissionsTodayCount}
                       </button>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 sm:px-6 py-4 text-right">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`${ROUTES.ATTENDANCE}?teamId=${team.teamId}&date=today`);
                         }}
-                        className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-800 font-bold hover:bg-indigo-100 hover:underline transition"
+                        className="px-2.5 py-1 rounded-md font-bold hover:underline transition text-text-primary"
                       >
                         {team.attendancePresentCount} / {team.attendanceTotalCount}
                       </button>
@@ -718,119 +818,27 @@ const SuperAdminDashboardView = () => {
         </div>
       </div>
 
-      {/* 4. PROGRAM ADVISOR PERFORMANCE SECTION */}
-      <div className="rounded-2xl border border-border bg-surface shadow-2xs overflow-hidden">
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-              <UserCheck className="text-emerald-600" size={18} />
-              Program Advisor Performance
-            </h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Click advisor name to inspect user profile context. Click individual metrics to view filtered records.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
-            {advisorPerformance.length} Advisor(s)
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
-                <th className="px-6 py-3.5">Advisor</th>
-                <th className="px-6 py-3.5">Team</th>
-                <th className="px-6 py-3.5">Assigned Data</th>
-                <th className="px-6 py-3.5">Calls Today</th>
-                <th className="px-6 py-3.5">Leads Today</th>
-                <th className="px-6 py-3.5 text-right">Admissions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {advisorPerformance.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted">
-                    No active program advisors found.
-                  </td>
-                </tr>
-              ) : (
-                advisorPerformance.map((adv) => (
-                  <tr key={adv.userId} className="hover:bg-neutral-50/80 transition">
-                    <td className="px-6 py-4 font-bold text-text-primary">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.USERS}?search=${encodeURIComponent(adv.advisorName)}`)}
-                        className="hover:text-primary-600 hover:underline text-left"
-                      >
-                        {adv.advisorName}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary font-medium">
-                      {adv.teamName}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.DATA_ASSIGNMENT}?assignedTo=${adv.userId}`)}
-                        className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 font-bold hover:bg-cyan-100 hover:underline transition"
-                      >
-                        {adv.assignedDataCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.CALLS}?advisorId=${adv.userId}&date=today`)}
-                        className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold hover:bg-emerald-100 hover:underline transition"
-                      >
-                        {adv.callsCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.LEADS}?assignedToId=${adv.userId}`)}
-                        className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold hover:bg-blue-100 hover:underline transition"
-                      >
-                        {adv.leadsCount}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`${ROUTES.LEADS}?assignedToId=${adv.userId}&status=ADMISSION_DONE`)}
-                        className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold hover:bg-purple-100 hover:underline transition"
-                      >
-                        {adv.admissionsCount}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* 4. TEAM MEMBER CALL PERFORMANCE SECTION */}
+      <TeamMemberCallPerformanceTable data={advisorPerformance} />
 
       {/* 5. LEAD PIPELINE STAGE BREAKDOWN */}
-      <div className="rounded-2xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-4">
+      <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 gap-2 sm:gap-4">
           <div>
             <h2 className="text-base font-bold text-text-primary">Lead Pipeline Stages</h2>
             <p className="text-xs text-text-secondary mt-0.5">
               Click any pipeline stage segment to inspect filtered leads in the Lead Management module.
             </p>
           </div>
-          <span className="text-xs font-semibold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg">
+          <span className="text-xs font-semibold text-primary-700 bg-primary-50 dark:bg-primary-950/50 dark:text-primary-300 px-3 py-1 rounded-lg shrink-0 self-start sm:self-auto">
             Dynamic LeadStatus Config
           </span>
         </div>
 
-        {leadPipeline.length > 0 && (
-          <div className="h-60 w-full pt-2">
+        {chartPipeline.length > 0 && (
+          <div className="h-56 sm:h-64 w-full pt-2 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leadPipeline} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+              <BarChart data={chartPipeline} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip
@@ -840,10 +848,14 @@ const SuperAdminDashboardView = () => {
                 <Bar
                   dataKey="count"
                   radius={[4, 4, 0, 0]}
-                  onClick={(entry) => navigate(`${ROUTES.LEADS}?status=${entry.name}`)}
+                  onClick={(entry) => {
+                    if (entry?.name && entry.name !== "Retained") {
+                      navigate(`${ROUTES.LEADS}?status=${entry.name}`);
+                    }
+                  }}
                   className="cursor-pointer"
                 >
-                  {leadPipeline.map((entry, index) => (
+                  {chartPipeline.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color || "#6366F1"} />
                   ))}
                 </Bar>
@@ -852,14 +864,14 @@ const SuperAdminDashboardView = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3 pt-2">
           {leadPipeline.map((stage) => (
             <div
               key={stage.id}
               onClick={() => navigate(`${ROUTES.LEADS}?status=${stage.name}`)}
-              className="cursor-pointer p-3.5 rounded-xl border border-border bg-neutral-50/50 hover:bg-neutral-100 transition space-y-2 group"
+              className="cursor-pointer p-3 sm:p-3.5 rounded-xl border border-border bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 transition space-y-2 group min-w-0"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: stage.color || "#6366F1" }}
@@ -868,8 +880,8 @@ const SuperAdminDashboardView = () => {
                   {stage.name}
                 </span>
               </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-xl font-bold text-text-primary">{stage.count}</span>
+              <div className="flex items-baseline justify-between gap-1">
+                <span className="text-lg sm:text-xl font-bold text-text-primary">{stage.count}</span>
                 <span className="text-[11px] font-semibold text-text-muted">{stage.percentage}%</span>
               </div>
             </div>
@@ -878,18 +890,18 @@ const SuperAdminDashboardView = () => {
       </div>
 
       {/* 6. RECENT ACTIVITY LOG SECTION */}
-      <div className="rounded-2xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-4">
+      <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 gap-2 sm:gap-4">
           <div>
             <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-              <Activity className="text-primary-600" size={18} />
-              Recent System Activity Log
+              <Activity className="text-primary-600 shrink-0" size={18} />
+              <span>Recent System Activity Log</span>
             </h2>
             <p className="text-xs text-text-secondary mt-0.5">
               Click activity log rows to navigate directly to the target record.
             </p>
           </div>
-          <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-3 py-1 rounded-lg">
+          <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 px-3 py-1 rounded-lg shrink-0 self-start sm:self-auto">
             Real ActivityLog Entries
           </span>
         </div>
@@ -938,42 +950,69 @@ const SuperAdminDashboardView = () => {
               <span className="font-semibold text-text-primary">{recentActivity.length}</span> entries
             </div>
 
-            <div className="flex items-center gap-1.5 self-center sm:self-auto">
+            <div className="flex items-center gap-1 sm:gap-1.5 self-center sm:self-auto flex-wrap justify-center">
               <button
                 type="button"
                 disabled={currentActivityPage <= 1}
                 onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Previous page"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
 
-              {Array.from({ length: totalActivityPages }, (_, idx) => idx + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  onClick={() => setActivityPage(pageNum)}
-                  className={`flex h-8 min-w-[2rem] items-center justify-center px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${pageNum === currentActivityPage
+              {getCompactPageNumbers(currentActivityPage, totalActivityPages).map((page, idx) => {
+                if (page === "...") {
+                  return (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-1 text-xs text-text-muted font-bold select-none"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                const pageNum = page as number;
+                const isActive = pageNum === currentActivityPage;
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setActivityPage(pageNum)}
+                    className={`flex h-7 min-w-[28px] sm:h-7.5 sm:min-w-[30px] px-1.5 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${isActive
                       ? "bg-primary-600 text-white shadow-xs"
                       : "border border-border text-text-secondary hover:bg-surface-hover"
-                    }`}
-                >
-                  {pageNum}
-                </button>
-              ))}
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
 
               <button
                 type="button"
                 disabled={currentActivityPage >= totalActivityPages}
                 onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex h-7 w-7 sm:h-7.5 sm:w-7.5 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-hover transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Next page"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Right-Side Student Details Drawer */}
+      <StudentMetricDrawer
+        isOpen={Boolean(selectedDrawerMetric)}
+        onClose={() => setSelectedDrawerMetric(null)}
+        metric={selectedDrawerMetric?.metric || null}
+        metricTitle={selectedDrawerMetric?.title || ""}
+        metricDescription={selectedDrawerMetric?.description}
+        metricIcon={selectedDrawerMetric?.icon}
+        token={accessToken}
+      />
     </div>
   );
 };

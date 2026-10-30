@@ -5,7 +5,6 @@ import {
   Shield,
   PhoneCall,
   RefreshCw,
-  AlertCircle,
   Search,
   Users,
   Trophy,
@@ -38,6 +37,12 @@ import {
   type ManagerDashboardData,
 } from "../../../services/managerDashboardService";
 import { ROUTES } from "../../../app/router/routes";
+import {
+  DashboardDropdown,
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 type PeriodOption = "daily" | "weekly" | "monthly" | "yearly" | "all_time";
 
@@ -108,31 +113,16 @@ const TeamDetailsPage = () => {
   }, [loadTeamData]);
 
   if (loading && !team) {
-    return (
-      <div className="space-y-6 animate-pulse p-6">
-        <div className="h-10 w-48 bg-neutral-200 rounded-lg"></div>
-        <div className="h-32 w-full bg-neutral-200 rounded-xl"></div>
-        <div className="h-64 w-full bg-neutral-200 rounded-xl"></div>
-      </div>
-    );
+    return <PageLoadingState message="Loading team details..." />;
   }
 
   if (error || !team) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 rounded-xl border border-rose-200 bg-rose-50 text-center">
-        <AlertCircle size={36} className="text-rose-600 mb-3" />
-        <h3 className="text-base font-semibold text-rose-900">Team Workspace Error</h3>
-        <p className="text-xs text-rose-700 mt-1 max-w-md">
-          {error || "Team not found or access forbidden."}
-        </p>
-        <button
-          onClick={() => navigate(ROUTES.TEAMS)}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-medium text-white hover:bg-rose-700 transition"
-        >
-          <ArrowLeft size={14} />
-          Back to Teams
-        </button>
-      </div>
+      <PageErrorState
+        title="Team Workspace Error"
+        message={error || "Team not found or access forbidden."}
+        onRetry={loadTeamData}
+      />
     );
   }
 
@@ -351,27 +341,21 @@ const TeamDetailsPage = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <label
-                htmlFor="period-select"
-                className="text-xs font-semibold text-text-secondary flex items-center gap-1.5"
-              >
-                <Calendar size={14} className="text-primary-600" />
-                Period:
-              </label>
-              <select
+              <DashboardDropdown
+                label="Period:"
+                icon={Calendar}
                 id="period-select"
                 value={selectedPeriod}
-                onChange={(e) =>
-                  setSelectedPeriod(e.target.value as PeriodOption)
-                }
-                className="h-9 rounded-lg border border-border bg-surface px-3 text-xs font-semibold text-text-primary outline-none focus:border-primary-500 shadow-2xs transition"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-                <option value="all_time">All Time</option>
-              </select>
+                onChange={(val) => setSelectedPeriod(val as PeriodOption)}
+                options={[
+                  { value: "daily", label: "Daily" },
+                  { value: "weekly", label: "Weekly" },
+                  { value: "monthly", label: "Monthly" },
+                  { value: "yearly", label: "Yearly" },
+                  { value: "all_time", label: "All Time" },
+                ]}
+                minWidth="130px"
+              />
             </div>
           </div>
 
@@ -851,14 +835,12 @@ const TeamDetailsPage = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredMembers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-8 text-center text-text-muted"
-                    >
-                      No members match your search criteria.
-                    </td>
-                  </tr>
+                  <PageEmptyState
+                    isTableRow
+                    colSpan={4}
+                    title="No members found"
+                    message="No members match your search criteria."
+                  />
                 ) : (
                   filteredMembers.map((m) => (
                     <tr

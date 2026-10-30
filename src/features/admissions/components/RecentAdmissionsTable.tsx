@@ -1,6 +1,7 @@
 import React from "react";
-import { UserCheck, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { UserCheck, ChevronLeft, ChevronRight, Eye, GraduationCap } from "lucide-react";
 import type { RecentAdmissionRecord } from "../../../services/admissionsDashboardService";
+import { SectionLoadingState, PageEmptyState } from "../../../components/common";
 
 interface RecentAdmissionsTableProps {
   data: RecentAdmissionRecord[];
@@ -21,10 +22,6 @@ export const RecentAdmissionsTable: React.FC<RecentAdmissionsTableProps> = ({
   onSelectAdmission,
   loading,
 }) => {
-  if (loading) {
-    return <div className="h-80 rounded-xl border border-border bg-surface p-5 animate-pulse" />;
-  }
-
   return (
     <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
@@ -59,12 +56,21 @@ export const RecentAdmissionsTable: React.FC<RecentAdmissionsTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-xs text-text-muted">
-                  No recent admission records found matching current filters.
-                </td>
-              </tr>
+            {loading ? (
+              <SectionLoadingState
+                isTableRow
+                colSpan={8}
+                message="Loading recent admissions..."
+                description="Retrieving confirmed student rosters and enrollment records"
+              />
+            ) : data.length === 0 ? (
+              <PageEmptyState
+                isTableRow
+                colSpan={8}
+                icon={GraduationCap}
+                title="No recent admission records found"
+                description="No admissions match your selected date or college filters."
+              />
             ) : (
               data.map((row) => (
                 <tr

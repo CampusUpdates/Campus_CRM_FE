@@ -48,21 +48,21 @@ const TPCModal = ({ lead, onClose, onSuccess }: TPCModalProps) => {
         className={`
           fixed right-0 top-0
           h-[100dvh]
-          w-[42vw]
-          min-w-[420px] max-w-[550px]
+          w-full sm:w-[480px] md:w-[42vw] md:min-w-[420px] md:max-w-[550px]
+          max-w-full
           bg-surface
           shadow-2xl border-l border-border
-          flex flex-col
+          flex flex-col z-[101]
           ${isClosing ? "animate-slide-out-right" : "animate-slide-in-right"}
         `}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
-          <div>
-            <h2 className="text-xl font-semibold text-text-primary">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary truncate">
               Assign Third Party Calling (TPC)
             </h2>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-secondary leading-snug">
               {lead
                 ? `Assign TPC calls for ${lead.firstName} to team members.`
                 : "Select a lead and assign TPC calls to team members."}
@@ -73,7 +73,7 @@ const TPCModal = ({ lead, onClose, onSuccess }: TPCModalProps) => {
             type="button"
             onClick={handleClose}
             className="
-              rounded-lg p-2 text-text-secondary transition
+              shrink-0 rounded-lg p-1.5 sm:p-2 text-text-secondary transition
               hover:bg-neutral-100 hover:text-text-primary
             "
           >
@@ -82,7 +82,7 @@ const TPCModal = ({ lead, onClose, onSuccess }: TPCModalProps) => {
         </div>
 
         {/* Scrollable Form */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           <TPCForm lead={lead} onSuccess={handleSuccess} />
         </div>
       </div>

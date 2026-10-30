@@ -10,6 +10,7 @@ import {
   type LeadStatusItem,
   type UpdateLeadPipelinePayload,
 } from "../../../services/leadService";
+import { getFieldValidationClass } from "../../../utils/formValidation";
 
 type LeadPipelineDrawerProps = {
   lead: LeadItem;
@@ -92,6 +93,38 @@ const LeadPipelineDrawer = ({
 
   // APPLICATION fields
   const [applicationId, setApplicationId] = useState("");
+  const [applicationIdTouched, setApplicationIdTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleApplicationIdKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key.length > 1 ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.altKey
+    ) {
+      return;
+    }
+    if (!/^[A-Za-z0-9_-]$/.test(e.key)) {
+      e.preventDefault();
+      setApplicationIdTouched(true);
+    }
+  };
+
+  const getApplicationIdError = (val: string, isTouchedOrSubmitted: boolean): string | null => {
+    if (!isTouchedOrSubmitted && val.length === 0) return null;
+    const trimmed = val.trim();
+    if (!trimmed) {
+      return "Application ID is required.";
+    }
+    if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) {
+      return "Application ID can contain only letters, numbers, hyphens (-), and underscores (_).";
+    }
+    return null;
+  };
+
+  const isAppIdTouchedOrSubmitted = applicationIdTouched || submitted;
+  const appIdError = getApplicationIdError(applicationId, isAppIdTouchedOrSubmitted);
 
   // INTERVIEW_SCHEDULED fields
   const [interviewDate, setInterviewDate] = useState("");
@@ -164,13 +197,23 @@ const LeadPipelineDrawer = ({
     }
   };
 
+  const currentYear = new Date().getFullYear();
+  const minPaymentDate = `${currentYear}-01-01`;
+  const maxPaymentDate = `${currentYear}-12-31`;
+
+  const isPaymentDateValid = () => {
+    if (!paymentDate) return true; // defaults to current date if left empty
+    const year = parseInt(paymentDate.split("-")[0], 10);
+    return year === currentYear;
+  };
+
   // Basic frontend validation for enabling primary submit button
   const isValid = () => {
     if (!selectedCollegeId) return false;
 
     switch (statusName) {
       case "APPLICATION":
-        return applicationId.trim().length > 0;
+        return applicationId.trim().length > 0 && /^[A-Za-z0-9_-]+$/.test(applicationId.trim());
       case "INTERVIEW_SCHEDULED":
         return interviewDate.length > 0;
       case "INTERVIEW_DONE":
@@ -178,7 +221,7 @@ const LeadPipelineDrawer = ({
       case "LETTER_OUT":
         return letterIssuedDate.length > 0 && admissionLastDate.length > 0;
       case "ADMISSION_DONE":
-        return Boolean(admissionAmount) && Number(admissionAmount) > 0;
+        return Boolean(admissionAmount) && Number(admissionAmount) > 0 && isPaymentDateValid();
       case "CANCELLED":
         return cancellationReason.trim().length > 0;
       default:
@@ -188,6 +231,10 @@ const LeadPipelineDrawer = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
+    if (statusName === "APPLICATION") {
+      setApplicationIdTouched(true);
+    }
     if (!accessToken) return;
     if (!isValid()) return;
 
@@ -198,6 +245,14 @@ const LeadPipelineDrawer = ({
       statusId: targetStatus.id,
       collegeId: selectedCollegeId,
     };
+
+    // Include the exact LeadCollege record ID for precise targeting
+    const matchedApp = existingApps.find(
+      (app) => (app.college?.id || app.collegeId) === selectedCollegeId
+    );
+    if (matchedApp) {
+      payload.leadCollegeId = matchedApp.id;
+    }
 
     try {
       if (statusName === "APPLICATION") {
@@ -246,10 +301,15 @@ const LeadPipelineDrawer = ({
       handleClose();
     } catch (err: any) {
       let message = err.message || "Failed to update pipeline status";
-      if (message.includes("already exists for this lead") || message.includes("409")) {
+      const isDuplicateAppError = message.includes("already exists for this lead") || message.includes("409");
+
+      if (isDuplicateAppError) {
         message = "This lead already has an application for this college.";
+      } else {
+        // Only set inline error for other types of errors
+        setErrorMsg(message);
       }
-      setErrorMsg(message);
+
       toast.showToast(message, "error");
     } finally {
       setLoading(false);
@@ -458,14 +518,29 @@ const LeadPipelineDrawer = ({
                   <input
                     type="text"
                     value={applicationId}
-                    onChange={(e) => setApplicationId(e.target.value)}
+                    onChange={(e) => {
+                      setApplicationId(e.target.value);
+                      setApplicationIdTouched(true);
+                    }}
+                    onBlur={() => setApplicationIdTouched(true)}
+                    onKeyDown={handleApplicationIdKeyDown}
                     placeholder="e.g. APP-12345 or REG-987"
                     required
-                    className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100 placeholder:text-text-muted"
+                    className={getFieldValidationClass(
+                      isAppIdTouchedOrSubmitted || applicationId.length > 0,
+                      appIdError,
+                      "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted"
+                    )}
                   />
-                  <p className="mt-1 text-[11px] text-text-muted">
-                    Official registration/application number provided by the college.
-                  </p>
+                  {appIdError ? (
+                    <p className="mt-1.5 text-[11px] font-medium text-rose-500 dark:text-red-400">
+                      {appIdError}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] text-text-muted">
+                      Official registration/application number provided by the college.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -630,10 +705,21 @@ const LeadPipelineDrawer = ({
                       </label>
                       <input
                         type="date"
+                        min={minPaymentDate}
+                        max={maxPaymentDate}
                         value={paymentDate}
                         onChange={(e) => setPaymentDate(e.target.value)}
-                        className="h-11 w-full rounded-lg border border-border bg-surface px-4 text-sm text-text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                        className={`h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none focus:ring-2 transition ${
+                          !isPaymentDateValid()
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950"
+                            : "border-border focus:border-amber-500 focus:ring-amber-100"
+                        }`}
                       />
+                      {!isPaymentDateValid() && (
+                        <p className="mt-1 text-xs text-rose-500 font-medium">
+                          Payment date must be within the current year ({currentYear}).
+                        </p>
+                      )}
                     </div>
 
                     <div>

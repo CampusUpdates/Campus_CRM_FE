@@ -1,11 +1,43 @@
 import { API_URL } from "../config/api";
 import { type LeadItem } from "./leadService";
+import { type UserItem } from "./userService";
 
 export type TPCStatus = "PENDING" | "COMPLETED" | "NO_REPLY" | "NOT_INTERESTED" | "CANCELLED";
 
 export interface AssignTpcPayload {
   leadId: string;
   assignedToIds: string[];
+}
+
+export interface TPCCall {
+  id: string;
+  tpcUserId: string;
+  callerId: string;
+  outcome: string;
+  notes?: string;
+  createdAt: string;
+  caller?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+    username?: string;
+    email?: string;
+    role?: {
+      name: string;
+    };
+  };
+  tpcUser?: {
+    id: string;
+    status: string;
+    assignedTo?: {
+      id: string;
+      firstName: string;
+      lastName?: string;
+      role?: {
+        name: string;
+      };
+    };
+  };
 }
 
 export interface TPCUserItem {
@@ -16,6 +48,7 @@ export interface TPCUserItem {
   completedById?: string;
   assignedAt: string;
   completedAt?: string;
+  attempts: number;
   status: TPCStatus;
   tpc?: {
     id: string;
@@ -47,6 +80,7 @@ export interface TPCUserItem {
     firstName: string;
     lastName?: string;
   };
+  calls?: TPCCall[];
 }
 
 export interface TPCResponse {
@@ -57,6 +91,24 @@ export interface TPCResponse {
   lead?: LeadItem;
   assignments?: TPCUserItem[];
 }
+
+export async function fetchTpcUsers(token: string): Promise<UserItem[]> {
+  const response = await fetch(`${API_URL}/tpc/users`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch TPC users");
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
 
 export async function fetchAllTpcs(token: string): Promise<TPCResponse[]> {
   const response = await fetch(`${API_URL}/tpc`, {
@@ -141,13 +193,20 @@ export async function fetchTpcsForLead(token: string, leadId: string): Promise<T
     return null;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  return JSON.parse(text);
 }
 
 export async function updateTpcAssignmentStatus(
   token: string,
   assignmentId: string,
-  status: TPCStatus
+  status?: TPCStatus,
+  notes?: string,
+  outcome?: string
 ): Promise<TPCUserItem> {
   const response = await fetch(`${API_URL}/tpc/assignment/${assignmentId}/status`, {
     method: "PATCH",
@@ -155,7 +214,7 @@ export async function updateTpcAssignmentStatus(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, notes, outcome }),
   });
 
   const data = await response.json();
@@ -189,4 +248,74 @@ export async function deleteTpcAssignment(
   }
 
   return data;
+}
+export interface GetTpcReportParams {
+  teamId?: string | number;
+  userId?: string;
+  status?: string;
+  period?: string;
+  search?: string;
+}
+
+export interface TpcReportsResponse {
+  counts: {
+    activeLeadsToday: number;
+    tpcAssignedToday: number;
+    tpcCompleted: number;
+    notAssignedTpcs: number;
+  };
+  data: TPCResponse[];
+}
+
+export async function fetchTpcReports(
+  token: string,
+  params: GetTpcReportParams = {}
+): Promise<TpcReportsResponse> {
+  const query = new URLSearchParams();
+  if (params.teamId && params.teamId !== "ALL") query.set("teamId", String(params.teamId));
+  if (params.userId && params.userId !== "ALL") query.set("userId", params.userId);
+  if (params.status && params.status !== "ALL") query.set("status", params.status);
+  if (params.period && params.period !== "ALL") query.set("period", params.period);
+  if (params.search) query.set("search", params.search);
+
+  const qs = query.toString();
+  const url = `${API_URL}/tpc/reports${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to fetch TPC reports");
+  }
+
+  return response.json();
+}
+
+export async function fetchTpcHistory(
+  token: string,
+  leadId?: string,
+  assignmentId?: string
+): Promise<TPCCall[]> {
+  const url = leadId
+    ? `${API_URL}/tpc/history/lead/${leadId}`
+    : `${API_URL}/tpc/history/assignment/${assignmentId}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch TPC activity history");
+  }
+
+  return response.json();
 }

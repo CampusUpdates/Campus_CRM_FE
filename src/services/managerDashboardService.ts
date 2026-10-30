@@ -159,6 +159,16 @@ export interface ManagerDashboardData {
   teamPerformance: TeamPerformanceItem[];
   leadPipeline: LeadPipelineStage[];
   memberPerformance: MemberPerformanceItem[];
+  advisorPerformance?: Array<{
+    userId: string;
+    advisorName: string;
+    teamName: string;
+    teamId?: number | null;
+    assignedDataCount: number;
+    callsCount: number;
+    answeredCallsCount: number;
+    notAnsweredCallsCount: number;
+  }>;
   tpcOverview: {
     byStatus: TpcStatusCounts;
     byMember: TpcMemberItem[];

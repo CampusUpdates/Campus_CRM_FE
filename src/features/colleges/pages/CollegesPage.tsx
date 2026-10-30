@@ -21,6 +21,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
+import { useNotification } from "../../../context/NotificationContext";
 import {
   fetchActiveColleges,
   fetchManagementColleges,
@@ -32,15 +33,26 @@ import CreateCollegeModal from "../components/CreateCollegeModal";
 import CollegeDetailsModal from "../components/CollegeDetailsModal";
 import EditCollegeModal from "../components/EditCollegeModal";
 import DeleteCollegeModal from "../components/DeleteCollegeModal";
+import {
+  PageLoadingState,
+  PageErrorState,
+  PageEmptyState,
+} from "../../../components/common";
 
 const CollegesPage = () => {
   const { accessToken, hasRole, user } = useAuth();
+  const { markModuleSeen } = useNotification();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearchQuery = searchParams.get("search") || "";
 
+  useEffect(() => {
+    markModuleSeen("COLLEGES");
+  }, [markModuleSeen]);
+
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(urlSearchQuery);
   const [isCreateCollegeOpen, setIsCreateCollegeOpen] = useState(false);
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
@@ -70,14 +82,17 @@ const CollegesPage = () => {
   const loadColleges = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
+    setError(null);
     try {
       const data = canManageCollege
         ? await fetchManagementColleges(accessToken)
         : await fetchActiveColleges(accessToken);
       setColleges(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load colleges:", err);
-      toast.error("Failed to load colleges");
+      const msg = err.message || "Failed to load partner colleges";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -287,22 +302,31 @@ const CollegesPage = () => {
 
       {/* Content Section */}
       {loading ? (
-        <div className="flex items-center justify-center p-16 text-sm text-text-secondary rounded-xl border border-border bg-surface">
-          <RefreshCw className="animate-spin mr-2" size={18} />
-          Loading colleges...
-        </div>
+        <PageLoadingState
+          message="Loading colleges..."
+          description="Fetching partner institutions, fee structures, and course offerings"
+          minHeight="min-h-[380px]"
+        />
+      ) : error ? (
+        <PageErrorState
+          title="Unable to load colleges"
+          message={error}
+          onRetry={loadColleges}
+          minHeight="min-h-[380px]"
+        />
       ) : filteredColleges.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 text-center rounded-xl border border-border bg-surface">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3 text-text-muted">
-            <Building2 size={24} />
-          </div>
-          <h3 className="text-base font-semibold text-text-primary">No colleges found</h3>
-          <p className="text-sm text-text-secondary mt-1 max-w-sm">
-            {searchTerm
-              ? "No colleges matched your search query."
-              : "No partner colleges available."}
-          </p>
-        </div>
+        <PageEmptyState
+          icon={Building2}
+          title="No colleges found"
+          description={
+            searchTerm
+              ? `No partner institutions matched "${searchTerm}". Try a different search.`
+              : "No partner colleges available in the system."
+          }
+          actionText={searchTerm ? "Clear Search" : undefined}
+          onAction={searchTerm ? () => handleSearchChange("") : undefined}
+          minHeight="min-h-[380px]"
+        />
       ) : viewMode === "card" ? (
         /* Card Grid Layout */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

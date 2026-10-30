@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -8,6 +9,8 @@ import { ROUTES } from "./routes";
 
 import LoginPage from "../../features/auth/pages/LoginPage";
 import UpdatePasswordPage from "../../features/auth/pages/UpdatePasswordPage";
+import ForgotPasswordPage from "../../features/auth/pages/ForgotPasswordPage";
+import ResetPasswordPage from "../../features/auth/pages/ResetPasswordPage";
 import AccessDeniedPage from "../../features/auth/pages/AccessDeniedPage";
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 import LeadPage from "../../features/leads/pages/LeadPage";
@@ -16,6 +19,7 @@ import AdmissionPage from "../../features/admissions/pages/AdmissionPage";
 import ReportsPage from "../../features/reports/pages/ReportsPage";
 import ProfilePage from "../../features/profile/pages/ProfilePage";
 import Tpc from "../../features/tpc/pages/Tpc";
+import TpcReportsPage from "../../features/tpc/pages/TpcReportsPage";
 import Todo from "../../features/todo/pages/Todo";
 import Notifications from "../../features/notifications/pages/Notifications";
 import PitchApprovalsPage from "../../features/pitch-approvals/pages/PitchApprovalsPage";
@@ -28,8 +32,24 @@ import TeamDetailsPage from "../../features/teams/pages/TeamDetailsPage";
 import DataUploadPage from "../../features/data-management/pages/DataUploadPage";
 import DataAssignmentPage from "../../features/data-management/pages/DataAssignmentPage";
 import CallWorkspace from "../../features/calls/pages/CallWorkspace";
+import CallReportsPage from "../../features/calls/pages/CallReportsPage";
 import ClaimRequestsPage from "../../features/claim-requests/pages/ClaimRequestsPage";
 import OfficeSettingsPage from "../../features/office/pages/OfficeSettingsPage";
+import LeadReallocationPage from "../../features/data-management/pages/LeadReallocationPage";
+import AnalysisSpreadsheetsPage from "../../features/data-management/pages/AnalysisSpreadsheetsPage";
+import BroadcastPage from "../../features/broadcasts/pages/BroadcastPage";
+import CollegeCounsellingPage from "../../features/counselling/pages/CollegeCounsellingPage";
+
+const CallsRedirect = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const isSuperAdmin = user?.roleCode === "SUPER_ADMIN" || user?.roleId === 1;
+
+  if (isSuperAdmin) {
+    return <Navigate to={`${ROUTES.CALL_REPORTS}${location.search}`} replace />;
+  }
+  return <Navigate to={`${ROUTES.CALL_WORKSPACE}${location.search}`} replace />;
+};
 
 const AppRouter = () => {
   return (
@@ -38,6 +58,8 @@ const AppRouter = () => {
       <Route element={<AuthLayout />}>
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         <Route path={ROUTES.UPDATE_PASSWORD} element={<UpdatePasswordPage />} />
+        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+        <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
       </Route>
 
       {/* Protected Routes */}
@@ -50,9 +72,24 @@ const AppRouter = () => {
             element={<DashboardPage />}
           />
 
+          {/* Call Workspace: available to all call-enabled roles */}
+          <Route
+            path={ROUTES.CALL_WORKSPACE}
+            element={<CallWorkspace />}
+          />
+
+          {/* Call Reports: Super Admin only */}
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
+            <Route
+              path={ROUTES.CALL_REPORTS}
+              element={<CallReportsPage />}
+            />
+          </Route>
+
+          {/* Backward compatibility: /calls redirects to the appropriate call view */}
           <Route
             path={ROUTES.CALLS}
-            element={<CallWorkspace />}
+            element={<CallsRedirect />}
           />
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR"]} />}>
@@ -67,7 +104,15 @@ const AppRouter = () => {
             <Route path={ROUTES.DATA_ASSIGNMENT} element={<DataAssignmentPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
+            <Route path={ROUTES.LEAD_REALLOCATION} element={<LeadReallocationPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER"]} />}>
+            <Route path={ROUTES.ANALYSIS_SPREADSHEETS} element={<AnalysisSpreadsheetsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.LEADS} element={<LeadPage />} />
             <Route path={ROUTES.LEAD_PROFILE} element={<LeadProfilePage />} />
             <Route path={ROUTES.TPC} element={<Tpc />} />
@@ -79,10 +124,19 @@ const AppRouter = () => {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER"]} />}>
+            <Route path={ROUTES.TPC_REPORTS} element={<TpcReportsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD"]} />}>
             <Route path={ROUTES.PITCH_APPROVALS} element={<PitchApprovalsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "PROGRAM_ADVISOR"]} />}>
+            <Route path={ROUTES.COLLEGE_COUNSELLING} element={<CollegeCounsellingPage />} />
+            <Route path="/counselling" element={<Navigate to={ROUTES.COLLEGE_COUNSELLING} replace />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.COLLEGES} element={<CollegesPage />} />
           </Route>
 
@@ -102,13 +156,18 @@ const AppRouter = () => {
             <Route path={ROUTES.ADMISSIONS} element={<AdmissionPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR", "PROGRAM_ADVISOR"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "TEAM_LEAD", "HR", "PROGRAM_ADVISOR"]} />}>
             <Route path={ROUTES.TODO} element={<Todo />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "MANAGER", "HR"]} />}>
             <Route path={ROUTES.REPORTS} element={<ReportsPage />} />
           </Route>
+
+          <Route
+            path={ROUTES.BROADCASTS}
+            element={<BroadcastPage />}
+          />
 
           <Route
             path={ROUTES.NOTIFICATIONS}
