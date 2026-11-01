@@ -44,42 +44,50 @@ const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; defaultClass: st
   {
     label: "No Answer",
     value: "NO_ANSWER",
-    defaultClass: "border-slate-700/80 bg-slate-900/80 text-slate-300 hover:border-slate-500 hover:bg-slate-800",
+    defaultClass:
+      "border-slate-300 bg-slate-100 text-slate-800 hover:border-slate-400 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800",
   },
   {
     label: "Wrong Number",
     value: "WRONG_NUMBER",
-    defaultClass: "border-rose-900/60 bg-rose-950/30 text-rose-300 hover:border-rose-700 hover:bg-rose-950/60",
+    defaultClass:
+      "border-rose-300 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-400 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/60",
   },
   {
     label: "Not Interested",
     value: "NOT_INTERESTED",
-    defaultClass: "border-amber-900/60 bg-amber-950/30 text-amber-300 hover:border-amber-700 hover:bg-amber-950/60",
+    defaultClass:
+      "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:border-amber-700 dark:hover:bg-amber-950/60",
   },
   {
     label: "Follow Up Required",
     value: "FOLLOW_UP",
-    defaultClass: "border-blue-900/60 bg-blue-950/30 text-blue-300 hover:border-blue-700 hover:bg-blue-950/60",
+    defaultClass:
+      "border-blue-300 bg-blue-50 text-blue-800 hover:border-blue-400 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/60",
   },
   {
     label: "Call Back Later",
     value: "CALL_BACK_LATER",
-    defaultClass: "border-purple-900/60 bg-purple-950/30 text-purple-300 hover:border-purple-700 hover:bg-purple-950/60",
+    defaultClass:
+      "border-purple-300 bg-purple-50 text-purple-800 hover:border-purple-400 hover:bg-purple-100 focus-visible:ring-2 focus-visible:ring-purple-400 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:border-purple-700 dark:hover:bg-purple-950/60",
   },
   {
     label: "Interested / Create Lead",
     value: "INTERESTED",
-    defaultClass: "border-emerald-800/80 bg-emerald-950/40 text-emerald-300 hover:border-emerald-600 hover:bg-emerald-950/70 font-semibold",
+    defaultClass:
+      "border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/70 font-semibold",
   },
   {
     label: "Disconnected",
     value: "DISCONNECTED",
-    defaultClass: "border-orange-900/60 bg-orange-950/30 text-orange-300 hover:border-orange-700 hover:bg-orange-950/60",
+    defaultClass:
+      "border-orange-300 bg-orange-50 text-orange-900 hover:border-orange-400 hover:bg-orange-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300 dark:hover:border-orange-700 dark:hover:bg-orange-950/60",
   },
   {
     label: "Other",
     value: "OTHER",
-    defaultClass: "border-cyan-900/60 bg-cyan-950/30 text-cyan-300 hover:border-cyan-700 hover:bg-cyan-950/60",
+    defaultClass:
+      "border-cyan-300 bg-cyan-50 text-cyan-900 hover:border-cyan-400 hover:bg-cyan-100 focus-visible:ring-2 focus-visible:ring-cyan-400 dark:border-cyan-900/60 dark:bg-cyan-950/30 dark:text-cyan-300 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/60",
   },
 ];
 
@@ -288,9 +296,9 @@ export const CallOutcomePanel = ({
                 key={opt.value}
                 type="button"
                 onClick={() => setSelectedOutcome(opt.value)}
-                className={`min-h-[38px] px-2 sm:px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium transition text-left flex items-center justify-between gap-1 cursor-pointer w-full min-w-0 ${
+                className={`min-h-[38px] px-2 sm:px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium transition text-left flex items-center justify-between gap-1 cursor-pointer w-full min-w-0 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                   isSelected
-                    ? "border-emerald-500 bg-emerald-950/80 text-emerald-200 ring-1 ring-emerald-500/70 shadow-xs"
+                    ? "border-emerald-600 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-600 font-bold shadow-xs dark:border-emerald-500 dark:bg-emerald-950/80 dark:text-emerald-200 dark:ring-1 dark:ring-emerald-500/70"
                     : opt.defaultClass
                 }`}
               >
@@ -298,7 +306,7 @@ export const CallOutcomePanel = ({
                   {opt.label}
                 </span>
                 {isSelected && (
-                  <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                  <CheckCircle2 size={12} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                 )}
               </button>
             );
@@ -335,25 +343,25 @@ export const CallOutcomePanel = ({
 
       {/* INTERESTED Lead Handling Section */}
       {selectedOutcome === "INTERESTED" && (
-        <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/30 p-3 space-y-3 pt-3 border-t w-full min-w-0">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30 p-3 space-y-3 pt-3 border-t w-full min-w-0">
           <div className="flex items-center justify-between min-w-0">
-            <span className="text-xs font-bold uppercase text-emerald-300 flex items-center gap-1.5 truncate">
-              <Building2 size={15} className="text-emerald-400 shrink-0" />
+            <span className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 truncate">
+              <Building2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>Lead Discovery & Creation</span>
             </span>
-            {searchingLead && <Loader2 size={13} className="animate-spin text-emerald-400 shrink-0" />}
+            {searchingLead && <Loader2 size={13} className="animate-spin text-emerald-600 dark:text-emerald-400 shrink-0" />}
           </div>
 
           {searchingLead ? (
-            <div className="text-xs text-emerald-300 flex items-center gap-2 py-1">
-              <Search size={13} className="animate-bounce text-emerald-400 shrink-0" />
+            <div className="text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2 py-1">
+              <Search size={13} className="animate-bounce text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="truncate">Searching existing CRM leads for phone {student?.phone}...</span>
             </div>
           ) : leadSearchResult?.exists ? (
-            <div className="rounded-xl border border-amber-800/60 bg-background/90 p-3 space-y-2.5 w-full min-w-0">
+            <div className="rounded-xl border border-amber-300 bg-background/95 dark:border-amber-800/60 dark:bg-background/90 p-3 space-y-2.5 w-full min-w-0 shadow-xs">
               <div className="flex items-start justify-between min-w-0">
                 <div className="min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950/70 border border-amber-800/60 px-2 py-0.5 rounded">
+                  <span className="text-[10px] uppercase font-bold text-amber-900 bg-amber-100 border border-amber-300 dark:text-amber-300 dark:bg-amber-950/70 dark:border-amber-800/60 px-2 py-0.5 rounded">
                     Existing Lead Found
                   </span>
                   <h4 className="text-xs font-bold text-text-primary mt-1 truncate">
@@ -365,15 +373,15 @@ export const CallOutcomePanel = ({
 
               {/* CASE 3: Unclaimable lead protection reason */}
               {isAdmissionDone ? (
-                <div className="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-950/40 p-2 rounded-lg border border-rose-900/60">
-                  <AlertCircle size={14} className="shrink-0 text-rose-400" />
+                <div className="flex items-center gap-1.5 text-xs text-rose-800 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/40 p-2 rounded-lg border border-rose-200 dark:border-rose-900/60">
+                  <AlertCircle size={14} className="shrink-0 text-rose-600 dark:text-rose-400" />
                   <span className="text-[11px]">
                     <strong>Protected Status (ADMISSION_DONE):</strong> Admission is complete for this contact.
                   </span>
                 </div>
               ) : isProtectedAssignment ? (
-                <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/40 p-2 rounded-lg border border-amber-900/60">
-                  <AlertCircle size={14} className="shrink-0 text-amber-400" />
+                <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40 p-2 rounded-lg border border-amber-200 dark:border-amber-900/60">
+                  <AlertCircle size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
                   <span className="text-[11px]">
                     <strong>Active Assignment:</strong> Assigned to{" "}
                     <strong>

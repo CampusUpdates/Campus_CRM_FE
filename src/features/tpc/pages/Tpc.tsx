@@ -55,8 +55,8 @@ const Tpc = () => {
     statusParam?.toUpperCase() === "COMPLETED"
       ? "COMPLETED"
       : statusParam?.toUpperCase() === "ALL"
-      ? "ALL"
-      : "PENDING";
+        ? "ALL"
+        : "PENDING";
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -209,25 +209,53 @@ const Tpc = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2.5">
-            <PhoneCall className="text-primary-600 h-6 w-6 sm:h-7 sm:w-7 shrink-0" />
-            <span className="truncate">{activeTab === "MY_TPCS" ? "My TPCs" : "Assigned TPCs"}</span>
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-text-secondary">
-            {activeTab === "MY_TPCS"
-              ? "View and manage TPC calls created by you or linked to your leads."
-              : "View and execute TPC call assignments assigned to you by team members."}
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <PhoneCall className="text-primary-600 h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
+              <span className="truncate">{activeTab === "MY_TPCS" ? "My TPCs" : "Assigned TPCs"}</span>
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-text-secondary hidden sm:block">
+              {activeTab === "MY_TPCS"
+                ? "View and manage TPC calls created by you or linked to your leads."
+                : "View and execute TPC call assignments assigned to you by team members."}
+            </p>
+          </div>
+
+          {/* Action buttons on mobile positioned inline with heading */}
+          <div className="flex sm:hidden items-center gap-2 shrink-0">
+            <button
+              onClick={loadData}
+              disabled={loading}
+              title="Refresh TPC List"
+              aria-label="Refresh TPC List"
+              className="p-2 h-9 w-9 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button
+              onClick={() => handleOpenAssignModal()}
+              className="
+                inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2
+                text-xs font-semibold text-white shadow-sm hover:bg-primary-700
+                transition shrink-0 h-9 cursor-pointer
+              "
+            >
+              <Plus size={15} />
+              <span>Assign TPC</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-end">
+        {/* Action buttons on desktop */}
+        <div className="hidden sm:flex items-center gap-2.5 shrink-0">
           <button
             onClick={loadData}
             disabled={loading}
             title="Refresh TPC List"
-            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50"
+            aria-label="Refresh TPC List"
+            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -236,7 +264,7 @@ const Tpc = () => {
             className="
               inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5
               text-sm font-medium text-white shadow-sm hover:bg-primary-700
-              transition shrink-0
+              transition shrink-0 cursor-pointer
             "
           >
             <Plus size={18} />
@@ -246,13 +274,13 @@ const Tpc = () => {
       </div>
 
       {/* Search & Status Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full min-w-0">
 
         {/* Search Input */}
         <div className="relative flex-1 w-full min-w-0">
           <Search
             size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             type="text"
@@ -260,15 +288,15 @@ const Tpc = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="
-              h-11
+              h-10 sm:h-11
               w-full
               rounded-xl
               border
               border-border
               bg-surface
-              pl-11
-              pr-10
-              text-sm
+              pl-10 sm:pl-11
+              pr-9 sm:pr-10
+              text-xs sm:text-sm
               outline-none
               transition
               focus:border-primary-500
@@ -287,102 +315,107 @@ const Tpc = () => {
           )}
         </div>
 
-        {/* Status Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[150px]">
-          <div className="relative">
-            <Filter
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as FilterStatusType)}
-              className="
-                h-11
-                w-full
-                rounded-xl
-                border
-                border-border
-                bg-surface
-                pl-10
-                pr-9
-                text-sm
-                font-medium
-                text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-                appearance-none
-                cursor-pointer
-              "
-            >
-              <option value="ALL">All</option>
-              <option value="PENDING">Pending</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
-            <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-          </div>
-        </div>
-
-        {/* Time Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[150px]">
-          <div className="relative">
-            <Clock
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value as DateFilterType)}
-              className="
-                h-11
-                w-full
-                rounded-xl
-                border
-                border-border
-                bg-surface
-                pl-10
-                pr-9
-                text-sm
-                font-medium
-                text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-                appearance-none
-                cursor-pointer
-              "
-            >
-              <option value="ALL">All Time</option>
-              <option value="TODAY">Today</option>
-              <option value="YESTERDAY">Yesterday</option>
-              <option value="LAST_7_DAYS">Last 7 Days</option>
-              <option value="LAST_30_DAYS">Last 30 Days</option>
-              <option value="CUSTOM">Custom Date</option>
-            </select>
-            <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-          </div>
-
-          {dateFilter === "CUSTOM" && (
-            <div className="absolute top-12 left-0 right-0 z-10 bg-surface border border-border p-2 rounded-xl shadow-lg">
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full h-10 border border-border rounded-lg px-3 text-sm text-text-primary focus:outline-none focus:border-primary-500"
+        {/* Dropdowns Container: 2-column grid on mobile, flex row on desktop */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full sm:w-auto sm:flex sm:items-center min-w-0">
+          {/* Status Filter Dropdown */}
+          <div className="relative w-full sm:w-auto sm:min-w-[150px] min-w-0">
+            <div className="relative">
+              <Filter
+                size={15}
+                className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as FilterStatusType)}
+                className="
+                  h-10 sm:h-11
+                  w-full
+                  rounded-xl
+                  border
+                  border-border
+                  bg-surface
+                  pl-8 sm:pl-10
+                  pr-7 sm:pr-9
+                  text-xs sm:text-sm
+                  font-medium
+                  text-text-primary
+                  outline-none
+                  transition
+                  focus:border-primary-500
+                  focus:ring-2
+                  focus:ring-primary-100
+                  appearance-none
+                  cursor-pointer
+                  truncate
+                "
+              >
+                <option value="ALL">All</option>
+                <option value="PENDING">Pending</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+              <ChevronDown
+                size={15}
+                className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
               />
             </div>
-          )}
+          </div>
+
+          {/* Time Filter Dropdown */}
+          <div className="relative w-full sm:w-auto sm:min-w-[150px] min-w-0">
+            <div className="relative">
+              <Clock
+                size={15}
+                className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+              />
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as DateFilterType)}
+                className="
+                  h-10 sm:h-11
+                  w-full
+                  rounded-xl
+                  border
+                  border-border
+                  bg-surface
+                  pl-8 sm:pl-10
+                  pr-7 sm:pr-9
+                  text-xs sm:text-sm
+                  font-medium
+                  text-text-primary
+                  outline-none
+                  transition
+                  focus:border-primary-500
+                  focus:ring-2
+                  focus:ring-primary-100
+                  appearance-none
+                  cursor-pointer
+                  truncate
+                "
+              >
+                <option value="ALL">All Time</option>
+                <option value="TODAY">Today</option>
+                <option value="YESTERDAY">Yesterday</option>
+                <option value="LAST_7_DAYS">Last 7 Days</option>
+                <option value="LAST_30_DAYS">Last 30 Days</option>
+                <option value="CUSTOM">Custom Date</option>
+              </select>
+              <ChevronDown
+                size={15}
+                className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+              />
+            </div>
+
+            {dateFilter === "CUSTOM" && (
+              <div className="absolute top-11 sm:top-12 left-auto right-0 w-[200px] sm:w-[220px] z-20 bg-surface border border-border p-2 rounded-xl shadow-lg">
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="w-full h-9 sm:h-10 border border-border rounded-lg px-2 sm:px-3 text-xs sm:text-sm text-text-primary focus:outline-none focus:border-primary-500"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
@@ -418,6 +451,8 @@ const Tpc = () => {
           }
           actionText={activeTab === "MY_TPCS" && activeList.length === 0 ? "Assign TPC" : undefined}
           onAction={activeTab === "MY_TPCS" && activeList.length === 0 ? () => handleOpenAssignModal() : undefined}
+          minHeight="min-h-[240px] sm:min-h-[380px]"
+          className="p-4 sm:p-6 mx-auto w-full"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

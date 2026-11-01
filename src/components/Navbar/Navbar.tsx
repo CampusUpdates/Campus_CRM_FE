@@ -213,7 +213,7 @@ const Navbar = () => {
         </button>
 
         {/* Mobile / Tablet Brand Title */}
-        <span className="font-bold text-base text-primary-800 dark:text-primary-400 tracking-tight hidden sm:block lg:hidden truncate max-w-[130px] md:max-w-[200px]">
+        <span className="font-bold text-base text-primary-800 dark:text-primary-400 tracking-tight hidden truncate max-w-[130px] md:max-w-[200px]">
           Campus Updates
         </span>
 

@@ -503,39 +503,41 @@ const CallWorkspace = () => {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 w-full min-w-0">
       {/* Workspace Top Header & Mode Toggle */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2.5">
-            <PhoneCall className="text-primary-600" size={26} />
-            Call Workspace & Call Logs
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <PhoneCall className="text-primary-600 shrink-0 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
+            <span className="break-words">Call Workspace & Call Logs</span>
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-1 text-xs sm:text-sm text-text-secondary break-words">
             Actionable call log history, dispositioning, and live dialer calling queue.
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl border border-border bg-surface p-1 shadow-2xs">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center rounded-xl border border-border bg-surface p-1 shadow-2xs flex-1 sm:flex-initial min-w-0">
             <button
               onClick={() => setActiveTab("dialer")}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${activeTab === "dialer"
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-3.5 py-2 sm:py-1.5 text-xs font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "dialer"
                 ? "bg-primary-600 text-white shadow-xs"
                 : "text-text-secondary hover:text-text-primary"
                 }`}
             >
-              <PhoneCall size={14} /> Live Dialer Queue
+              <PhoneCall size={14} className="shrink-0" />
+              <span>Live Dialer Queue</span>
             </button>
             <button
               onClick={() => setActiveTab("logs")}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${activeTab === "logs"
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-3.5 py-2 sm:py-1.5 text-xs font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "logs"
                 ? "bg-primary-600 text-white shadow-xs"
                 : "text-text-secondary hover:text-text-primary"
                 }`}
             >
-              <History size={14} /> Call Logs ({logsTotal})
+              <History size={14} className="shrink-0" />
+              <span>Call Logs ({logsTotal})</span>
             </button>
           </div>
 
@@ -544,18 +546,20 @@ const CallWorkspace = () => {
               type="button"
               onClick={loadQueue}
               title="Refresh queue"
-              className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
+              aria-label="Refresh queue"
+              className="p-2 sm:p-2.5 h-9 w-9 sm:h-auto sm:w-auto shrink-0 flex items-center justify-center rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
             >
-              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
             </button>
           ) : (
             <button
               type="button"
               onClick={loadLogs}
               title="Refresh call logs"
-              className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
+              aria-label="Refresh call logs"
+              className="p-2 sm:p-2.5 h-9 w-9 sm:h-auto sm:w-auto shrink-0 flex items-center justify-center rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
             >
-              <RefreshCw size={18} className={logsLoading ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${logsLoading ? "animate-spin" : ""}`} />
             </button>
           )}
         </div>
@@ -587,22 +591,25 @@ const CallWorkspace = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-text-secondary w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-text-secondary w-full sm:w-auto min-w-0">
               <button
                 type="button"
                 onClick={() => setIsBookmarksDrawerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-800/80 bg-blue-950/50 hover:bg-blue-900/60 text-blue-300 px-3.5 py-2 font-bold transition shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800 active:bg-blue-200/80 font-bold px-3 sm:px-3.5 h-9 sm:h-10 text-xs transition shadow-2xs hover:shadow-xs cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-blue-800/80 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-300"
                 title="Open active 24h bookmarks slider"
+                aria-label="Open active 24h bookmarks slider"
               >
-                <Bookmark size={14} className="fill-blue-400 text-blue-400" />
+                <Bookmark size={14} className="fill-blue-600 text-blue-600 dark:fill-blue-400 dark:text-blue-400 shrink-0" />
                 <span>Bookmarks</span>
                 {bookmarkedCount > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold">
+                  <span className="inline-flex items-center justify-center rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold shrink-0">
                     {bookmarkedCount}
                   </span>
                 )}
               </button>
-              <span>Showing <strong>{callLogs.length}</strong> of <strong>{logsTotal}</strong> student call records</span>
+              <span className="text-[11px] sm:text-xs text-text-secondary text-right sm:text-left leading-tight sm:leading-normal min-w-0">
+                Showing <strong>{callLogs.length}</strong> of <strong>{logsTotal}</strong> student call records
+              </span>
             </div>
           </div>
 
@@ -628,21 +635,22 @@ const CallWorkspace = () => {
                 description={searchQuery ? `No calls found matching "${searchQuery}".` : "Try clearing your search criteria or requesting dataset assignments from your Manager."}
                 actionText={searchQuery ? "Clear Search" : undefined}
                 onAction={searchQuery ? () => setSearchInput("") : undefined}
-                minHeight="min-h-[260px]"
+                minHeight="min-h-[220px] sm:min-h-[260px]"
+                className="p-4 sm:p-6 mx-auto w-full"
               />
             ) : (
               <div className="space-y-4">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs min-w-[850px]">
                     <thead>
                       <tr className="border-b border-border bg-background/80 text-text-secondary font-semibold uppercase tracking-wider">
-                        <th className="px-5 py-4">Student Name</th>
-                        <th className="px-5 py-4">Phone / Email</th>
-                        <th className="px-5 py-4">City / State</th>
-                        <th className="px-5 py-4">Dataset File</th>
-                        <th className="px-5 py-4">Latest Outcome</th>
-                        <th className="px-5 py-4">24h Bookmark</th>
-                        <th className="px-5 py-4 text-right">Actions</th>
+                        <th className="px-5 py-4 min-w-[140px]">Student Name</th>
+                        <th className="px-5 py-4 min-w-[130px] whitespace-nowrap">Phone / Email</th>
+                        <th className="px-5 py-4 min-w-[120px]">City / State</th>
+                        <th className="px-5 py-4 min-w-[130px]">Dataset File</th>
+                        <th className="px-5 py-4 min-w-[130px]">Latest Outcome</th>
+                        <th className="px-5 py-4 min-w-[110px]">24h Bookmark</th>
+                        <th className="px-5 py-4 text-right min-w-[150px] whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -693,18 +701,18 @@ const CallWorkspace = () => {
                               {item.latestCall ? (
                                 <div>
                                   <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold ${latestOutcome === "INTERESTED"
-                                    ? "border-emerald-700 bg-emerald-950/70 text-emerald-300"
+                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
                                     : latestOutcome === "FOLLOW_UP" || latestOutcome === "CALL_BACK_LATER"
-                                      ? "border-blue-800/80 bg-blue-950/60 text-blue-300"
+                                      ? "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800/80 dark:bg-blue-950/60 dark:text-blue-300"
                                       : latestOutcome === "DISCONNECTED"
-                                        ? "border-orange-800/80 bg-orange-950/60 text-orange-300"
+                                        ? "border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-800/80 dark:bg-orange-950/60 dark:text-orange-300"
                                         : latestOutcome === "OTHER"
-                                          ? "border-cyan-800/80 bg-cyan-950/60 text-cyan-300"
+                                          ? "border-cyan-300 bg-cyan-50 text-cyan-900 dark:border-cyan-800/80 dark:bg-cyan-950/60 dark:text-cyan-300"
                                           : latestOutcome === "NOT_INTERESTED"
-                                            ? "border-amber-800/80 bg-amber-950/60 text-amber-300"
+                                            ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/60 dark:text-amber-300"
                                             : latestOutcome === "WRONG_NUMBER"
-                                              ? "border-rose-800/80 bg-rose-950/60 text-rose-300"
-                                              : "border-slate-700/80 bg-slate-900/80 text-slate-300"
+                                              ? "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800/80 dark:bg-rose-950/60 dark:text-rose-300"
+                                              : "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-300"
                                     }`}>
                                     {latestOutcomeLabel}
                                   </span>
@@ -724,10 +732,10 @@ const CallWorkspace = () => {
                                 <button
                                   type="button"
                                   onClick={() => setIsBookmarksDrawerOpen(true)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-blue-800/80 bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 px-2.5 py-1 text-[11px] font-bold shadow-2xs cursor-pointer transition"
+                                  className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-800 dark:border-blue-800/80 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 px-2.5 py-1 text-[11px] font-bold shadow-2xs cursor-pointer transition"
                                   title="Click to view all bookmarks in right slider"
                                 >
-                                  <Bookmark size={12} className="fill-blue-400 text-blue-400 shrink-0" />
+                                  <Bookmark size={12} className="fill-blue-600 text-blue-600 dark:fill-blue-400 dark:text-blue-400 shrink-0" />
                                   Active 24h
                                 </button>
                               ) : (
@@ -859,15 +867,16 @@ const CallWorkspace = () => {
               icon={Users}
               title="No assigned contacts found"
               description="You do not currently have active student dataset assignments. Please request dataset assignments from your Manager."
-              minHeight="min-h-[380px]"
+              minHeight="min-h-[240px] sm:min-h-[380px]"
+              className="p-4 sm:p-6 mx-auto w-full"
             />
           ) : (
             <div className="space-y-4">
               {/* Live Queue Header Bar with Data-Set Jump Dropdown & Uncompleted Filter */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface p-3.5 rounded-xl border border-border/80 gap-3 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface p-3 sm:p-3.5 rounded-xl border border-border/80 gap-3 min-w-0">
                 {/* Completed Session Count, Data-Set Select, & Uncompleted Filter Toggle */}
-                <div className="flex flex-wrap items-center gap-3 text-xs min-w-0">
-                  <div className="flex items-center gap-2 font-semibold text-text-secondary">
+                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs min-w-0">
+                  <div className="flex items-center gap-2 font-semibold text-text-secondary shrink-0">
                     <span>Completed in Session:</span>
                     <span className="px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-800 text-emerald-300 font-mono font-bold">
                       {completedCount} / {queue.length}
@@ -879,8 +888,8 @@ const CallWorkspace = () => {
                       <div className="h-4 w-px bg-border hidden sm:block" />
 
                       {/* Jump to Data Set Selector */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        <label htmlFor="dataset-jump-select" className="font-bold text-text-secondary whitespace-nowrap flex items-center gap-1">
+                      <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
+                        <label htmlFor="dataset-jump-select" className="font-bold text-text-secondary whitespace-nowrap flex items-center gap-1 shrink-0">
                           <Layers size={14} className="text-emerald-500 shrink-0" />
                           <span>Data Set:</span>
                         </label>
@@ -888,7 +897,7 @@ const CallWorkspace = () => {
                           id="dataset-jump-select"
                           value={selectedAssignmentId}
                           onChange={(e) => handleJumpToAssignmentBatch(e.target.value)}
-                          className="h-8 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-semibold text-text-primary outline-none focus:border-emerald-500 transition cursor-pointer max-w-[220px] sm:max-w-[300px] truncate"
+                          className="h-8 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-semibold text-text-primary outline-none focus:border-emerald-500 transition cursor-pointer w-full sm:w-auto max-w-full sm:max-w-[300px] truncate"
                           title="Select an assignment batch to jump to its saved calling position"
                         >
                           {batches.map((batch) => {
@@ -911,7 +920,7 @@ const CallWorkspace = () => {
                       </div>
 
                       {/* Working Queue Filter Toggle: All Records vs Uncompleted Only */}
-                      <div className="inline-flex items-center rounded-lg border border-border/80 bg-background p-0.5 shadow-2xs">
+                      <div className="inline-flex items-center rounded-lg border border-border/80 bg-background p-0.5 shadow-2xs shrink-0">
                         <button
                           type="button"
                           onClick={() => handleToggleFilterMode("all")}
@@ -946,7 +955,7 @@ const CallWorkspace = () => {
                 </div>
 
                 {/* Queue Navigation & Position Counter */}
-                <div className="flex items-center gap-3 text-xs self-end sm:self-auto">
+                <div className="flex items-center justify-between sm:justify-end gap-3 text-xs w-full sm:w-auto shrink-0 border-t sm:border-t-0 border-border/60 pt-2.5 sm:pt-0">
                   {activeBatch && activeBatchQueue.length > 0 && (
                     <span className="text-text-muted text-[11px] hidden lg:inline font-medium">
                       {filterMode === "uncompleted" ? (

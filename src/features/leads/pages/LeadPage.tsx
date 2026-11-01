@@ -107,7 +107,7 @@ const MultiSelectDropdown = ({
   };
 
   return (
-    <div className="relative w-full sm:w-auto" ref={popoverRef}>
+    <div className="relative w-full sm:w-auto shrink-0" ref={popoverRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -115,6 +115,7 @@ const MultiSelectDropdown = ({
           flex items-center justify-between w-full sm:w-auto min-w-[140px] h-11 px-3.5
           rounded-xl border border-border bg-surface text-sm font-medium text-text-primary
           hover:bg-neutral-50 transition focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500
+          cursor-pointer shrink-0
         "
       >
         <div className="flex items-center gap-2">
@@ -628,41 +629,44 @@ const LeadPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
             Lead Management
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-1 text-xs sm:text-sm text-text-secondary">
             Track student leads, manage pipeline status stages, pitch college courses, and log TPC calls.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-start sm:self-auto">
           <button
             onClick={loadLeads}
             title="Refresh leads"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition"
+            className="p-2 sm:p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shrink-0 cursor-pointer"
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
           </button>
 
           <button
             onClick={() => setIsCreateLeadOpen(true)}
             className="
-              flex items-center gap-2
+              flex items-center gap-1.5 sm:gap-2
               rounded-lg
               bg-primary-500
-              px-4 py-2.5
-              text-sm font-medium
+              px-3 py-2 sm:px-4 sm:py-2.5
+              text-xs sm:text-sm font-medium
               text-white
+              whitespace-nowrap
+              shrink-0
               transition
               hover:bg-primary-600
               shadow-sm
+              cursor-pointer
             "
           >
-            <Plus size={18} />
-            Create Lead
+            <Plus size={16} className="sm:w-[18px] sm:h-[18px] shrink-0" />
+            <span>Create Lead</span>
           </button>
         </div>
       </div>
@@ -710,9 +714,9 @@ const LeadPage = () => {
       )}
 
       {/* Search & Status Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 w-full min-w-0">
+      <div className="flex flex-wrap items-center gap-3 w-full min-w-0">
         {/* Search Input */}
-        <div className="relative flex-1 w-full min-w-0">
+        <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
@@ -744,7 +748,7 @@ const LeadPage = () => {
               type="button"
               onClick={handleClearSearch}
               title="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md transition cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -752,7 +756,7 @@ const LeadPage = () => {
         </div>
 
         {/* Status Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[150px]">
+        <div className="relative w-full sm:w-auto sm:min-w-[150px] shrink-0">
           <div className="relative">
             <Filter
               size={16}
@@ -801,7 +805,7 @@ const LeadPage = () => {
         </div>
 
         {/* Time Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[140px]">
+        <div className="relative w-full sm:w-auto sm:min-w-[140px] shrink-0">
           <div className="relative">
             <Clock
               size={16}
@@ -899,6 +903,8 @@ const LeadPage = () => {
             hover:bg-primary-100
             shadow-sm
             disabled:opacity-50
+            shrink-0
+            cursor-pointer
           "
         >
           <Download size={16} className={isExporting ? "animate-bounce" : ""} />
@@ -968,6 +974,9 @@ const LeadPage = () => {
           </div>
         </div>
       )}
+      <div>
+        <h1>Damini is so cool EyeCon</h1>
+      </div>
 
       {/* Leads Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
@@ -1000,31 +1009,31 @@ const LeadPage = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1100px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-neutral-50">
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[180px]">
                       Lead Name
                     </th>
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[140px] whitespace-nowrap">
                       Phone
                     </th>
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[170px]">
                       Email
                     </th>
-                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[180px]">
                       Course & Location
                     </th>
                     <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[200px] max-w-[280px]">
                       Colleges Pitched
                     </th>
                     {isSuperAdminOrManager && (
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary min-w-[180px]">
                         Current Owner / Claimed By
                       </th>
                     )}
 
-                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary min-w-[180px] whitespace-nowrap">
                       Actions
                     </th>
                   </tr>
@@ -1064,9 +1073,9 @@ const LeadPage = () => {
 
                     const createdDateFormatted = lead.createdAt
                       ? new Date(lead.createdAt).toLocaleString("en-IN", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })
                       : "";
 
                     const statusName = lead.status?.name || "LEAD";
@@ -1110,7 +1119,7 @@ const LeadPage = () => {
 
                     return (
                       <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition">
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 min-w-[180px]">
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {isSuperAdminUser ? (
@@ -1170,15 +1179,15 @@ const LeadPage = () => {
                           </div>
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-text-secondary">
+                        <td className="px-5 py-4 text-sm text-text-secondary min-w-[140px] whitespace-nowrap">
                           {lead.phone}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-text-secondary">
+                        <td className="px-5 py-4 text-sm text-text-secondary min-w-[170px] break-all">
                           {lead.email || "N/A"}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-text-secondary">
+                        <td className="px-5 py-4 text-sm text-text-secondary min-w-[180px]">
                           <div>
                             <p className="font-medium text-text-primary">
                               {lead.courseInterested || "N/A"}
@@ -1205,7 +1214,7 @@ const LeadPage = () => {
                         </td>
 
                         {isSuperAdminOrManager && (
-                          <td className="px-5 py-4 text-sm text-text-secondary">
+                          <td className="px-5 py-4 text-sm text-text-secondary min-w-[180px]">
                             {(() => {
                               const assignedUser = activeAssignment?.user || (lead.assignments && lead.assignments[0]?.user);
                               const ownerName = assignedUser
@@ -1251,8 +1260,8 @@ const LeadPage = () => {
                         )}
 
                         {/* Actions Column */}
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-5 py-4 text-right min-w-[180px] whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             {/* Role-based Lead Acknowledgement (Managers, Team Leads, Super Admin only - never PA) */}
                             {isAuthorizedToAcknowledge && !isAcknowledged && (
                               <button
