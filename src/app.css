@@ -377,6 +377,174 @@ select option:checked {
 }
 
 /* ===========================
+   Global Responsive Typography System
+   Applies consistent font scale across all CRM pages.
+   Uses CSS variables defined in @theme above.
+   Mobile-first: base sizes for mobile, sm: and lg: for larger viewports.
+   =========================== */
+
+/* Page-level headings (e.g. "Colleges", "Dashboard", "Leads") */
+.crm-page-title {
+  font-size: var(--text-lg);       /* 18px on mobile */
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+@media (min-width: 640px) {
+  .crm-page-title {
+    font-size: var(--text-2xl);    /* 24px on sm+ */
+  }
+}
+
+/* Section / card headings */
+.crm-section-title {
+  font-size: var(--text-sm);       /* 14px mobile */
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 640px) {
+  .crm-section-title {
+    font-size: var(--text-base);   /* 16px sm+ */
+  }
+}
+
+/* Card headings (college name, lead name, etc.) */
+.crm-card-title {
+  font-size: var(--text-sm);       /* 14px mobile */
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.35;
+}
+
+@media (min-width: 640px) {
+  .crm-card-title {
+    font-size: var(--text-base);   /* 16px sm+ */
+  }
+}
+
+/* Body / descriptive text */
+.crm-body-text {
+  font-size: var(--text-xs);       /* 12px mobile */
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  .crm-body-text {
+    font-size: var(--text-sm);     /* 14px sm+ */
+  }
+}
+
+/* Labels and helper text */
+.crm-label {
+  font-size: var(--text-xxs);      /* 11px mobile */
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+@media (min-width: 640px) {
+  .crm-label {
+    font-size: var(--text-xs);     /* 12px sm+ */
+  }
+}
+
+/* Muted / description text (below headings) */
+.crm-description {
+  font-size: 11px;                 /* 11px mobile */
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .crm-description {
+    font-size: var(--text-sm);     /* 14px sm+ */
+    line-height: 1.6;
+  }
+}
+
+/* Badges */
+.crm-badge {
+  font-size: var(--text-xxs);      /* 11px */
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Table header cells */
+.crm-table-header {
+  font-size: var(--text-xxs);      /* 11px */
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+/* Table body cells */
+.crm-table-cell {
+  font-size: var(--text-xs);       /* 12px mobile */
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 640px) {
+  .crm-table-cell {
+    font-size: var(--text-sm);     /* 14px sm+ */
+  }
+}
+
+/* Button text */
+.crm-btn-text {
+  font-size: var(--text-xs);       /* 12px mobile */
+  font-weight: var(--font-weight-medium);
+}
+
+@media (min-width: 640px) {
+  .crm-btn-text {
+    font-size: var(--text-sm);     /* 14px sm+ */
+  }
+}
+
+/* Input / select fields */
+.crm-input {
+  font-size: var(--text-xs);       /* 12px mobile */
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 640px) {
+  .crm-input {
+    font-size: var(--text-sm);     /* 14px sm+ */
+  }
+}
+
+/* Modal heading */
+.crm-modal-title {
+  font-size: var(--text-base);     /* 16px mobile */
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 640px) {
+  .crm-modal-title {
+    font-size: var(--text-lg);     /* 18px sm+ */
+  }
+}
+
+/* Modal body content */
+.crm-modal-body {
+  font-size: var(--text-xs);       /* 12px mobile */
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  .crm-modal-body {
+    font-size: var(--text-sm);     /* 14px sm+ */
+  }
+}
+
+/* ===========================
    Global Custom Scrollbar Design
    =========================== */
 

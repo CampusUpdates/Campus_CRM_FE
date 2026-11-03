@@ -974,9 +974,6 @@ const LeadPage = () => {
           </div>
         </div>
       )}
-      <div>
-        <h1>Damini is so cool EyeCon</h1>
-      </div>
 
       {/* Leads Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">

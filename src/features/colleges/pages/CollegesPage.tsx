@@ -182,98 +182,104 @@ const CollegesPage = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            Colleges
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {!canManageCollege
-              ? "Browse partner colleges, university details, and admission pitch guidelines in read-only mode."
-              : "View partner colleges, university details, activation status, and affiliation programs."}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* View Toggle */}
-          <div className="flex items-center rounded-lg border border-border bg-surface p-1">
-            <button
-              onClick={() => setViewMode("card")}
-              title="Card View"
-              className={`p-1.5 rounded-md text-sm font-medium transition ${
-                viewMode === "card"
-                  ? "bg-primary-50 text-primary-600 shadow-xs"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <LayoutGrid size={17} />
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              title="Table View"
-              className={`p-1.5 rounded-md text-sm font-medium transition ${
-                viewMode === "table"
-                  ? "bg-primary-50 text-primary-600 shadow-xs"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <List size={17} />
-            </button>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          {/* Title & Description */}
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-semibold text-text-primary">
+              Colleges
+            </h1>
+            <p className="hidden sm:block mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              {!canManageCollege
+                ? "Browse partner colleges, university details, and admission pitch guidelines in read-only mode."
+                : "View partner colleges, university details, activation status, and affiliation programs."}
+            </p>
           </div>
 
-          <button
-            onClick={loadColleges}
-            title="Refresh colleges"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
+          {/* Action Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* View Toggle */}
+            <div className="flex items-center rounded-lg border border-border bg-surface p-1">
+              <button
+                onClick={() => setViewMode("card")}
+                title="Card View"
+                className={`p-1.5 rounded-md text-sm font-medium transition ${
+                  viewMode === "card"
+                    ? "bg-primary-50 text-primary-600 shadow-xs"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                title="Table View"
+                className={`p-1.5 rounded-md text-sm font-medium transition ${
+                  viewMode === "table"
+                    ? "bg-primary-50 text-primary-600 shadow-xs"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                <List size={16} />
+              </button>
+            </div>
 
-          {canManageCollege && (
             <button
-              onClick={() => setIsCreateCollegeOpen(true)}
-              className="
-                flex items-center gap-2
-                rounded-lg
-                bg-primary-500
-                px-4 py-2.5
-                text-sm font-medium
-                text-white
-                transition
-                hover:bg-primary-600
-              "
+              onClick={loadColleges}
+              title="Refresh colleges"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shrink-0"
             >
-              <Plus size={18} />
-              Add College
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
-          )}
+
+            {canManageCollege && (
+              <button
+                onClick={() => setIsCreateCollegeOpen(true)}
+                className="
+                  inline-flex items-center gap-1.5
+                  rounded-lg
+                  bg-primary-500
+                  px-3 sm:px-4 py-2 sm:py-2.5
+                  text-xs sm:text-sm font-medium
+                  text-white
+                  transition
+                  hover:bg-primary-600
+                  shrink-0
+                "
+              >
+                <Plus size={16} />
+                <span className="hidden xs:inline sm:inline">Add College</span>
+                <span className="xs:hidden sm:hidden">Add</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Search & Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            size={16}
+            className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             type="text"
-            placeholder="Search colleges by name, city, contact person, or guidelines..."
+            placeholder="Search colleges..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="
-              h-11
+              h-9 sm:h-11
               w-full
               rounded-lg
               border
               border-border
               bg-surface
-              pl-11
-              pr-4
-              text-sm
+              pl-9 sm:pl-11
+              pr-3 sm:pr-4
+              text-xs sm:text-sm
               outline-none
               transition
               focus:border-primary-500
@@ -285,18 +291,19 @@ const CollegesPage = () => {
 
         <button
           className="
-            flex items-center gap-2
+            inline-flex items-center gap-1.5
             rounded-lg
             border border-border
             bg-surface
-            px-4 py-2.5
-            text-sm
+            px-3 sm:px-4 py-2 sm:py-2.5
+            text-xs sm:text-sm
             text-text-secondary
             hover:bg-neutral-100
+            shrink-0
           "
         >
-          <SlidersHorizontal size={17} />
-          Filters
+          <SlidersHorizontal size={15} />
+          <span className="hidden sm:inline">Filters</span>
         </button>
       </div>
 
@@ -329,7 +336,7 @@ const CollegesPage = () => {
         />
       ) : viewMode === "card" ? (
         /* Card Grid Layout */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {filteredColleges.map((college) => {
             const location = [college.city, college.state].filter(Boolean).join(", ");
             const isInactive = college.isActive === false;
@@ -341,30 +348,30 @@ const CollegesPage = () => {
                 style={{ opacity: isInactive ? 0.6 : 1 }}
                 className={`
                   group flex flex-col justify-between
-                  rounded-2xl border bg-surface p-6
+                  rounded-xl sm:rounded-2xl border bg-surface p-4 sm:p-5 lg:p-6
                   shadow-xs transition duration-200
                   ${isInactive ? "border-neutral-300 bg-neutral-50/40" : "border-border hover:shadow-md hover:border-primary-200"}
                 `}
               >
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition duration-200 ${
+                  <div className="flex items-start justify-between gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl shrink-0 transition duration-200 ${
                         isInactive
                           ? "bg-neutral-200 text-neutral-500"
                           : "bg-primary-50 text-primary-600 group-hover:bg-primary-500 group-hover:text-white"
                       }`}>
-                        <Building2 size={22} />
+                        <Building2 size={20} />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-text-primary text-base leading-snug line-clamp-1">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-text-primary text-sm sm:text-base leading-snug line-clamp-1">
                           {college.name}
                         </h3>
                         {location && (
                           <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
-                            <MapPin size={12} className="text-primary-500 shrink-0" />
-                            {location}
+                            <MapPin size={11} className="text-primary-500 shrink-0" />
+                            <span className="truncate">{location}</span>
                           </p>
                         )}
                       </div>
@@ -372,16 +379,16 @@ const CollegesPage = () => {
                   </div>
 
                   {/* Partnership Badge & HR Toggle */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap border-y border-border/50 py-2.5 my-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap border-y border-border/50 py-2 sm:py-2.5 my-0.5 sm:my-1">
                     {/* TieUp Badge */}
                     <div>
                       {college.hasTieUp ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                          <CheckCircle2 size={12} />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 sm:px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          <CheckCircle2 size={11} />
                           Official Partner
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 sm:px-2.5 py-0.5 text-xs font-semibold text-blue-700">
                           Affiliated
                         </span>
                       )}
@@ -389,13 +396,13 @@ const CollegesPage = () => {
 
                     {/* HR Activation / Deactivation Toggle Switch */}
                     {canManageCollege ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(college)}
                           disabled={isToggling}
                           className={`
-                            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                            relative inline-flex h-5 w-9 sm:h-6 sm:w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
                             transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500
                             disabled:opacity-50 disabled:cursor-not-allowed
                             ${college.isActive !== false ? "bg-emerald-600" : "bg-neutral-300"}
@@ -410,13 +417,13 @@ const CollegesPage = () => {
                         >
                           <span
                             className={`
-                              pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md
-                              transition duration-200 ease-in-out flex items-center justify-center text-[9px] font-black
-                              ${college.isActive !== false ? "translate-x-5 text-emerald-700" : "translate-x-0 text-neutral-500"}
+                              pointer-events-none inline-block h-4 w-4 sm:h-5 sm:w-5 transform rounded-full bg-white shadow-md
+                              transition duration-200 ease-in-out flex items-center justify-center text-[8px] sm:text-[9px] font-black
+                              ${college.isActive !== false ? "translate-x-4 sm:translate-x-5 text-emerald-700" : "translate-x-0 text-neutral-500"}
                             `}
                           >
                             {isToggling ? (
-                              <Loader2 size={11} className="animate-spin text-neutral-500" />
+                              <Loader2 size={10} className="animate-spin text-neutral-500" />
                             ) : college.isActive !== false ? (
                               "ON"
                             ) : (
@@ -425,7 +432,7 @@ const CollegesPage = () => {
                           </span>
                         </button>
                         <span
-                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full ${
                             college.isActive !== false
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-neutral-200 text-neutral-700 border border-neutral-300"
@@ -437,7 +444,7 @@ const CollegesPage = () => {
                       </div>
                     ) : (
                       <span
-                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 sm:px-2.5 py-0.5 rounded-full ${
                           college.isActive !== false
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-neutral-200 text-neutral-700 border border-neutral-300"
@@ -455,28 +462,28 @@ const CollegesPage = () => {
                   </p>
 
                   {/* Contact Info List */}
-                  <div className="space-y-2 border-t border-border/60 pt-3 text-xs text-text-secondary">
+                  <div className="space-y-1.5 sm:space-y-2 border-t border-border/60 pt-2.5 sm:pt-3 text-xs text-text-secondary">
                     {college.contactPerson && (
                       <div className="flex items-center gap-2">
-                        <UserCheck size={14} className="text-primary-500 shrink-0" />
+                        <UserCheck size={13} className="text-primary-500 shrink-0" />
                         <span className="truncate">{college.contactPerson}</span>
                       </div>
                     )}
                     {college.phone && (
                       <div className="flex items-center gap-2">
-                        <Phone size={14} className="text-primary-500 shrink-0" />
+                        <Phone size={13} className="text-primary-500 shrink-0" />
                         <span>{college.phone}</span>
                       </div>
                     )}
                     {college.email && (
                       <div className="flex items-center gap-2">
-                        <Mail size={14} className="text-primary-500 shrink-0" />
+                        <Mail size={13} className="text-primary-500 shrink-0" />
                         <span className="truncate">{college.email}</span>
                       </div>
                     )}
                     {college.website && (
                       <div className="flex items-center gap-2">
-                        <Globe size={14} className="text-primary-500 shrink-0" />
+                        <Globe size={13} className="text-primary-500 shrink-0" />
                         <a
                           href={college.website.startsWith("http") ? college.website : `https://${college.website}`}
                           target="_blank"
@@ -491,25 +498,25 @@ const CollegesPage = () => {
 
                   {/* Admission Guidelines snippet */}
                   {college.admissionProcess && (
-                    <div className="rounded-lg bg-neutral-50 p-2.5 text-xs text-text-secondary border border-neutral-100 flex items-start gap-2">
-                      <GraduationCap size={15} className="text-primary-600 shrink-0 mt-0.5" />
+                    <div className="rounded-lg bg-neutral-50 p-2 sm:p-2.5 text-xs text-text-secondary border border-neutral-100 flex items-start gap-2">
+                      <GraduationCap size={14} className="text-primary-600 shrink-0 mt-0.5" />
                       <p className="line-clamp-2 italic">{college.admissionProcess}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Card Actions */}
-                <div className="border-t border-border/60 pt-4 mt-4 flex items-center justify-end gap-2">
+                <div className="border-t border-border/60 pt-3 sm:pt-4 mt-3 sm:mt-4 flex items-center justify-end gap-1 sm:gap-2">
                   <button
                     onClick={() => setSelectedCollege(college)}
                     className="
                       text-xs font-semibold
                       text-primary-600 hover:text-primary-700
                       hover:bg-primary-50
-                      px-3 py-1.5 rounded-lg transition
+                      px-2.5 sm:px-3 py-1.5 rounded-lg transition
                     "
                   >
-                    View Details
+                    View
                   </button>
                   {canManageCollege && (
                     <button
@@ -518,12 +525,12 @@ const CollegesPage = () => {
                         text-xs font-semibold
                         text-neutral-700 hover:text-text-primary
                         hover:bg-neutral-100
-                        px-3 py-1.5 rounded-lg transition
+                        px-2.5 sm:px-3 py-1.5 rounded-lg transition
                         flex items-center gap-1
                       "
                       title="Edit College"
                     >
-                      <Edit3 size={13} />
+                      <Edit3 size={12} />
                       Edit
                     </button>
                   )}
@@ -534,13 +541,13 @@ const CollegesPage = () => {
                         text-xs font-semibold
                         text-rose-600 hover:text-rose-700
                         hover:bg-rose-50
-                        px-3 py-1.5 rounded-lg transition
+                        px-2.5 sm:px-3 py-1.5 rounded-lg transition
                         flex items-center gap-1
                       "
                       title="Delete Permanently"
                     >
-                      <Trash2 size={13} />
-                      Delete
+                      <Trash2 size={12} />
+                      <span className="hidden sm:inline">Delete</span>
                     </button>
                   )}
                 </div>
