@@ -29,6 +29,8 @@ export const MockCallPanel = ({
   loading,
   phonePosition = 1,
   onPhonePositionChange,
+  totalAssigned = 0,
+  currentIndex = 0,
 }: MockCallPanelProps) => {
   const [duration, setDuration] = useState(0);
 
@@ -156,7 +158,12 @@ export const MockCallPanel = ({
       )}
 
       {/* 5. Contact details in a compact two-column layout */}
-      <StudentDetailsCard student={student} />
+      <StudentDetailsCard
+        student={student}
+        totalAssigned={totalAssigned}
+        currentIndex={currentIndex}
+        phonePosition={phonePosition}
+      />
 
       {/* 6. Full-width green Start Call button */}
       <div className="pt-2 w-full">

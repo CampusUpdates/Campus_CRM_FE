@@ -104,11 +104,10 @@ const SidebarMenu = () => {
                 <button
                   type="button"
                   onClick={() => toggleExpand(item)}
-                  className={`group flex w-full items-center justify-between gap-3 rounded-md px-3 py-3 text-sm transition-all duration-200 cursor-pointer ${
-                    isAnyChildActive
-                      ? "text-text-primary font-medium hover:bg-primary-25"
-                      : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
-                  }`}
+                  className={`group flex w-full items-center justify-between gap-3 rounded-md px-3 py-3 text-sm transition-all duration-200 cursor-pointer ${isAnyChildActive
+                    ? "text-text-primary font-medium hover:bg-primary-25"
+                    : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Icon size={20} strokeWidth={1.8} className="shrink-0" />
@@ -122,9 +121,8 @@ const SidebarMenu = () => {
                     )}
                     <ChevronDown
                       size={16}
-                      className={`shrink-0 transition-transform duration-200 ${
-                        isExpanded ? "rotate-180 text-text-primary" : "text-text-muted"
-                      }`}
+                      className={`shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180 text-text-primary" : "text-text-muted"
+                        }`}
                     />
                   </div>
                 </button>
@@ -144,11 +142,10 @@ const SidebarMenu = () => {
                           <NavLink
                             to={child.path}
                             onClick={closeSidebar}
-                            className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-all duration-200 ${
-                              isChildActive
-                                ? "bg-primary-500 text-white font-medium shadow-xs"
-                                : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
-                            }`}
+                            className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-all duration-200 ${isChildActive
+                              ? "bg-primary-500 text-white font-medium shadow-xs"
+                              : "text-text-secondary font-normal hover:bg-primary-25 hover:text-text-primary"
+                              }`}
                           >
                             {ChildIcon && (
                               <ChildIcon size={16} strokeWidth={1.8} className="shrink-0" />
