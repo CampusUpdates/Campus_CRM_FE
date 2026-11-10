@@ -31,9 +31,9 @@ export const AdmissionsKpiCards: React.FC<AdmissionsKpiCardsProps> = ({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-28 rounded-xl border border-border bg-surface p-5 animate-pulse" />
+          <div key={i} className={`h-24 sm:h-28 rounded-xl border border-border bg-surface p-3.5 sm:p-5 animate-pulse ${i === 5 ? "col-span-2 sm:col-span-1" : "col-span-1"}`} />
         ))}
       </div>
     );
@@ -41,26 +41,26 @@ export const AdmissionsKpiCards: React.FC<AdmissionsKpiCardsProps> = ({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-4">
         {/* Card 1: Total Admissions (Clickable) */}
         <div
           onClick={() => setModalType("TOTAL")}
-          className="group relative rounded-xl border border-border bg-surface p-5 shadow-xs transition hover:border-primary-500/50 hover:shadow-md cursor-pointer"
+          className="col-span-1 group relative rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs transition hover:border-primary-500/50 hover:shadow-xs cursor-pointer min-w-0"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider truncate">
               Total Admissions
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-105 transition-transform">
-              <CheckCircle2 size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-105 transition-transform shrink-0">
+              <CheckCircle2 size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-xl sm:text-3xl font-extrabold text-text-primary tracking-tight truncate">
               {kpis.totalAdmissions.toLocaleString()}
             </div>
-            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Click to view employee breakdown →
+            <p className="mt-1 text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate">
+              Click to view breakdown →
             </p>
           </div>
         </div>
@@ -68,86 +68,86 @@ export const AdmissionsKpiCards: React.FC<AdmissionsKpiCardsProps> = ({
         {/* Card 2: Admissions This Month (Clickable) */}
         <div
           onClick={() => setModalType("MONTH")}
-          className="group relative rounded-xl border border-border bg-surface p-5 shadow-xs transition hover:border-primary-500/50 hover:shadow-md cursor-pointer"
+          className="col-span-1 group relative rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs transition hover:border-primary-500/50 hover:shadow-xs cursor-pointer min-w-0"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider truncate">
               This Month
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-105 transition-transform">
-              <Calendar size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-105 transition-transform shrink-0">
+              <Calendar size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-xl sm:text-3xl font-extrabold text-text-primary tracking-tight truncate">
               {kpis.admissionsThisMonth.toLocaleString()}
             </div>
-            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
-              Admissions completed this month
+            <p className="mt-1 text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-medium truncate">
+              Completed this month
             </p>
           </div>
         </div>
 
         {/* Card 3: Top Counselor */}
-        <div className="relative rounded-xl border border-border bg-surface p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <div className="col-span-1 relative rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider truncate">
               Top Counselor
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-              <Award size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+              <Award size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-text-primary truncate">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-sm sm:text-lg font-bold text-text-primary truncate">
               {kpis.topCounselor ? kpis.topCounselor.name : "N/A"}
             </div>
-            <p className="mt-1 text-xs text-text-secondary">
+            <p className="mt-1 text-[10px] sm:text-xs text-text-secondary truncate">
               {kpis.topCounselor
-                ? `${kpis.topCounselor.admissions} Admissions (${kpis.topCounselor.team})`
+                ? `${kpis.topCounselor.admissions} Adm (${kpis.topCounselor.team})`
                 : "No admissions data"}
             </p>
           </div>
         </div>
 
         {/* Card 4: Top Converter */}
-        <div className="relative rounded-xl border border-border bg-surface p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <div className="col-span-1 relative rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider truncate">
               Top Converter
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
-              <TrendingUp size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500 shrink-0">
+              <TrendingUp size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-text-primary truncate">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-sm sm:text-lg font-bold text-text-primary truncate">
               {kpis.topConverter ? kpis.topConverter.name : "N/A"}
             </div>
-            <p className="mt-1 text-xs text-text-secondary">
+            <p className="mt-1 text-[10px] sm:text-xs text-text-secondary truncate">
               {kpis.topConverter
-                ? `${kpis.topConverter.conversionRate}% Rate (${kpis.topConverter.team})`
+                ? `${kpis.topConverter.conversionRate}% (${kpis.topConverter.team})`
                 : "No conversion data"}
             </p>
           </div>
         </div>
 
         {/* Card 5: Overall Conversion Rate */}
-        <div className="relative rounded-xl border border-border bg-surface p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <div className="col-span-2 sm:col-span-1 relative rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider truncate">
               Conversion Rate
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pink-500/10 text-pink-500">
-              <Percent size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-pink-500/10 text-pink-500 shrink-0">
+              <Percent size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-xl sm:text-3xl font-extrabold text-text-primary tracking-tight truncate">
               {kpis.overallConversionRate}%
             </div>
-            <p className="mt-1 text-xs text-text-secondary">
-              From {kpis.totalLeads.toLocaleString()} Total Leads
+            <p className="mt-1 text-[10px] sm:text-xs text-text-secondary truncate">
+              From {kpis.totalLeads.toLocaleString()} Leads
             </p>
           </div>
         </div>

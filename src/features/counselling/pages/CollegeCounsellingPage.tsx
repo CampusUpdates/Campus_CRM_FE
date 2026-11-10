@@ -9,7 +9,7 @@ import {
   MapPin,
   Phone,
   Mail,
-  RefreshCw,
+  RotateCw,
   Eye,
   ChevronLeft,
   ChevronRight,
@@ -518,59 +518,83 @@ const CollegeCounsellingPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+      <div className="flex flex-col gap-3.5 sm:gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
+        <div className="min-w-0">
+          <h1 className="text-[19px] sm:text-2xl font-bold sm:font-semibold text-text-primary leading-tight tracking-tight sm:tracking-normal truncate sm:whitespace-normal">
             College Counselling
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
             Review and coordinate college counselling requests submitted by advisors.
           </p>
         </div>
 
-        {/* Date Filter, Status Dropdown & Refresh Button */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Date Filter Dropdown */}
-          <DashboardDropdown
-            id="counselling-date-dropdown"
-            value={dateFilter}
-            onChange={(val) => {
-              setDateFilter(val);
-              setPage(1);
-              if (val !== "CUSTOM") {
-                setCustomStartDate("");
-                setCustomEndDate("");
-                setAppliedCustomStartDate("");
-                setAppliedCustomEndDate("");
-              }
-            }}
-            options={COUNSELLING_DATE_OPTIONS}
-            minWidth="145px"
-            align="right"
-          />
+        {/* Date Filter, Status Dropdown & Action Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+          {/* Dropdowns Row (Compact 2-column on mobile, inline on sm+) */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+            {/* Date Filter Dropdown */}
+            <div className="w-full sm:w-auto">
+              <DashboardDropdown
+                id="counselling-date-dropdown"
+                value={dateFilter}
+                onChange={(val) => {
+                  setDateFilter(val);
+                  setPage(1);
+                  if (val !== "CUSTOM") {
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                    setAppliedCustomStartDate("");
+                    setAppliedCustomEndDate("");
+                  }
+                }}
+                options={COUNSELLING_DATE_OPTIONS}
+                minWidth="100%"
+                align="right"
+                className="w-full sm:w-auto"
+                buttonClassName="w-full sm:w-auto min-w-[130px] sm:min-w-[145px]"
+              />
+            </div>
+
+            {/* Status Dropdown */}
+            <div className="w-full sm:w-auto">
+              <DashboardDropdown
+                id="counselling-status-dropdown"
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+                options={COUNSELLING_STATUS_OPTIONS}
+                minWidth="100%"
+                align="right"
+                className="w-full sm:w-auto"
+                buttonClassName="w-full sm:w-auto min-w-[130px] sm:min-w-[140px]"
+              />
+            </div>
+          </div>
 
           {/* Custom Date Range Picker */}
           {dateFilter === "CUSTOM" && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs shadow-xs h-9">
-              <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-surface p-2 sm:px-2.5 sm:py-1 text-xs shadow-xs w-full sm:w-auto sm:h-9">
+              <div className="flex items-center gap-1 flex-1 sm:flex-initial">
                 <span className="text-[11px] text-text-muted font-medium">From:</span>
                 <input
                   type="date"
                   value={customStartDate}
                   max={customEndDate || undefined}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="rounded border border-border bg-background px-1.5 py-0.5 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer dark:bg-slate-800"
+                  className="w-full sm:w-auto rounded border border-border bg-background px-1.5 py-0.5 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer dark:bg-slate-800"
                 />
               </div>
               <span className="text-text-muted text-[11px] font-medium">to</span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-1 sm:flex-initial">
                 <span className="text-[11px] text-text-muted font-medium">To:</span>
                 <input
                   type="date"
                   value={customEndDate}
                   min={customStartDate || undefined}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="rounded border border-border bg-background px-1.5 py-0.5 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer dark:bg-slate-800"
+                  className="w-full sm:w-auto rounded border border-border bg-background px-1.5 py-0.5 text-xs text-text-primary focus:border-primary-500 focus:outline-hidden cursor-pointer dark:bg-slate-800"
                 />
               </div>
               <button
@@ -583,97 +607,89 @@ const CollegeCounsellingPage = () => {
                   }
                 }}
                 disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
-                className="rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-700 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                className="w-full sm:w-auto rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-700 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs mt-1 sm:mt-0"
               >
                 Apply
               </button>
             </div>
           )}
 
-          {/* Clear / Reset Date Filter Button */}
-          {dateFilter !== "ALL" && (
+          {/* Action Buttons Row: Reset Date + Refresh + Export */}
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+            {/* Clear / Reset Date Filter Button */}
+            {dateFilter !== "ALL" && (
+              <button
+                type="button"
+                onClick={handleResetDateFilter}
+                title="Reset date filter to All Time"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer h-9 shrink-0"
+              >
+                <X size={13} className="text-text-muted" />
+                <span>Reset Date</span>
+              </button>
+            )}
+
+            {/* Refresh Button */}
+            <Tooltip content="Refresh" className={ACTION_TOOLTIP_CLASS}>
+              <button
+                type="button"
+                onClick={() => loadRequests(false)}
+                disabled={loading || isRefreshing || isExporting}
+                aria-label="Refresh"
+                title="Refresh"
+                className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <RotateCw
+                  size={15}
+                  className={loading || isRefreshing ? "animate-spin text-primary-600 dark:text-emerald-400" : "text-text-muted"}
+                />
+              </button>
+            </Tooltip>
+
+            {/* Export Button */}
             <button
               type="button"
-              onClick={handleResetDateFilter}
-              title="Reset date filter to All Time"
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer h-9"
+              id="export-counselling-excel"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              title="Export all matching counselling records to Excel"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer disabled:opacity-50 h-9 shrink-0"
             >
-              <X size={13} className="text-text-muted" />
-              <span>Reset Date</span>
+              {isExporting ? (
+                <Loader2 size={13} className="animate-spin text-primary-600 dark:text-emerald-400" />
+              ) : (
+                <Download size={13} className="text-text-muted" />
+              )}
+              <span>{isExporting ? "Exporting..." : "Export"}</span>
             </button>
-          )}
-
-          {/* Status Dropdown */}
-          <DashboardDropdown
-            id="counselling-status-dropdown"
-            value={statusFilter}
-            onChange={(val) => {
-              setStatusFilter(val);
-              setPage(1);
-            }}
-            options={COUNSELLING_STATUS_OPTIONS}
-            minWidth="140px"
-            align="right"
-          />
-
-          {/* Refresh Button */}
-          <button
-            type="button"
-            onClick={() => loadRequests(false)}
-            disabled={loading || isRefreshing || isExporting}
-            title="Refresh counselling requests"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer disabled:opacity-50 h-9"
-          >
-            <RefreshCw
-              size={13}
-              className={loading || isRefreshing ? "animate-spin text-primary-600 dark:text-emerald-400" : "text-text-muted"}
-            />
-            <span>Refresh</span>
-          </button>
-
-          {/* Export Button */}
-          <button
-            type="button"
-            id="export-counselling-excel"
-            onClick={handleExportExcel}
-            disabled={isExporting}
-            title="Export all matching counselling records to Excel"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover active:bg-neutral-100 dark:active:bg-slate-800 transition shadow-xs cursor-pointer disabled:opacity-50 h-9"
-          >
-            {isExporting ? (
-              <Loader2 size={13} className="animate-spin text-primary-600 dark:text-emerald-400" />
-            ) : (
-              <Download size={13} className="text-text-muted" />
-            )}
-            <span>{isExporting ? "Exporting..." : "Export"}</span>
-          </button>
+          </div>
         </div>
       </div>
 
       {/* College Counselling Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[760px] sm:min-w-[840px] text-left border-collapse">
             <thead>
-              <tr className="border-b border-border bg-neutral-50">
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+              <tr className="border-b border-border bg-neutral-50 dark:bg-neutral-800/40">
+                <th className="px-4 sm:px-5 py-3.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary w-[28%] min-w-[200px]">
                   Student Information
                 </th>
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-4 sm:px-5 py-3.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary w-[34%] min-w-[220px]">
                   College & Counselling Info
                 </th>
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-4 sm:px-5 py-3.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary w-[18%] min-w-[140px]">
                   Requested By
                 </th>
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-4 sm:px-5 py-3.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary w-[10%] min-w-[100px]">
                   Status
                 </th>
-                <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-4 sm:px-5 py-3.5 sm:py-4 text-right text-xs font-semibold uppercase text-text-secondary w-[10%] min-w-[100px]">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {loading ? (
                 <SectionLoadingState
                   isTableRow
@@ -717,49 +733,49 @@ const CollegeCounsellingPage = () => {
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition align-top"
+                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition align-top"
                     >
                       {/* Student Information Column */}
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <div className="space-y-1">
-                          <p className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-text-primary flex items-center gap-1.5 break-words">
                             <User size={14} className="text-primary-600 shrink-0" />
-                            {studentName || "N/A"}
+                            <span>{studentName || "N/A"}</span>
                           </p>
                           {item.lead?.phone && (
-                            <p className="text-xs text-text-secondary flex items-center gap-1.5">
+                            <p className="text-xs text-text-secondary flex items-center gap-1.5 font-mono">
                               <Phone size={12} className="text-text-muted shrink-0" />
-                              {item.lead.phone}
+                              <span>{item.lead.phone}</span>
                             </p>
                           )}
                           {item.lead?.email && (
-                            <p className="text-xs text-text-secondary flex items-center gap-1.5">
+                            <p className="text-xs text-text-secondary flex items-center gap-1.5 break-all">
                               <Mail size={12} className="text-text-muted shrink-0" />
-                              {item.lead.email}
+                              <span>{item.lead.email}</span>
                             </p>
                           )}
                           {studentLocation && (
-                            <p className="text-xs text-text-muted flex items-center gap-1.5">
+                            <p className="text-xs text-text-muted flex items-center gap-1.5 break-words">
                               <MapPin size={12} className="text-primary-500 shrink-0" />
-                              {studentLocation}
+                              <span>{studentLocation}</span>
                             </p>
                           )}
                         </div>
                       </td>
 
                       {/* College & Counselling Info Column */}
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <div>
-                          <p className="text-sm font-semibold text-text-primary">
+                          <p className="text-sm font-semibold text-text-primary break-words">
                             {item.college?.name || "Unknown College"}
                           </p>
                           {collegeLocation && (
-                            <p className="text-xs text-text-muted mt-0.5">
+                            <p className="text-xs text-text-muted mt-0.5 break-words">
                               {collegeLocation}
                             </p>
                           )}
                           {Boolean(item.preferredDate || item.preferredTime || item.preferredTiming) && (
-                            <p className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 mt-1">
+                            <p className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 dark:text-emerald-400 mt-1">
                               <Calendar size={12} className="shrink-0" />
                               <span>
                                 {[
@@ -772,8 +788,9 @@ const CollegeCounsellingPage = () => {
                             </p>
                           )}
                           {item.purpose && (
-                            <p className="text-xs text-text-secondary mt-0.5">
-                              Purpose: {item.purpose}
+                            <p className="text-xs text-text-secondary mt-0.5 break-words">
+                              <span className="text-text-muted font-medium">Purpose: </span>
+                              {item.purpose}
                             </p>
                           )}
 
@@ -792,7 +809,7 @@ const CollegeCounsellingPage = () => {
                                 </p>
                               )}
                               {(item.counsellingNotes || item.completionRemark) && (
-                                <p className="text-xs text-blue-700 dark:text-blue-400 italic">
+                                <p className="text-xs text-blue-700 dark:text-blue-400 italic break-words">
                                   Notes: {item.counsellingNotes || item.completionRemark}
                                 </p>
                               )}
@@ -809,7 +826,7 @@ const CollegeCounsellingPage = () => {
                                 </p>
                               )}
                               {item.completionRemark && (
-                                <p className="text-xs text-emerald-700 dark:text-emerald-400 italic">
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 italic break-words">
                                   Revert: {item.completionRemark}
                                 </p>
                               )}
@@ -819,21 +836,21 @@ const CollegeCounsellingPage = () => {
                       </td>
 
                       {/* Requested By Column */}
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-text-secondary">
                         <div>
-                          <p className="font-medium text-text-primary">
+                          <p className="font-medium text-text-primary break-words">
                             {requesterName || "Program Advisor"}
                           </p>
                           <p className="text-xs text-text-muted">
                             {formatDate(item.requestedAt || item.createdAt)}
                           </p>
                           {isScheduled && item.scheduledBy && (
-                            <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5 font-medium">
+                            <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5 font-medium break-words">
                               Scheduled by: {[item.scheduledBy.firstName, item.scheduledBy.lastName].filter(Boolean).join(" ")}
                             </p>
                           )}
                           {isDone && item.completedBy && (
-                            <p className="text-xs text-text-muted mt-0.5">
+                            <p className="text-xs text-text-muted mt-0.5 break-words">
                               Done by: {[item.completedBy.firstName, item.completedBy.lastName].filter(Boolean).join(" ")}
                             </p>
                           )}
@@ -841,11 +858,11 @@ const CollegeCounsellingPage = () => {
                       </td>
 
                       {/* Status Column */}
-                      <td className="px-5 py-4">{renderBadge(item.status)}</td>
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">{renderBadge(item.status)}</td>
 
                       {/* Actions Column */}
-                      <td className="px-5 py-4 text-right">
-                        <div className="inline-flex items-center justify-end gap-1.5 flex-wrap sm:flex-nowrap">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5 flex-nowrap">
                           {isDone ? (
                             /* Completed requests retain only View Details */
                             <Tooltip content="View Details" className={ACTION_TOOLTIP_CLASS} wrapperClassName="inline-flex">
@@ -942,9 +959,9 @@ const CollegeCounsellingPage = () => {
         </div>
 
         {/* Pagination Section */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 border-t border-border px-5 py-3.5 text-xs bg-surface">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border px-4 sm:px-5 py-3 sm:py-3.5 text-xs bg-surface">
           {/* Left: Current Page & Total Matching Count */}
-          <div className="text-text-secondary font-medium flex items-center gap-1.5 flex-wrap">
+          <div className="text-text-secondary font-medium flex items-center justify-between sm:justify-start gap-1.5 w-full sm:w-auto text-[11px] sm:text-xs">
             <span>
               Page <span className="font-bold text-text-primary">{page}</span> of{" "}
               <span className="font-bold text-text-primary">{Math.max(1, totalPages)}</span>
@@ -955,10 +972,10 @@ const CollegeCounsellingPage = () => {
           </div>
 
           {/* Right: Page Size Selector & Prev/Next Controls */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 w-full sm:w-auto">
             {/* Page Size Selector */}
-            <div className="flex items-center gap-1.5 text-text-secondary">
-              <span>Show:</span>
+            <div className="flex items-center gap-1.5 text-text-secondary text-[11px] sm:text-xs shrink-0">
+              <span className="hidden xs:inline">Show:</span>
               <select
                 id="counselling-page-size-select"
                 value={pageSize}
@@ -976,16 +993,16 @@ const CollegeCounsellingPage = () => {
             </div>
 
             {/* Previous and Next Controls */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 id="counselling-prev-page-btn"
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface font-semibold text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg border border-border bg-surface font-semibold text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer text-xs"
               >
                 <ChevronLeft size={14} />
-                Previous
+                <span>Previous</span>
               </button>
 
               <button
@@ -993,9 +1010,9 @@ const CollegeCounsellingPage = () => {
                 id="counselling-next-page-btn"
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface font-semibold text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg border border-border bg-surface font-semibold text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer text-xs"
               >
-                Next
+                <span>Next</span>
                 <ChevronRight size={14} />
               </button>
             </div>

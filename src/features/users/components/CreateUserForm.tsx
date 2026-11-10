@@ -21,10 +21,14 @@ type CreateUserFormProps = {
 };
 
 const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
-  const { accessToken, user: currentUser } = useAuth();
+  const { accessToken } = useAuth();
   const toast = useToast();
 
-  const isSuperAdmin = currentUser?.roleCode === "SUPER_ADMIN" || currentUser?.roleId === 1;
+  const normalizedUserRole = (userToEdit?.role?.name || "").toUpperCase().replace(/\s+/g, "_");
+  const isEditingSuperAdmin = Boolean(
+    userToEdit &&
+      (normalizedUserRole === "SUPER_ADMIN" || normalizedUserRole === "SUPERADMIN")
+  );
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -104,6 +108,7 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
         if (value.trim() && !/^\d{10}$/.test(value)) return "Alternate phone must be exactly 10 digits";
         return null;
       case "roleId":
+        if (isEditingSuperAdmin) return null;
         if (!value) return "System Role is required";
         return null;
       default:
@@ -174,23 +179,37 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
     setErrorMsg(null);
 
     try {
-      const payload: CreateUserPayload = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim() || undefined,
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        alternatePhone: formData.alternatePhone.trim() || undefined,
-        dob: formData.dob ? new Date(formData.dob).toISOString() : undefined,
-        roleId: Number(formData.roleId),
-        teamId: formData.teamId ? Number(formData.teamId) : null,
-      };
-
       if (userToEdit) {
-        const updated = await updateUser(accessToken, userToEdit.id, payload);
+        const updatePayload: Partial<CreateUserPayload> = {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim() || undefined,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          alternatePhone: formData.alternatePhone.trim() || undefined,
+          dob: formData.dob ? new Date(formData.dob).toISOString() : undefined,
+        };
+
+        if (!isEditingSuperAdmin) {
+          updatePayload.roleId = Number(formData.roleId);
+          updatePayload.teamId = formData.teamId ? Number(formData.teamId) : null;
+        }
+
+        const updated = await updateUser(accessToken, userToEdit.id, updatePayload);
         toast.success("Employee profile updated successfully!");
         if (onSuccess) onSuccess(updated);
       } else {
-        const result = await createUser(accessToken, payload);
+        const createPayload: CreateUserPayload = {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim() || undefined,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          alternatePhone: formData.alternatePhone.trim() || undefined,
+          dob: formData.dob ? new Date(formData.dob).toISOString() : undefined,
+          roleId: Number(formData.roleId),
+          teamId: formData.teamId ? Number(formData.teamId) : null,
+        };
+
+        const result = await createUser(accessToken, createPayload);
         setCreatedUserCredentials(result);
         toast.success("User account created successfully!");
       }
@@ -436,32 +455,50 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
               value={formData.roleId}
               onChange={handleChange}
               onBlur={() => handleBlur("roleId")}
+              disabled={isEditingSuperAdmin}
               required
               className={getFieldValidationClass(
                 touched.roleId,
                 errors.roleId,
-                "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition"
+                `h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition ${
+                  isEditingSuperAdmin ? "opacity-60 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800" : ""
+                }`
               )}
             >
-              <option value="">Select Role</option>
-              {roles.length > 0 ? (
-                roles
-                  .filter((r) => isSuperAdmin || (r.name !== "SUPER_ADMIN" && r.id !== 1))
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))
+              {isEditingSuperAdmin ? (
+                <option value={userToEdit?.roleId || ""}>
+                  {userToEdit?.role?.name || "SUPER_ADMIN"} (Locked)
+                </option>
               ) : (
                 <>
-                  {isSuperAdmin && <option value="1">Super Admin</option>}
-                  <option value="2">Program Advisor</option>
-                  <option value="3">Manager</option>
-                  <option value="4">HR</option>
-                  <option value="5">Team Lead</option>
+                  <option value="">Select Role</option>
+                  {roles.length > 0 ? (
+                    roles
+                      .filter((r) => {
+                        const name = (r.name || "").toUpperCase().replace(/\s+/g, "_");
+                        return name !== "SUPER_ADMIN" && name !== "SUPERADMIN";
+                      })
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))
+                  ) : (
+                    <>
+                      <option value="2">Program Advisor</option>
+                      <option value="3">Manager</option>
+                      <option value="4">HR</option>
+                      <option value="5">Team Lead</option>
+                    </>
+                  )}
                 </>
               )}
             </select>
+            {isEditingSuperAdmin && (
+              <p className="mt-1 text-xs text-text-muted">
+                Super Admin role cannot be modified here. Use the Super Admin Replacement workflow.
+              </p>
+            )}
             {touched.roleId && errors.roleId && (
               <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.roleId}</p>
             )}
@@ -476,19 +513,33 @@ const CreateUserForm = ({ userToEdit, onSuccess }: CreateUserFormProps) => {
               value={formData.teamId}
               onChange={handleChange}
               onBlur={() => handleBlur("teamId")}
+              disabled={isEditingSuperAdmin}
               className={getFieldValidationClass(
                 touched.teamId,
                 errors.teamId,
-                "h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition"
+                `h-11 w-full rounded-lg border bg-surface px-4 text-sm text-text-primary outline-none transition ${
+                  isEditingSuperAdmin ? "opacity-60 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800" : ""
+                }`
               )}
             >
-              <option value="">No Team</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
+              {isEditingSuperAdmin ? (
+                <option value="">No Team (Super Admin cannot be assigned to a team)</option>
+              ) : (
+                <>
+                  <option value="">No Team</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
+            {isEditingSuperAdmin && (
+              <p className="mt-1 text-xs text-text-muted">
+                Super Admin accounts cannot belong to a team.
+              </p>
+            )}
             {touched.teamId && errors.teamId && (
               <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.teamId}</p>
             )}

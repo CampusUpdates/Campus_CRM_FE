@@ -217,72 +217,84 @@ const DataUploadPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-            <Upload className="text-primary-600" size={26} />
-            Data Upload
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Upload prospective student datasets (CSV, XLS, XLSX) into the system for batch assignment to advisors.
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary flex items-center gap-2">
+              <Upload className="text-primary-600 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
+              <span>Data Upload</span>
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Upload prospective student datasets (CSV, XLS, XLSX) into the system for batch assignment to advisors.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={loadDataUploads}
-            title="Refresh uploads"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
+            <button
+              onClick={loadDataUploads}
+              title="Refresh uploads"
+              aria-label="Refresh uploads"
+              className="w-8 sm:w-10 h-8 sm:h-10 inline-flex items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:text-primary-600 hover:border-primary-500/40 hover:bg-primary-50/50 dark:hover:bg-primary-950/30 transition shadow-2xs shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin text-primary-600" : ""}`} />
+            </button>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="
-              flex items-center gap-2
-              rounded-lg
-              bg-primary-500
-              px-4 py-2.5
-              text-sm font-medium
-              text-white
-              transition
-              hover:bg-primary-600
-              shadow-sm
-            "
-          >
-            <Plus size={18} />
-            Upload Data
-          </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="
+                inline-flex items-center gap-1.5 sm:gap-2
+                rounded-lg
+                bg-primary-500
+                h-8 sm:h-10
+                px-3 sm:px-4
+                text-xs sm:text-sm font-medium
+                text-white
+                transition
+                hover:bg-primary-600
+                shadow-2xs
+                shrink-0
+                cursor-pointer
+              "
+            >
+              <Plus size={15} className="sm:w-[18px] sm:h-[18px]" />
+              Upload Data
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-text-secondary">Total Uploads</span>
-            <FileSpreadsheet size={20} className="text-primary-500" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase text-text-secondary">Total Uploads</span>
+            <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
+            </div>
           </div>
-          <p className="mt-2 text-3xl font-bold text-text-primary">{uploads.length}</p>
+          <p className="mt-2 text-xl sm:text-3xl font-bold text-text-primary">{uploads.length}</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-text-secondary">Total Records</span>
-            <Users size={20} className="text-emerald-500" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase text-text-secondary">Total Records</span>
+            <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+            </div>
           </div>
-          <p className="mt-2 text-3xl font-bold text-text-primary">{totalRecordsCount}</p>
+          <p className="mt-2 text-xl sm:text-3xl font-bold text-text-primary">{totalRecordsCount}</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-text-secondary">Completed Imports</span>
-            <CheckCircle2 size={20} className="text-purple-500" />
+            <span className="text-[11px] sm:text-xs font-semibold uppercase text-text-secondary">Completed Imports</span>
+            <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+            </div>
           </div>
-          <p className="mt-2 text-3xl font-bold text-text-primary">
+          <p className="mt-2 text-xl sm:text-3xl font-bold text-text-primary">
             {uploads.filter((u) => u.status === "COMPLETED").length}
           </p>
         </div>
@@ -291,8 +303,7 @@ const DataUploadPage = () => {
       {/* Search Bar */}
       <div className="relative">
         <Search
-          size={18}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+          className="w-4 h-4 sm:w-[18px] sm:h-[18px] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
         />
         <input
           type="text"
@@ -300,15 +311,17 @@ const DataUploadPage = () => {
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="
-            h-11
+            h-9 sm:h-11
             w-full
-            rounded-xl
+            rounded-lg sm:rounded-xl
             border
             border-border
             bg-surface
-            pl-11
+            pl-9 sm:pl-11
             pr-4
-            text-sm
+            text-xs sm:text-sm
+            text-text-primary
+            placeholder:text-text-muted
             outline-none
             transition
             focus:border-primary-500
@@ -347,26 +360,26 @@ const DataUploadPage = () => {
             minHeight="min-h-[300px]"
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto w-full max-w-full min-w-0">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <tr className="border-b border-border bg-neutral-50 dark:bg-neutral-800/50">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Dataset File
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Total Records
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Status
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Uploaded By
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Uploaded Date
                   </th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-right text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
@@ -382,69 +395,69 @@ const DataUploadPage = () => {
                   return (
                     <tr
                       key={u.id}
-                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
+                      className="border-b border-border last:border-0 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition"
                     >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-primary-50 text-primary-600">
-                            <FileText size={18} />
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 shrink-0">
+                            <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-text-primary truncate max-w-[150px] sm:max-w-xs">
                               {u.fileName}
                             </p>
-                            <p className="text-xs text-text-muted font-mono">
+                            <p className="text-[10px] sm:text-xs text-text-muted font-mono">
                               #{u.id.slice(0, 8).toUpperCase()}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-sm font-semibold text-text-primary">
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-text-primary whitespace-nowrap">
                         {recordCount} records
                       </td>
 
-                      <td className="px-5 py-4">{getStatusBadge(u.status, u.failureReason)}</td>
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4 whitespace-nowrap">{getStatusBadge(u.status, u.failureReason)}</td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm text-text-secondary whitespace-nowrap">
                         {uploaderName}
                       </td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs sm:text-sm text-text-secondary whitespace-nowrap">
                         {new Date(u.uploadedAt).toLocaleString()}
                       </td>
 
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex justify-end items-center gap-2">
+                      <td className="px-3.5 sm:px-5 py-3 sm:py-4 text-right whitespace-nowrap">
+                        <div className="flex justify-end items-center gap-1.5 sm:gap-2">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedUploadForHistory(u);
                               setIsHistoryDrawerOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition shadow-2xs cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition shadow-2xs cursor-pointer"
                             title="View dataset history and student call outcomes"
                           >
                             <History size={14} className="text-primary-600 shrink-0" />
-                            <span>History</span>
+                            <span className="hidden sm:inline">History</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleSoftDelete(u)}
-                            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface p-1.5 text-text-secondary hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition shadow-2xs cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface p-1 sm:p-1.5 text-text-secondary hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition shadow-2xs cursor-pointer"
                             title="Hide Dataset (Soft Delete)"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} className="sm:w-4 sm:h-4" />
                           </button>
 
                           <button
                             type="button"
                             onClick={() => openHardDeleteModal(u)}
-                            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface p-1.5 text-text-secondary hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition shadow-2xs cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface p-1 sm:p-1.5 text-text-secondary hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition shadow-2xs cursor-pointer"
                             title="Permanently Delete Eligible Records (Hard Delete)"
                           >
-                            <AlertTriangle size={16} />
+                            <AlertTriangle size={15} className="sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       </td>
@@ -546,8 +559,7 @@ const DataUploadPage = () => {
             className={`
               fixed right-0 top-0
               h-[100dvh]
-              w-[42vw]
-              min-w-[440px]
+              w-full sm:w-[480px] md:w-[42vw] md:min-w-[440px]
               bg-surface
               shadow-2xl
               flex flex-col
@@ -556,13 +568,13 @@ const DataUploadPage = () => {
             `}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 sm:px-6 py-4 sm:py-5">
               <div>
-                <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
-                  <AlertTriangle className="text-rose-600" size={24} />
-                  Hard Delete Records
+                <h2 className="text-lg sm:text-xl font-bold text-text-primary flex items-center gap-2">
+                  <AlertTriangle className="text-rose-600 w-5 h-5 sm:w-6 sm:h-6" />
+                  <span>Hard Delete Records</span>
                 </h2>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-1 text-xs sm:text-sm text-text-secondary truncate max-w-[240px] sm:max-w-none">
                   Dataset: <span className="font-semibold text-text-primary">{hardDeleteUpload?.fileName}</span>
                 </p>
               </div>
@@ -570,14 +582,14 @@ const DataUploadPage = () => {
               <button
                 type="button"
                 onClick={() => !loadingHardDelete && closeHardDeleteDrawer()}
-                className="rounded-lg p-2 text-text-secondary transition hover:bg-neutral-100 hover:text-text-primary"
+                className="rounded-lg p-1.5 sm:p-2 text-text-secondary transition hover:bg-neutral-100 hover:text-text-primary"
               >
-                <X size={20} />
+                <X size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
 
             {/* Scrollable Form Body */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
               {loadingHardDelete && !hardDeletePreview ? (
                 <div className="py-12 text-center text-sm text-text-secondary flex flex-col items-center">
                   <RefreshCw size={28} className="animate-spin text-primary-500 mb-3" />
@@ -623,18 +635,18 @@ const DataUploadPage = () => {
             </div>
 
             {/* Footer with Actions */}
-            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-4">
+            <div className="flex shrink-0 items-center justify-end gap-2.5 sm:gap-3 border-t border-border px-4 sm:px-6 py-3.5 sm:py-4">
               <button
                 disabled={loadingHardDelete}
                 onClick={closeHardDeleteDrawer}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-neutral-100 transition"
+                className="h-8 sm:h-10 rounded-lg border border-border px-3 sm:px-4 text-xs sm:text-sm font-medium text-text-secondary hover:bg-neutral-100 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 disabled={!hardDeletePreview || hardDeletePreview.eligibleCount === 0 || loadingHardDelete}
                 onClick={confirmHardDelete}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-rose-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 sm:h-10 rounded-lg bg-rose-600 px-3.5 sm:px-4 text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-rose-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loadingHardDelete && hardDeletePreview ? "Deleting..." : "Permanently Delete"}
               </button>

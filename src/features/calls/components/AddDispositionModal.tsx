@@ -23,61 +23,45 @@ interface AddDispositionModalProps {
   onSuccess: () => void;
 }
 
-const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; color: string; desc: string }[] = [
+const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; desc: string }[] = [
   {
     label: "No Answer",
     value: "NO_ANSWER",
-    color:
-      "border-slate-300 bg-slate-100 text-slate-800 hover:border-slate-400 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800",
     desc: "Phone rang with no response",
   },
   {
     label: "Wrong Number",
     value: "WRONG_NUMBER",
-    color:
-      "border-rose-300 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-400 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/70",
     desc: "Number does not belong to student",
   },
   {
     label: "Not Interested",
     value: "NOT_INTERESTED",
-    color:
-      "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:border-amber-700 dark:hover:bg-amber-950/70",
     desc: "Student declined program offering",
   },
   {
     label: "Follow Up Required",
     value: "FOLLOW_UP",
-    color:
-      "border-blue-300 bg-blue-50 text-blue-800 hover:border-blue-400 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/70",
     desc: "Creates 24-hr active bookmark",
   },
   {
     label: "Call Back Later",
     value: "CALL_BACK_LATER",
-    color:
-      "border-purple-300 bg-purple-50 text-purple-800 hover:border-purple-400 hover:bg-purple-100 focus-visible:ring-2 focus-visible:ring-purple-400 dark:border-purple-900/60 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:border-purple-700 dark:hover:bg-purple-950/70",
     desc: "Creates 24-hr active bookmark",
   },
   {
     label: "Interested / Lead",
     value: "INTERESTED",
-    color:
-      "border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/90 font-bold",
     desc: "Student interested in admission",
   },
   {
     label: "Disconnected",
     value: "DISCONNECTED",
-    color:
-      "border-orange-300 bg-orange-50 text-orange-900 hover:border-orange-400 hover:bg-orange-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:border-orange-700 dark:hover:bg-orange-950/70",
     desc: "Call got disconnected prematurely",
   },
   {
     label: "Other",
     value: "OTHER",
-    color:
-      "border-cyan-300 bg-cyan-50 text-cyan-900 hover:border-cyan-400 hover:bg-cyan-100 focus-visible:ring-2 focus-visible:ring-cyan-400 dark:border-cyan-900/60 dark:bg-cyan-950/40 dark:text-cyan-300 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/70",
     desc: "Other disposition or special scenario",
   },
 ];
@@ -180,10 +164,10 @@ const AddDispositionModal = ({
 
               {/* Outcome Selection */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase text-text-secondary">
+                <label className="block text-xs font-semibold uppercase text-text-secondary dark:text-slate-300">
                   Select Call Disposition *
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {OUTCOME_OPTIONS.map((opt) => {
                     const isSelected = selectedOutcome === opt.value;
                     return (
@@ -191,17 +175,35 @@ const AddDispositionModal = ({
                         key={opt.value}
                         type="button"
                         onClick={() => setSelectedOutcome(opt.value)}
-                        className={`p-3 rounded-xl border text-xs text-left transition flex flex-col justify-between space-y-1 cursor-pointer focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                        className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs text-left flex items-center justify-between gap-2 cursor-pointer w-full min-w-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed ${
                           isSelected
-                            ? "border-emerald-600 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-600 font-bold shadow-xs dark:border-emerald-500 dark:bg-emerald-950/70 dark:text-emerald-300 dark:ring-2 dark:ring-emerald-500/40"
-                            : opt.color
+                            ? "border-emerald-500 bg-emerald-50/90 dark:border-emerald-600/70 dark:bg-emerald-950/40 shadow-2xs"
+                            : "border-border bg-surface hover:bg-neutral-50 hover:border-neutral-300 dark:border-slate-700/80 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 dark:hover:border-slate-600"
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{opt.label}</span>
-                          {isSelected && <CheckCircle2 size={14} className="text-emerald-700 dark:text-emerald-400 shrink-0" />}
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className={`leading-tight truncate ${
+                              isSelected
+                                ? "font-bold text-emerald-950 dark:text-emerald-200"
+                                : "font-medium text-text-primary dark:text-slate-100"
+                            }`}
+                          >
+                            {opt.label}
+                          </div>
+                          <div
+                            className={`text-[10px] truncate mt-0.5 ${
+                              isSelected
+                                ? "font-medium text-emerald-800/90 dark:text-emerald-300/80"
+                                : "text-text-muted dark:text-slate-400"
+                            }`}
+                          >
+                            {opt.desc}
+                          </div>
                         </div>
-                        <span className="text-[10px] opacity-80 leading-tight">{opt.desc}</span>
+                        {isSelected && (
+                          <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        )}
                       </button>
                     );
                   })}

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Users, Search, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Users, Search, ArrowUpDown, ChevronUp, ChevronDown, X } from "lucide-react";
 import type { AdmissionsDashboardData } from "../../../services/admissionsDashboardService";
 
 interface EmployeePerformanceTableProps {
@@ -14,8 +14,21 @@ export const EmployeePerformanceTable: React.FC<EmployeePerformanceTableProps> =
   loading,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>("admissions");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  const handleCloseSearch = () => {
+    setIsSearchOpen(false);
+    setSearchTerm("");
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -38,31 +51,71 @@ export const EmployeePerformanceTable: React.FC<EmployeePerformanceTableProps> =
   });
 
   if (loading) {
-    return <div className="h-64 rounded-xl border border-border bg-surface p-5 animate-pulse" />;
+    return <div className="h-64 rounded-xl border border-border bg-surface p-3.5 sm:p-5 animate-pulse" />;
   }
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/10 text-violet-500">
-            <Users size={16} />
+    <div className="rounded-xl border border-border bg-surface p-3 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-border pb-2.5 sm:pb-3">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/10 text-violet-500 shrink-0">
+              <Users size={16} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-text-primary truncate">Employee Performance</h3>
+              <p className="text-[11px] text-text-muted truncate">Admissions conversion performance by counselor</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-text-primary">Counselor & Employee Performance</h3>
-            <p className="text-[11px] text-text-muted">Admissions conversion performance by counselor</p>
-          </div>
+
+          {/* Search Toggle Icon Button on Mobile */}
+          {!isSearchOpen && (
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              title="Search employees"
+              aria-label="Search employees"
+              className="sm:hidden flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shrink-0 cursor-pointer"
+            >
+              <Search size={15} />
+            </button>
+          )}
         </div>
 
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search counselor or team..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-64 rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none"
-          />
+        {/* Collapsible Search Input Section */}
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
+          {!isSearchOpen ? (
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              title="Search employees"
+              aria-label="Search employees"
+              className="hidden sm:inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shrink-0 cursor-pointer"
+            >
+              <Search size={15} />
+            </button>
+          ) : (
+            <div className="relative flex items-center w-full sm:w-64">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search counselor or team..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background pl-8 pr-8 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none h-8"
+              />
+              <button
+                type="button"
+                onClick={handleCloseSearch}
+                title="Close search"
+                aria-label="Close search"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary transition rounded cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

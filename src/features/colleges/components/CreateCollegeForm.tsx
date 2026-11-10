@@ -350,11 +350,12 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
       </section>
 
       {/* Submit Button */}
-      <div className="flex justify-end gap-3 border-t border-border pt-6">
+      <div className="flex justify-end gap-3 border-t border-border pt-4 sm:pt-6">
         <button
           type="submit"
           disabled={loading}
           className="
+            w-full sm:w-auto
             rounded-lg
             bg-primary-500
             px-5 py-2.5
@@ -362,6 +363,8 @@ const CreateCollegeForm = ({ onSuccess }: CreateCollegeFormProps) => {
             transition
             hover:bg-primary-600
             disabled:opacity-50
+            cursor-pointer
+            shadow-xs
           "
         >
           {loading ? "Creating College..." : "Create College"}

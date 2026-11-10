@@ -17,6 +17,7 @@ import {
   FileSpreadsheet,
   ChevronDown,
   Filter,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
@@ -147,6 +148,7 @@ const AnalysisSpreadsheetsPage = () => {
       ? "ALL"
       : "AVAILABLE"
   );
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
   // 5. Disposition filter (default: All)
   const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
@@ -178,6 +180,7 @@ const AnalysisSpreadsheetsPage = () => {
         setIsStateDropdownOpen(false);
         setIsCityDropdownOpen(false);
         setIsUploadDropdownOpen(false);
+        setIsStatusDropdownOpen(false);
         setIsDispositionDropdownOpen(false);
         setIsNotCalledByDropdownOpen(false);
       }
@@ -474,32 +477,33 @@ const AnalysisSpreadsheetsPage = () => {
   return (
     <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary-500/10 text-primary-500 border border-primary-500/20">
-              <FileSpreadsheet size={24} />
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-primary-500/10 text-primary-500 border border-primary-500/20 shrink-0 mt-0.5 sm:mt-0">
+              <FileSpreadsheet className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[19px] sm:text-2xl font-bold text-text-primary leading-tight tracking-tight sm:tracking-normal truncate sm:whitespace-normal">
                 Analysis Spreadsheets
               </h1>
-              <p className="mt-0.5 text-xs text-text-secondary">
+              <p className="mt-1 text-[11px] sm:text-xs text-text-secondary leading-relaxed sm:leading-normal">
                 Spreadsheet-style student data viewing, sequential remark history, and multi-filter bulk assignment.
               </p>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => loadFilteredData()}
-            title="Refresh spreadsheet data"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shadow-2xs text-xs font-semibold"
-          >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
+            <button
+              onClick={() => loadFilteredData()}
+              title="Refresh spreadsheet data"
+              aria-label="Refresh"
+              className="w-10 h-10 sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 rounded-full sm:rounded-xl border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shadow-2xs text-xs font-semibold inline-flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <RefreshCw size={15} className={`shrink-0 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -521,28 +525,29 @@ const AnalysisSpreadsheetsPage = () => {
         </div>
 
         {/* 6 Filter Dropdowns in Data Assignment Workspace Order */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 pt-1">
           {/* 1. State Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative col-span-1">
             <button
               type="button"
               onClick={() => {
                 setIsStateDropdownOpen(!isStateDropdownOpen);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
                 setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left min-w-0">
                 State: {selectedStates.length > 0 ? `${selectedStates.length} selected` : "All States"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
             </button>
 
             {isStateDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-64 max-w-[calc(100vw-32px)] max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {filterOptions.states.length === 0 ? (
                   <p className="p-2 text-xs text-text-muted">No state options available</p>
                 ) : (
@@ -557,7 +562,7 @@ const AnalysisSpreadsheetsPage = () => {
                         onChange={() => handleStateToggle(st)}
                         className="rounded border-border text-primary-600 focus:ring-primary-400"
                       />
-                      <span>{st}</span>
+                      <span className="truncate">{st}</span>
                     </label>
                   ))
                 )}
@@ -566,26 +571,27 @@ const AnalysisSpreadsheetsPage = () => {
           </div>
 
           {/* 2. City Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative col-span-1">
             <button
               type="button"
               onClick={() => {
                 setIsCityDropdownOpen(!isCityDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
                 setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left min-w-0">
                 City: {selectedCities.length > 0 ? `${selectedCities.length} selected` : "All Cities"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
             </button>
 
             {isCityDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute right-0 left-auto sm:right-auto sm:left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-64 max-w-[calc(100vw-32px)] max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {availableCityOptions.length === 0 ? (
                   <p className="p-2 text-xs text-text-muted">No city options available</p>
                 ) : (
@@ -600,7 +606,7 @@ const AnalysisSpreadsheetsPage = () => {
                         onChange={() => handleCityToggle(ct)}
                         className="rounded border-border text-primary-600 focus:ring-primary-400"
                       />
-                      <span>{ct}</span>
+                      <span className="truncate">{ct}</span>
                     </label>
                   ))
                 )}
@@ -609,26 +615,27 @@ const AnalysisSpreadsheetsPage = () => {
           </div>
 
           {/* 3. Dataset Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative col-span-1">
             <button
               type="button"
               onClick={() => {
                 setIsUploadDropdownOpen(!isUploadDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
                 setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left min-w-0">
                 Dataset: {selectedUploadIds.length > 0 ? `${selectedUploadIds.length} selected` : "All Datasets"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
             </button>
 
             {isUploadDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-64 max-w-[calc(100vw-32px)] max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {filterOptions.uploads.length === 0 ? (
                   <p className="p-2 text-xs text-text-muted">No dataset files available</p>
                 ) : (
@@ -651,21 +658,62 @@ const AnalysisSpreadsheetsPage = () => {
             )}
           </div>
 
-          {/* 4. Assignment Status Select */}
-          <div>
-            <select
-              value={assignmentStatus}
-              onChange={(e) => handleStatusChange(e.target.value as any)}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500"
+          {/* 4. Assignment Status Dropdown */}
+          <div className="relative col-span-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                setIsStateDropdownOpen(false);
+                setIsCityDropdownOpen(false);
+                setIsUploadDropdownOpen(false);
+                setIsDispositionDropdownOpen(false);
+                setIsNotCalledByDropdownOpen(false);
+              }}
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <option value="AVAILABLE">Status: Available (Unassigned)</option>
-              <option value="ASSIGNED">Status: Assigned</option>
-              <option value="ALL">Status: All Records</option>
-            </select>
+              <span className="truncate flex-1 text-left min-w-0">
+                {assignmentStatus === "AVAILABLE"
+                  ? "Status: Available"
+                  : assignmentStatus === "ASSIGNED"
+                  ? "Status: Assigned"
+                  : "Status: All"}
+              </span>
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
+            </button>
+
+            {isStatusDropdownOpen && (
+              <div className="absolute right-0 left-auto sm:right-auto sm:left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-60 max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-xl space-y-0.5">
+                {[
+                  { value: "AVAILABLE", label: "Status: Available (Unassigned)" },
+                  { value: "ASSIGNED", label: "Status: Assigned" },
+                  { value: "ALL", label: "Status: All Records" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      handleStatusChange(opt.value as any);
+                      setIsStatusDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium transition cursor-pointer flex items-center justify-between ${
+                      assignmentStatus === opt.value
+                        ? "bg-primary-50 text-primary-700 font-semibold dark:bg-emerald-950/60 dark:text-emerald-300"
+                        : "text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    }`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {assignmentStatus === opt.value && (
+                      <Check size={14} className="text-primary-600 shrink-0 ml-1.5" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 5. Call Disposition Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -673,18 +721,19 @@ const AnalysisSpreadsheetsPage = () => {
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left min-w-0">
                 Disposition: {selectedDispositions.length > 0 ? `${selectedDispositions.length} selected` : "All"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
             </button>
 
             {isDispositionDropdownOpen && (
-              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 sm:left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-64 max-w-[calc(100vw-32px)] max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {/* All Option */}
                 <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer text-xs font-medium text-text-primary">
                   <input
@@ -712,7 +761,7 @@ const AnalysisSpreadsheetsPage = () => {
                           onChange={() => handleDispositionToggle(opt.value)}
                           className="rounded border-border text-primary-600 focus:ring-primary-400"
                         />
-                        <span>{opt.label}</span>
+                        <span className="truncate">{opt.label}</span>
                       </label>
                     );
                   })}
@@ -735,7 +784,7 @@ const AnalysisSpreadsheetsPage = () => {
           </div>
 
           {/* 6. Not Called By Multi-Select Dropdown */}
-          <div className="relative">
+          <div className="relative col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -743,18 +792,19 @@ const AnalysisSpreadsheetsPage = () => {
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsStatusDropdownOpen(false);
                 setIsDispositionDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 pl-2.5 sm:pl-3.5 pr-2.5 sm:pr-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer gap-1.5"
             >
-              <span className="truncate">
+              <span className="truncate flex-1 text-left min-w-0">
                 Not Called By: {selectedNotCalledByUserIds.length > 0 ? `${selectedNotCalledByUserIds.length} selected` : "All"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 pointer-events-none" />
             </button>
 
             {isNotCalledByDropdownOpen && (
-              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-72 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 left-auto sm:right-auto sm:left-0 top-11 sm:top-12 z-40 w-[calc(100vw-48px)] sm:w-72 max-w-[calc(100vw-32px)] max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl">
                 {/* Search Bar inside Caller Dropdown */}
                 <div className="relative mb-2 shrink-0">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -1383,10 +1433,10 @@ const AnalysisSpreadsheetsPage = () => {
                               setAssignmentDrawerError(null);
                               setIsAssignmentDrawerOpen(true);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900 rounded-lg text-xs font-semibold transition border border-primary-200 dark:border-primary-800 shadow-2xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 dark:bg-primary-600 dark:hover:bg-primary-500 dark:active:bg-primary-700 dark:text-white dark:border-primary-500 rounded-lg text-xs font-semibold transition shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Assign to Program Advisor"
                           >
-                            <UserPlus size={13} />
+                            <UserPlus size={13} className="shrink-0" />
                             Assign
                           </button>
                           <button

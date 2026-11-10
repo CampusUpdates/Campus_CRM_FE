@@ -45,7 +45,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     <ToastContext.Provider value={{ showToast, success, error, info }}>
       {children}
       {/* Toast Render Container */}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+      <div className="fixed top-3 sm:top-5 left-3 right-3 sm:left-auto sm:right-5 z-[9999] flex flex-col items-center sm:items-end gap-2.5 sm:gap-3 pointer-events-none box-border">
         {toasts.map((toast) => {
           const isSuccess = toast.type === "success";
           const isError = toast.type === "error";
@@ -53,39 +53,43 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
           return (
             <div
               key={toast.id}
+              role="alert"
               className={`
                 pointer-events-auto
-                flex items-center gap-3
-                px-4 py-3.5
+                box-border
+                w-[calc(100vw-24px)] max-w-[400px] sm:w-auto sm:min-w-[320px] sm:max-w-sm
+                flex items-start sm:items-center gap-2.5 sm:gap-3
+                px-3.5 py-3 sm:px-4 sm:py-3.5
                 rounded-xl shadow-xl border
                 transition-all duration-300 transform translate-y-0
                 bg-white text-slate-800
                 ${
                   isSuccess
-                    ? "border-emerald-200 text-emerald-900 bg-emerald-50/90 backdrop-blur-md"
+                    ? "border-emerald-200 text-emerald-950 bg-emerald-50/95 backdrop-blur-md"
                     : isError
-                    ? "border-rose-200 text-rose-900 bg-rose-50/90 backdrop-blur-md"
-                    : "border-blue-200 text-blue-900 bg-blue-50/90 backdrop-blur-md"
+                    ? "border-rose-200 text-rose-950 bg-rose-50/95 backdrop-blur-md"
+                    : "border-blue-200 text-blue-950 bg-blue-50/95 backdrop-blur-md"
                 }
               `}
             >
-              <div className="shrink-0">
+              <div className="shrink-0 mt-0.5 sm:mt-0">
                 {isSuccess ? (
-                  <CheckCircle2 size={20} className="text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
                 ) : isError ? (
-                  <AlertCircle size={20} className="text-rose-600" />
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600" />
                 ) : (
-                  <Info size={20} className="text-blue-600" />
+                  <Info className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 )}
               </div>
 
-              <div className="flex-1 text-sm font-medium leading-snug">
+              <div className="flex-1 min-w-0 text-xs sm:text-sm font-medium leading-relaxed sm:leading-snug break-words">
                 {toast.message}
               </div>
 
               <button
                 onClick={() => removeToast(toast.id)}
-                className="shrink-0 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition"
+                aria-label="Close notification"
+                className="shrink-0 p-1 -mr-1 -mt-0.5 sm:mt-0 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition cursor-pointer"
               >
                 <X size={16} />
               </button>

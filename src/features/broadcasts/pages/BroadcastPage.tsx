@@ -166,15 +166,18 @@ export const BroadcastPage = () => {
   }, [items, isTableView, inboxStatusFilter]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 sm:space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+      <div className="flex flex-col gap-2.5 sm:gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3 sm:pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2.5">
-            <Megaphone className="text-primary-600 h-7 w-7 shrink-0" />
+          <h1 className="text-lg sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5">
+            <Megaphone className="text-primary-600 h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
             <span>Broadcast Messages</span>
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-0.5 text-xs text-text-secondary leading-normal sm:hidden">
+            Manage CRM broadcasts and acknowledgements.
+          </p>
+          <p className="hidden sm:block mt-1 text-sm text-text-secondary">
             {isSuperAdmin
               ? "Comprehensive broadcast history across the CRM, sender details, and real-time acknowledgement tracking."
               : isManager
@@ -183,30 +186,30 @@ export const BroadcastPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
+        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
           <button
             onClick={loadData}
             disabled={loading}
             title="Refresh announcements"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50"
+            className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs"
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
           </button>
 
           {canCreate && (
             <button
               onClick={() => setCreateModalOpen(true)}
               className="
-                flex items-center gap-2
+                flex items-center gap-1.5 sm:gap-2
                 rounded-lg
                 bg-primary-500 hover:bg-primary-600
-                px-4 py-2.5
-                text-sm font-medium
+                h-9 sm:h-10 px-3 sm:px-4
+                text-xs sm:text-sm font-medium
                 text-white
-                shadow-sm transition cursor-pointer
+                shadow-2xs transition cursor-pointer shrink-0
               "
             >
-              <Plus size={18} />
+              <Plus size={15} className="sm:w-[18px] sm:h-[18px]" />
               <span>New Broadcast</span>
             </button>
           )}
@@ -215,21 +218,24 @@ export const BroadcastPage = () => {
 
       {/* Role Navigation Tabs (Super Admin and Manager) */}
       {(isSuperAdmin || isManager) && (
-        <div className="flex items-center gap-2 border-b border-border">
+        <div className="flex items-center border-b border-border w-full">
           {isSuperAdmin && (
             <button
               type="button"
               onClick={() => handleTabChange("crm_broadcasts")}
-              className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition cursor-pointer ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 pb-2.5 sm:pb-3 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition cursor-pointer min-w-0 ${
                 activeTab === "crm_broadcasts"
                   ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                   : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
-              <ShieldCheck size={16} />
-              <span>All CRM Broadcasts</span>
+              <ShieldCheck size={15} className="sm:w-4 sm:h-4 shrink-0" />
+              <span className="whitespace-nowrap">
+                <span className="sm:hidden">All Broadcasts</span>
+                <span className="hidden sm:inline">All CRM Broadcasts</span>
+              </span>
               {activeTab === "crm_broadcasts" && meta?.total > 0 && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-primary-500/15 text-primary-600 dark:text-primary-400 font-semibold">
+                <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 text-[10px] sm:text-xs rounded-full bg-primary-500/15 text-primary-600 dark:text-primary-400 font-semibold shrink-0">
                   {meta.total}
                 </span>
               )}
@@ -240,16 +246,19 @@ export const BroadcastPage = () => {
             <button
               type="button"
               onClick={() => handleTabChange("sent")}
-              className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition cursor-pointer ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 pb-2.5 sm:pb-3 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition cursor-pointer min-w-0 ${
                 activeTab === "sent"
                   ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                   : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
-              <Send size={16} />
-              <span>Sent Announcements</span>
+              <Send size={15} className="sm:w-4 sm:h-4 shrink-0" />
+              <span className="whitespace-nowrap">
+                <span className="sm:hidden">Sent</span>
+                <span className="hidden sm:inline">Sent Announcements</span>
+              </span>
               {activeTab === "sent" && meta?.total > 0 && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-primary-500/15 text-primary-600 dark:text-primary-400 font-semibold">
+                <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 text-[10px] sm:text-xs rounded-full bg-primary-500/15 text-primary-600 dark:text-primary-400 font-semibold shrink-0">
                   {meta.total}
                 </span>
               )}
@@ -259,25 +268,28 @@ export const BroadcastPage = () => {
           <button
             type="button"
             onClick={() => handleTabChange("inbox")}
-            className={`flex items-center gap-2 pb-3 px-3 text-sm font-medium border-b-2 transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 pb-2.5 sm:pb-3 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition cursor-pointer min-w-0 ${
               activeTab === "inbox"
                 ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                 : "border-transparent text-text-secondary hover:text-text-primary"
             }`}
           >
-            <Inbox size={16} />
-            <span>Received Messages</span>
+            <Inbox size={15} className="sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">
+              <span className="sm:hidden">Received</span>
+              <span className="hidden sm:inline">Received Messages</span>
+            </span>
           </button>
         </div>
       )}
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full min-w-0">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
         {/* Search */}
         <div className="relative flex-1 min-w-0">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            size={15}
+            className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none sm:w-[18px] sm:h-[18px]"
           />
           <input
             type="text"
@@ -294,18 +306,19 @@ export const BroadcastPage = () => {
               setPage(1);
             }}
             className="
-              h-11
+              h-9 sm:h-11
               w-full
-              rounded-xl
+              rounded-lg sm:rounded-xl
               border border-border
               bg-surface
-              pl-11 pr-10
-              text-sm text-text-primary
+              pl-9 sm:pl-11 pr-8 sm:pr-10
+              text-xs sm:text-sm text-text-primary
               placeholder:text-text-muted
               outline-none
               focus:border-primary-500
               focus:ring-2 focus:ring-primary-100
               transition
+              shadow-2xs
             "
           />
           {searchTerm && (
@@ -315,16 +328,16 @@ export const BroadcastPage = () => {
                 setSearchTerm("");
                 setPage(1);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
+              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
             >
-              <X size={16} />
+              <X size={14} className="sm:w-4 sm:h-4" />
             </button>
           )}
         </div>
 
         {/* Filters for Table View (Super Admin / Manager Sent) */}
         {isTableView ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             {/* Sender Filter - Super Admin Only */}
             {isSuperAdmin && (
               <select
@@ -333,7 +346,7 @@ export const BroadcastPage = () => {
                   setSenderRoleFilter(e.target.value as any);
                   setPage(1);
                 }}
-                className="h-11 px-3 rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer"
+                className="h-9 sm:h-11 px-2.5 sm:px-3 rounded-lg sm:rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer flex-1 min-w-[130px] sm:flex-none sm:w-auto shadow-2xs"
               >
                 <option value="ALL">All Senders</option>
                 <option value="SUPER_ADMIN">Super Admins Only</option>
@@ -348,7 +361,7 @@ export const BroadcastPage = () => {
                 setTimeFilter(e.target.value as any);
                 setPage(1);
               }}
-              className="h-11 px-3 rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer"
+              className="h-9 sm:h-11 px-2.5 sm:px-3 rounded-lg sm:rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer flex-1 min-w-[120px] sm:flex-none sm:w-auto shadow-2xs"
             >
               <option value="ALL">All Time</option>
               <option value="TODAY">Sent Today</option>
@@ -363,7 +376,7 @@ export const BroadcastPage = () => {
                 setAckFilter(e.target.value as any);
                 setPage(1);
               }}
-              className="h-11 px-3 rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer"
+              className="h-9 sm:h-11 px-2.5 sm:px-3 rounded-lg sm:rounded-xl border border-border bg-surface text-xs text-text-primary outline-none focus:border-primary-500 cursor-pointer flex-1 min-w-[130px] sm:flex-none sm:w-auto shadow-2xs"
             >
               <option value="ALL">All Ack Statuses</option>
               <option value="ACKNOWLEDGED">100% Acknowledged</option>
@@ -372,21 +385,31 @@ export const BroadcastPage = () => {
           </div>
         ) : (
           /* Segmented Control for Employee / Inbox View */
-          <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-border bg-surface shrink-0 self-start lg:self-auto overflow-x-auto max-w-full">
+          <div className="grid grid-cols-3 sm:inline-flex items-center gap-1 p-1 rounded-lg sm:rounded-xl border border-border bg-surface w-full sm:w-auto shrink-0 shadow-2xs">
             {(["ALL", "UNREAD", "ACKNOWLEDGED"] as const).map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => setInboxStatusFilter(st)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer whitespace-nowrap ${
+                className={`px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs font-medium transition cursor-pointer text-center justify-center whitespace-nowrap ${
                   inboxStatusFilter === st
                     ? "bg-primary-500 text-white font-semibold shadow-2xs"
                     : "text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
               >
-                {st === "ALL" && "All Messages"}
-                {st === "UNREAD" && "Unread Only"}
-                {st === "ACKNOWLEDGED" && "Acknowledged"}
+                {st === "ALL" && (
+                  <>
+                    <span className="sm:hidden">All</span>
+                    <span className="hidden sm:inline">All Messages</span>
+                  </>
+                )}
+                {st === "UNREAD" && (
+                  <>
+                    <span className="sm:hidden">Unread</span>
+                    <span className="hidden sm:inline">Unread Only</span>
+                  </>
+                )}
+                {st === "ACKNOWLEDGED" && <span>Acknowledged</span>}
               </button>
             ))}
           </div>
@@ -637,36 +660,36 @@ export const BroadcastPage = () => {
                 key={item.id}
                 onClick={() => handleOpenReader(item)}
                 className={`
-                  group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4
-                  p-5 rounded-xl border transition-all duration-200 cursor-pointer shadow-xs
+                  group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4
+                  p-3.5 sm:p-5 rounded-xl border transition-all duration-200 cursor-pointer shadow-2xs
                   ${!item.isRead
-                    ? "border-primary-500/40 bg-surface hover:border-primary-500 hover:shadow-md"
+                    ? "border-primary-500/40 bg-surface hover:border-primary-500 hover:shadow-xs"
                     : "border-border bg-surface hover:border-neutral-300 dark:hover:border-neutral-700"
                   }
                 `}
               >
                 {/* Left details */}
-                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                <div className="flex items-start gap-3 sm:gap-3.5 flex-1 min-w-0">
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border mt-0.5 ${
+                    className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border mt-0.5 ${
                       !item.isRead
                         ? "border-primary-300 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400"
                         : "border-border bg-neutral-100 dark:bg-neutral-800 text-text-muted"
                     }`}
                   >
-                    <Megaphone size={18} />
+                    <Megaphone size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       {!item.isRead && (
-                        <span className="px-2 py-0.5 rounded-full bg-primary-500 text-white font-semibold text-[10px] uppercase tracking-wider">
+                        <span className="px-1.5 py-0.5 sm:px-2 rounded-full bg-primary-500 text-white font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0">
                           New Unread
                         </span>
                       )}
 
                       <h3
-                        className={`text-sm ${
+                        className={`text-xs sm:text-sm ${
                           !item.isRead
                             ? "font-bold text-text-primary"
                             : "font-semibold text-text-primary"
@@ -680,7 +703,7 @@ export const BroadcastPage = () => {
                       {item.body}
                     </p>
 
-                    <div className="flex items-center gap-2.5 text-[11px] text-text-muted pt-1 flex-wrap">
+                    <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-text-muted pt-0.5 sm:pt-1 flex-wrap">
                       <span>
                         Sent by:{" "}
                         <strong className="text-text-primary font-medium">
@@ -689,7 +712,7 @@ export const BroadcastPage = () => {
                             : "Super Admin"}
                         </strong>
                         {item.createdBy?.role?.name && (
-                          <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-neutral-100 dark:bg-neutral-800 text-text-secondary">
+                          <span className="ml-1 sm:ml-1.5 px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] bg-neutral-100 dark:bg-neutral-800 text-text-secondary">
                             {item.createdBy.role.name.replace(/_/g, " ")}
                           </span>
                         )}
@@ -708,15 +731,15 @@ export const BroadcastPage = () => {
                 </div>
 
                 {/* Right: Ack status badge & Action */}
-                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-border/50 sm:border-t-0">
                   {item.isAcknowledged ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs border border-emerald-200 dark:border-emerald-800/60">
-                      <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] sm:text-xs border border-emerald-200 dark:border-emerald-800/60">
+                      <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Acknowledged
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800/60">
-                      <Clock size={14} className="text-amber-600 dark:text-amber-400" />
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold text-[11px] sm:text-xs border border-amber-200 dark:border-amber-800/60">
+                      <Clock size={13} className="sm:w-3.5 sm:h-3.5 text-amber-600 dark:text-amber-400" />
                       Pending Ack
                     </span>
                   )}
@@ -729,13 +752,13 @@ export const BroadcastPage = () => {
                     }}
                     className="
                       inline-flex items-center gap-1.5
-                      px-3.5 py-1.5 rounded-lg
+                      px-3 sm:px-3.5 py-1.5 rounded-lg
                       bg-primary-500 hover:bg-primary-600
                       text-white font-medium text-xs
                       shadow-2xs transition cursor-pointer
                     "
                   >
-                    <Eye size={14} />
+                    <Eye size={13} className="sm:w-3.5 sm:h-3.5" />
                     Read & Acknowledge
                   </button>
                 </div>

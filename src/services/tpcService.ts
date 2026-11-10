@@ -255,6 +255,15 @@ export interface GetTpcReportParams {
   status?: string;
   period?: string;
   search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TpcReportsPagination {
+  page: number;
+  limit: number;
+  totalRecords: number;
+  totalPages: number;
 }
 
 export interface TpcReportsResponse {
@@ -265,6 +274,7 @@ export interface TpcReportsResponse {
     notAssignedTpcs: number;
   };
   data: TPCResponse[];
+  pagination?: TpcReportsPagination;
 }
 
 export async function fetchTpcReports(
@@ -277,6 +287,8 @@ export async function fetchTpcReports(
   if (params.status && params.status !== "ALL") query.set("status", params.status);
   if (params.period && params.period !== "ALL") query.set("period", params.period);
   if (params.search) query.set("search", params.search);
+  if (params.page !== undefined) query.set("page", String(params.page));
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
 
   const qs = query.toString();
   const url = `${API_URL}/tpc/reports${qs ? `?${qs}` : ""}`;
