@@ -27,6 +27,11 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const normalizedRoleName = (user.role?.name || "").toUpperCase().replace(/\s+/g, "_");
+  const isSuperAdmin =
+    normalizedRoleName === "SUPER_ADMIN" ||
+    normalizedRoleName === "SUPERADMIN";
+
   const handleClose = () => {
     if (saving) return;
     setIsClosing(true);
@@ -68,6 +73,11 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!accessToken) return;
+
+    if (isSuperAdmin) {
+      setErrorMsg("Super Admin accounts cannot be assigned to any team.");
+      return;
+    }
 
     const targetTeamId = selectedTeamId ? Number(selectedTeamId) : null;
 
@@ -175,6 +185,15 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
         {/* Content Form Body */}
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            {isSuperAdmin && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800">
+                <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
+                <div className="flex-1 font-medium">
+                  Super Admin accounts are system-wide and cannot be assigned to any operational department team.
+                </div>
+              </div>
+            )}
+
             {errorMsg && (
               <div className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-700">
                 <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
@@ -200,11 +219,10 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
                 <Users size={15} className="text-text-muted shrink-0" />
                 <span>Current Team:</span>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                    user.team || user.teamId
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${user.team || user.teamId
                       ? "bg-purple-50 text-purple-700 border-purple-200"
                       : "bg-neutral-100 text-neutral-600 border-neutral-200"
-                  }`}
+                    }`}
                 >
                   {currentTeamName}
                 </span>
@@ -225,7 +243,7 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
               ) : (
                 <select
                   value={selectedTeamId}
-                  disabled={saving}
+                  disabled={saving || isSuperAdmin}
                   onChange={(e) => setSelectedTeamId(e.target.value)}
                   className="
                     h-11
@@ -280,7 +298,7 @@ const AssignTeamModal = ({ user, onClose, onSuccess }: AssignTeamDrawerProps) =>
 
             <button
               type="submit"
-              disabled={saving || loadingTeams || isUnchanged}
+              disabled={saving || loadingTeams || isUnchanged || isSuperAdmin}
               className="
                 flex items-center gap-2
                 rounded-lg

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Users,
   Filter,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useAuth } from "../../../context/AuthContext";
@@ -31,10 +32,15 @@ import {
 } from "../../../components/common";
 
 const UsersPage = () => {
-  const { accessToken, hasRole } = useAuth();
+  const { accessToken, hasRole, user: currentUser } = useAuth();
   const toast = useToast();
   const [searchParams] = useSearchParams();
   const paramSearch = searchParams.get("search");
+
+  const isCurrentSuperAdmin =
+    hasRole(["SUPER_ADMIN"]) ||
+    (currentUser?.roleCode || "").toUpperCase().replace(/\s+/g, "_") === "SUPER_ADMIN" ||
+    (currentUser?.role?.name || "").toUpperCase().replace(/\s+/g, "_") === "SUPER_ADMIN";
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [teams, setTeams] = useState<UserTeam[]>([]);
@@ -110,9 +116,10 @@ const UsersPage = () => {
 
   const handleConfirmDeactivate = async () => {
     if (!accessToken || !deactivatingUser) return;
+    const deactivatingRoleName = (deactivatingUser.role?.name || "").toUpperCase().replace(/\s+/g, "_");
     const isSuperAdminUser =
-      deactivatingUser.role?.name?.toUpperCase() === "SUPER_ADMIN" ||
-      deactivatingUser.roleId === 1;
+      deactivatingRoleName === "SUPER_ADMIN" ||
+      deactivatingRoleName === "SUPERADMIN";
 
     if (isSuperAdminUser) {
       toast.error("Super Admin accounts cannot be deactivated.");
@@ -385,9 +392,10 @@ const UsersPage = () => {
                   }`.toUpperCase();
 
                   const isActive = user.status === "ACTIVE";
+                  const targetUserRole = (user.role?.name || "").toUpperCase().replace(/\s+/g, "_");
                   const isSuperAdminRole =
-                    user.role?.name?.toUpperCase() === "SUPER_ADMIN" ||
-                    user.roleId === 1;
+                    targetUserRole === "SUPER_ADMIN" ||
+                    targetUserRole === "SUPERADMIN";
 
                   return (
                     <tr
@@ -464,27 +472,31 @@ const UsersPage = () => {
 
                       <td className="px-5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Edit User Button (Icon) */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(user)}
-                            title="Edit user"
-                            aria-label="Edit user"
-                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-primary-600 transition cursor-pointer"
-                          >
-                            <Edit3 size={17} />
-                          </button>
+                          {/* Edit User Button (Icon): Hidden for Super Admin accounts unless current user is an active Super Admin */}
+                          {(!isSuperAdminRole || isCurrentSuperAdmin) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(user)}
+                              title="Edit user"
+                              aria-label="Edit user"
+                              className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-primary-600 transition cursor-pointer"
+                            >
+                              <Edit3 size={17} />
+                            </button>
+                          )}
 
-                          {/* Assign / Change Team Button (Icon) */}
-                          <button
-                            type="button"
-                            onClick={() => setAssigningTeamUser(user)}
-                            title="Assign team"
-                            aria-label="Assign team"
-                            className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-purple-600 transition cursor-pointer"
-                          >
-                            <UserPlus size={17} />
-                          </button>
+                          {/* Assign / Change Team Button (Icon) - Super Admin cannot belong to a team */}
+                          {!isSuperAdminRole && (
+                            <button
+                              type="button"
+                              onClick={() => setAssigningTeamUser(user)}
+                              title="Assign team"
+                              aria-label="Assign team"
+                              className="p-2 rounded-lg text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-purple-600 transition cursor-pointer"
+                            >
+                              <UserPlus size={17} />
+                            </button>
+                          )}
 
                           {/* Account Access Deactivate / Reactivate Control: Hidden for Super Admin */}
                           {!isSuperAdminRole ? (
@@ -512,8 +524,14 @@ const UsersPage = () => {
                               </button>
                             )
                           ) : (
-                            /* Super Admin is protected: placeholder keeps alignment uniform without any deactivation trigger */
-                            <div className="w-8 h-8" aria-hidden="true" />
+                            /* Super Admin is protected: shield indicator confirms protected status */
+                            <div
+                              className="flex items-center justify-center p-2 rounded-lg text-amber-600 dark:text-amber-400"
+                              title="Super Admin account is permanently protected"
+                              aria-label="Super Admin protected"
+                            >
+                              <ShieldCheck size={17} />
+                            </div>
                           )}
                         </div>
                       </td>
