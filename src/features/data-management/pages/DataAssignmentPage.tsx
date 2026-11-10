@@ -675,61 +675,63 @@ const DataAssignmentPage = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-            <UserCheck className="text-primary-600" size={26} />
-            Data Assignment Workspace
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Find student data using filters and assign it to a Program Advisor.
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary flex items-center gap-2">
+              <UserCheck className="text-primary-600 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
+              <span>Data Assignment Workspace</span>
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Find student data using filters and assign it to a Program Advisor.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleOpenReclaimBulk}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-semibold transition shadow-2xs"
-          >
-            <RotateCcw size={15} />
-            Reclaim All Advisor Data
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={handleOpenReclaimBulk}
+              className="inline-flex items-center justify-center gap-1.5 h-8 sm:h-10 px-2.5 sm:px-3.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs sm:text-xs font-semibold transition shadow-2xs shrink-0 cursor-pointer"
+            >
+              <RotateCcw size={14} className="sm:w-[15px] sm:h-[15px]" />
+              <span>Reclaim All Advisor Data</span>
+            </button>
 
-          <button
-            onClick={() => {
-              loadFilteredData();
-              loadAssignmentsHistory();
-            }}
-            title="Refresh student data"
-            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
-          >
-            <RefreshCw size={18} className={loading || historyLoading ? "animate-spin" : ""} />
-          </button>
+            <button
+              onClick={() => {
+                loadFilteredData();
+                loadAssignmentsHistory();
+              }}
+              title="Refresh student data"
+              aria-label="Refresh student data"
+              className="w-8 sm:w-10 h-8 sm:h-10 inline-flex items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:text-primary-600 hover:border-primary-500/40 hover:bg-primary-50/50 dark:hover:bg-primary-950/30 transition shadow-2xs shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading || historyLoading ? "animate-spin text-primary-600" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Search & Multi-Filter Control Panel */}
-      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-xs">
+      <div className="rounded-xl sm:rounded-2xl border border-border bg-surface p-3.5 sm:p-5 space-y-3 sm:space-y-4 shadow-xs">
         {/* Search Bar */}
         <div className="relative">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            className="w-4 h-4 sm:w-[18px] sm:h-[18px] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           />
           <input
             type="text"
             placeholder="Search by student name, phone, email, city, state..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-surface pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            className="h-9 sm:h-11 w-full rounded-lg sm:rounded-xl border border-border bg-surface pl-9 sm:pl-11 pr-4 text-xs sm:text-sm text-text-primary outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 placeholder:text-text-muted"
           />
         </div>
 
         {/* Filter Dropdowns Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
-          {/* State Multi-Select Dropdown */}
-          <div className="relative filter-dropdown-container">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 pt-1">
+          {/* 1. State Multi-Select Dropdown */}
+          <div className="relative filter-dropdown-container col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -739,16 +741,16 @@ const DataAssignmentPage = () => {
                 setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer"
             >
               <span className="truncate">
                 State: {selectedStates.length > 0 ? `${selectedStates.length} selected` : "All States"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 ml-1" />
             </button>
 
             {isStateDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 top-11 sm:top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {/* Search Bar if > 6 options */}
                 {availableStateOptions.length > 6 && (
                   <div className="relative mb-1 shrink-0">
@@ -818,8 +820,8 @@ const DataAssignmentPage = () => {
             )}
           </div>
 
-          {/* City Multi-Select Dropdown */}
-          <div className="relative filter-dropdown-container">
+          {/* 2. City Multi-Select Dropdown */}
+          <div className="relative filter-dropdown-container col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -829,16 +831,16 @@ const DataAssignmentPage = () => {
                 setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer"
             >
               <span className="truncate">
                 City: {selectedCities.length > 0 ? `${selectedCities.length} selected` : "All Cities"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 ml-1" />
             </button>
 
             {isCityDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute right-0 sm:right-auto left-auto sm:left-0 top-11 sm:top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {/* Search Bar if > 6 options */}
                 {availableCityOptions.length > 6 && (
                   <div className="relative mb-1 shrink-0">
@@ -910,26 +912,27 @@ const DataAssignmentPage = () => {
             )}
           </div>
 
-          {/* Upload File Multi-Select Dropdown */}
-          <div className="relative filter-dropdown-container">
+          {/* 3. Upload File Multi-Select Dropdown */}
+          <div className="relative filter-dropdown-container col-span-1">
             <button
               type="button"
               onClick={() => {
                 setIsUploadDropdownOpen(!isUploadDropdownOpen);
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
+                setIsDispositionDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer"
             >
               <span className="truncate">
                 Dataset: {selectedUploadIds.length > 0 ? `${selectedUploadIds.length} selected` : "All Datasets"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 ml-1" />
             </button>
 
             {isUploadDropdownOpen && (
-              <div className="absolute left-0 top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 top-11 sm:top-12 z-40 w-64 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {filterOptions.uploads.length === 0 ? (
                   <p className="p-2 text-xs text-text-muted">No dataset files available</p>
                 ) : (
@@ -952,21 +955,21 @@ const DataAssignmentPage = () => {
             )}
           </div>
 
-          {/* Assignment Status Select */}
-          <div>
+          {/* 4. Assignment Status Select */}
+          <div className="col-span-1">
             <select
               value={assignmentStatus}
               onChange={(e) => handleStatusChange(e.target.value as any)}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500 cursor-pointer truncate"
             >
-              <option value="AVAILABLE">Status: Available (Unassigned)</option>
+              <option value="AVAILABLE">Status: Available</option>
               <option value="ASSIGNED">Status: Assigned</option>
               <option value="ALL">Status: All Records</option>
             </select>
           </div>
 
-          {/* Call Disposition Multi-Select Dropdown */}
-          <div className="relative filter-dropdown-container">
+          {/* 5. Call Disposition Multi-Select Dropdown */}
+          <div className="relative filter-dropdown-container col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -976,16 +979,16 @@ const DataAssignmentPage = () => {
                 setIsUploadDropdownOpen(false);
                 setIsNotCalledByDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer"
             >
               <span className="truncate">
                 Disposition: {selectedDispositions.length > 0 ? `${selectedDispositions.length} selected` : "All"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 ml-1" />
             </button>
 
             {isDispositionDropdownOpen && (
-              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
+              <div className="absolute left-0 sm:left-auto right-auto sm:right-0 top-11 sm:top-12 z-40 w-64 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl space-y-1">
                 {/* All Option */}
                 <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer text-xs font-medium text-text-primary">
                   <input
@@ -1035,8 +1038,8 @@ const DataAssignmentPage = () => {
             )}
           </div>
 
-          {/* Not Called By Multi-Select Dropdown */}
-          <div className="relative filter-dropdown-container">
+          {/* 6. Not Called By Multi-Select Dropdown */}
+          <div className="relative filter-dropdown-container col-span-1">
             <button
               type="button"
               onClick={() => {
@@ -1044,17 +1047,18 @@ const DataAssignmentPage = () => {
                 setIsStateDropdownOpen(false);
                 setIsCityDropdownOpen(false);
                 setIsUploadDropdownOpen(false);
+                setIsDispositionDropdownOpen(false);
               }}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface flex items-center justify-between text-xs font-semibold text-text-primary shadow-2xs hover:border-primary-300 transition cursor-pointer"
             >
               <span className="truncate">
                 Not Called By: {selectedNotCalledByUserIds.length > 0 ? `${selectedNotCalledByUserIds.length} selected` : "All"}
               </span>
-              <ChevronDown size={16} className="text-text-muted shrink-0" />
+              <ChevronDown size={14} className="text-text-muted shrink-0 ml-1" />
             </button>
 
             {isNotCalledByDropdownOpen && (
-              <div className="absolute right-0 sm:right-auto left-0 top-12 z-40 w-72 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 top-11 sm:top-12 z-40 w-64 sm:w-72 max-h-72 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-xl">
                 {/* Search Bar */}
                 <div className="relative mb-2 shrink-0">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -1251,19 +1255,20 @@ const DataAssignmentPage = () => {
       </div>
 
       {/* Result Summary & Quantity Selection Control Bar */}
-      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-border pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-bold">
-              <Database size={22} />
+      <div className="rounded-xl sm:rounded-2xl border border-border bg-surface p-3.5 sm:p-5 space-y-3 sm:space-y-4 shadow-xs">
+        {/* Pool Summary Header & Mix Data Button */}
+        <div className="flex flex-col gap-2.5 sm:gap-4 md:flex-row md:items-center md:justify-between border-b border-border pb-3 sm:pb-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 font-bold shrink-0">
+              <Database className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-text-secondary">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase text-text-secondary">
                 Available Matching Data Pool
               </p>
-              <p className="text-2xl font-bold text-text-primary">
+              <p className="text-xl sm:text-2xl font-bold text-text-primary">
                 {availableMatchingCount.toLocaleString()}{" "}
-                <span className="text-xs font-normal text-text-muted">
+                <span className="text-[11px] sm:text-xs font-normal text-text-muted">
                   (out of {totalCount.toLocaleString()} matching rows)
                 </span>
               </p>
@@ -1275,21 +1280,25 @@ const DataAssignmentPage = () => {
             onClick={handleMixData}
             disabled={isMixing || availableMatchingCount === 0}
             title="Randomize ordering of current matching records"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface text-text-primary hover:bg-neutral-100 font-semibold text-xs transition shadow-2xs disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface text-text-primary hover:bg-neutral-100 font-semibold text-xs transition shadow-2xs disabled:opacity-50 self-start md:self-auto cursor-pointer"
           >
-            <Shuffle size={14} className={isMixing ? "animate-spin text-primary-600" : "text-primary-600"} />
+            <Shuffle size={13} className={isMixing ? "animate-spin text-primary-600" : "text-primary-600"} />
             <span>{isMixing ? "Mixing..." : "Mix Data"}</span>
           </button>
         </div>
-          {/* Quick Selection Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-text-secondary uppercase">Select Quantity:</span>
+
+        {/* Quantity Selection Grid */}
+        <div className="space-y-2">
+          <span className="block text-[11px] sm:text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Select Quantity
+          </span>
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
             {PREDEFINED_QUANTITIES.map((q) => (
               <button
                 key={q}
                 type="button"
                 onClick={() => handleQuantitySelect(q)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                className={`h-8 sm:h-9 px-2 sm:px-3 rounded-lg text-xs font-semibold border transition cursor-pointer flex items-center justify-center ${
                   selectionMode === "ALL_MATCHING" && selectedQuantity === q
                     ? "bg-primary-500 text-white border-primary-500 shadow-xs"
                     : "bg-surface border-border text-text-primary hover:bg-neutral-100"
@@ -1302,7 +1311,7 @@ const DataAssignmentPage = () => {
             <button
               type="button"
               onClick={() => setShowCustomInput(!showCustomInput)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-lg text-xs font-semibold border transition cursor-pointer flex items-center justify-center ${
                 showCustomInput
                   ? "bg-primary-500 text-white border-primary-500 shadow-xs"
                   : "bg-surface border-border text-text-primary hover:bg-neutral-100"
@@ -1310,52 +1319,58 @@ const DataAssignmentPage = () => {
             >
               Custom
             </button>
-
-            <button
-              type="button"
-              onClick={handleSelectAllMatching}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                selectionMode === "ALL_MATCHING" && selectedQuantity === availableMatchingCount
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                  : "bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100"
-              }`}
-            >
-              Select All Matching ({availableMatchingCount})
-            </button>
           </div>
+        </div>
+
+        {/* Select All Matching Action */}
+        <div>
+          <button
+            type="button"
+            onClick={handleSelectAllMatching}
+            className={`w-full sm:w-auto h-8 sm:h-9 px-3 sm:px-3.5 rounded-lg text-xs font-semibold border transition cursor-pointer inline-flex items-center justify-center gap-1.5 ${
+              selectionMode === "ALL_MATCHING" && selectedQuantity === availableMatchingCount
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100"
+            }`}
+          >
+            Select All Matching ({availableMatchingCount})
+          </button>
+        </div>
 
         {/* Custom Quantity Input Bar */}
         {showCustomInput && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-border animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-neutral-50 border border-border animate-in fade-in duration-200">
             <span className="text-xs font-semibold text-text-primary">Enter Custom Batch Quantity:</span>
-            <input
-              type="number"
-              min={1}
-              max={availableMatchingCount || 1}
-              placeholder="e.g. 175"
-              value={customQuantityInput}
-              onChange={(e) => setCustomQuantityInput(e.target.value)}
-              className="h-9 w-32 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500"
-            />
-            <button
-              type="button"
-              onClick={handleCustomQuantitySubmit}
-              className="h-9 px-4 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition"
-            >
-              Apply Selection
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={availableMatchingCount || 1}
+                placeholder="e.g. 175"
+                value={customQuantityInput}
+                onChange={(e) => setCustomQuantityInput(e.target.value)}
+                className="h-8 sm:h-9 w-28 sm:w-32 rounded-lg border border-border bg-surface px-2.5 sm:px-3 text-xs outline-none focus:border-primary-500"
+              />
+              <button
+                type="button"
+                onClick={handleCustomQuantitySubmit}
+                className="h-8 sm:h-9 px-3 sm:px-4 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition cursor-pointer"
+              >
+                Apply Selection
+              </button>
+            </div>
           </div>
         )}
 
         {/* Selection Status & Geographic Distribution Preview */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-1">
+        <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between pt-1">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-text-primary">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-bold text-text-primary">
                 Selected: <span className="text-primary-600">{effectiveSelectionCount.toLocaleString()}</span> records
               </span>
-              <span className="text-xs text-text-muted">
-                ({selectionMode === "ALL_MATCHING" ? "Server-side Quantity Selection" : "Explicit Row Selection"})
+              <span className="text-[10px] sm:text-xs text-text-muted">
+                ({selectionMode === "ALL_MATCHING" ? "Server-side Quantity" : "Row Selection"})
               </span>
             </div>
 
@@ -1385,17 +1400,17 @@ const DataAssignmentPage = () => {
             type="button"
             onClick={() => setIsReviewModalOpen(true)}
             disabled={effectiveSelectionCount <= 0}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-600 shadow-md disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 sm:px-6 py-2.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white transition hover:bg-primary-600 shadow-md disabled:opacity-50 cursor-pointer"
           >
-            <UserCheck size={18} />
+            <UserCheck size={16} className="sm:w-[18px] sm:h-[18px]" />
             Assign Selected Data ({effectiveSelectionCount})
           </button>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
-        <div className="flex items-center justify-between border-b border-border bg-neutral-50 px-5 py-3 text-xs">
+      <div className="overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-surface shadow-xs">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-border bg-neutral-50 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -1406,7 +1421,7 @@ const DataAssignmentPage = () => {
             </button>
           </div>
 
-          <span className="text-text-muted">
+          <span className="text-text-muted text-[11px] sm:text-xs">
             Showing Page {page} of {totalPages} ({totalCount} total matching)
           </span>
         </div>
@@ -1432,11 +1447,11 @@ const DataAssignmentPage = () => {
             minHeight="min-h-[300px]"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto w-full max-w-full min-w-0">
+            <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-neutral-50/50">
-                  <th className="w-12 px-5 py-4 text-left">
+                  <th className="w-10 sm:w-12 px-3 sm:px-5 py-2.5 sm:py-4 text-left whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={isAllVisibleSelected}
@@ -1444,31 +1459,31 @@ const DataAssignmentPage = () => {
                       className="rounded border-border text-primary-600 focus:ring-primary-400"
                     />
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Student Name
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Phone
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     City
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     State
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Dataset File
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Call Disposition
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-3 sm:px-5 py-2.5 sm:py-4 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                     Status
                   </th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {students.map((student) => {
                   const isAvailable = student.isAvailable !== false;
                   const isChecked = explicitSelectedIds.includes(student.id);
@@ -1485,7 +1500,7 @@ const DataAssignmentPage = () => {
                         isChecked ? "bg-primary-50/40" : "hover:bg-neutral-50/50"
                       }`}
                     >
-                      <td className="w-12 px-5 py-4">
+                      <td className="w-10 sm:w-12 px-3 sm:px-5 py-2.5 sm:py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
                           disabled={!isAvailable}
@@ -1495,32 +1510,32 @@ const DataAssignmentPage = () => {
                         />
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 whitespace-nowrap">
                         <div>
-                          <p className="text-sm font-semibold text-text-primary">
+                          <p className="text-xs sm:text-sm font-semibold text-text-primary">
                             {fullName}
                           </p>
-                          <p className="text-xs text-text-muted">{student.email || "No email"}</p>
+                          <p className="text-[11px] sm:text-xs text-text-muted">{student.email || "No email"}</p>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 text-sm font-mono text-text-secondary">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 text-xs sm:text-sm font-mono text-text-secondary whitespace-nowrap">
                         {student.phone}
                       </td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 text-xs sm:text-sm text-text-secondary whitespace-nowrap">
                         {student.city || "—"}
                       </td>
 
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 text-xs sm:text-sm text-text-secondary whitespace-nowrap">
                         {student.state || "—"}
                       </td>
 
-                      <td className="px-5 py-4 text-xs text-text-muted truncate max-w-[180px]">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 text-xs text-text-muted truncate max-w-[180px] whitespace-nowrap">
                         {student.upload?.fileName || "Dataset"}
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 whitespace-nowrap">
                         {!latestCall ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-text-muted border border-border">
                             No Call Yet
@@ -1563,7 +1578,7 @@ const DataAssignmentPage = () => {
                         })()}
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-3 sm:px-5 py-2.5 sm:py-4 whitespace-nowrap">
                         {isAvailable ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold">
                             <CheckCircle2 size={12} /> Available
@@ -1593,43 +1608,43 @@ const DataAssignmentPage = () => {
       </div>
 
       {/* Data Assignments History Table */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xs space-y-3">
-        <div className="border-b border-border bg-neutral-50 px-5 py-4">
-          <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+      <div className="overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-surface shadow-xs space-y-3">
+        <div className="border-b border-border bg-neutral-50 px-3.5 sm:px-5 py-3 sm:py-4">
+          <h3 className="text-xs sm:text-sm font-bold text-text-primary flex items-center gap-2">
             <Clock size={16} className="text-primary-600" />
             Recent Data Assignment Operations History
           </h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto w-full max-w-full min-w-0">
+          <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-neutral-50/50">
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Assignee
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Datasets
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Total Assigned Records
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Assigned Date
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   First Call Made At
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Latest Assignment
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary">
+                <th className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">
                   Action
                 </th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-border">
               {historyLoading ? (
                 <SectionLoadingState
                   isTableRow
@@ -1694,45 +1709,45 @@ const DataAssignmentPage = () => {
                       key={item.assignee.id}
                       className="border-b border-border last:border-0 hover:bg-neutral-50/50 transition"
                     >
-                      <td className="px-5 py-3">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap">
                         <p className="text-xs font-semibold text-text-primary">{assigneeName}</p>
                         <p className="text-[11px] text-text-muted">{roleAndTeam || item.assignee.email}</p>
                       </td>
-                      <td className="px-5 py-3 text-xs font-semibold text-text-primary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs font-semibold text-text-primary whitespace-nowrap">
                         {item.datasetsCount} dataset{item.datasetsCount === 1 ? "" : "s"}
                       </td>
-                      <td className="px-5 py-3 text-xs font-bold text-text-primary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs font-bold text-text-primary whitespace-nowrap">
                         {item.activeRecordsCount.toLocaleString()} records
                       </td>
-                      <td className="px-5 py-3 text-xs text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs text-text-secondary whitespace-nowrap">
                         {formattedAssignedDate}
                       </td>
-                      <td className="px-5 py-3 text-xs font-mono text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs font-mono text-text-secondary whitespace-nowrap">
                         {formattedFirstCallAt}
                       </td>
-                      <td className="px-5 py-3 text-xs text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs text-text-secondary whitespace-nowrap">
                         {formattedLatestDate}
                       </td>
-                      <td className="px-5 py-3 text-xs">
-                        <div className="flex items-center gap-2">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           <button
                             type="button"
                             onClick={() => setSelectedAssigneeIdForDrawer(item.assignee.id)}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition cursor-pointer"
+                            className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition cursor-pointer"
                           >
                             View Details
                           </button>
                           {item.activeRecordsCount > 0 && (
                             <button
                               type="button"
-                                onClick={() =>
-                                  handleOpenReclaimSingle(
-                                    item.assignee.id,
-                                    assigneeName,
-                                    item.activeRecordsCount
-                                  )
-                                }
-                              className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-medium transition flex items-center gap-1 cursor-pointer"
+                              onClick={() =>
+                                handleOpenReclaimSingle(
+                                  item.assignee.id,
+                                  assigneeName,
+                                  item.activeRecordsCount
+                                )
+                              }
+                              className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-medium transition flex items-center gap-1 cursor-pointer"
                               title="Reclaim active assignments for this advisor"
                             >
                               <RotateCcw size={12} /> Reclaim

@@ -207,69 +207,46 @@ const Tpc = () => {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between gap-3 min-w-0">
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          {/* Row 1 on mobile: Title + Phone Icon */}
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
               <PhoneCall className="text-primary-600 h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
               <span className="truncate">{activeTab === "MY_TPCS" ? "My TPCs" : "Assigned TPCs"}</span>
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-text-secondary hidden sm:block">
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal hidden sm:block">
               {activeTab === "MY_TPCS"
                 ? "View and manage TPC calls created by you or linked to your leads."
                 : "View and execute TPC call assignments assigned to you by team members."}
             </p>
           </div>
 
-          {/* Action buttons on mobile positioned inline with heading */}
-          <div className="flex sm:hidden items-center gap-2 shrink-0">
+          {/* Row 2 on mobile, right aligned on desktop: [Refresh] and [Assign TPC] */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto shrink-0">
             <button
               onClick={loadData}
               disabled={loading}
               title="Refresh TPC List"
               aria-label="Refresh TPC List"
-              className="p-2 h-9 w-9 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+              className="inline-flex items-center justify-center h-8 sm:h-10 px-2.5 sm:p-2.5 rounded-lg sm:rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 shrink-0 cursor-pointer shadow-2xs"
             >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={() => handleOpenAssignModal()}
               className="
-                inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2
-                text-xs font-semibold text-white shadow-sm hover:bg-primary-700
-                transition shrink-0 h-9 cursor-pointer
+                inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-primary-600
+                h-8 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white shadow-2xs sm:shadow-sm
+                hover:bg-primary-700 transition shrink-0 cursor-pointer
               "
             >
-              <Plus size={15} />
+              <Plus size={15} className="sm:w-[18px] sm:h-[18px]" />
               <span>Assign TPC</span>
             </button>
           </div>
-        </div>
-
-        {/* Action buttons on desktop */}
-        <div className="hidden sm:flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={loadData}
-            disabled={loading}
-            title="Refresh TPC List"
-            aria-label="Refresh TPC List"
-            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
-          <button
-            onClick={() => handleOpenAssignModal()}
-            className="
-              inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5
-              text-sm font-medium text-white shadow-sm hover:bg-primary-700
-              transition shrink-0 cursor-pointer
-            "
-          >
-            <Plus size={18} />
-            Assign TPC
-          </button>
         </div>
       </div>
 
@@ -279,8 +256,8 @@ const Tpc = () => {
         {/* Search Input */}
         <div className="relative flex-1 w-full min-w-0">
           <Search
-            size={18}
-            className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            size={16}
+            className="sm:w-[18px] sm:h-[18px] absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           />
           <input
             type="text"
@@ -288,13 +265,13 @@ const Tpc = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="
-              h-10 sm:h-11
+              h-9 sm:h-11
               w-full
-              rounded-xl
+              rounded-lg sm:rounded-xl
               border
               border-border
               bg-surface
-              pl-10 sm:pl-11
+              pl-9 sm:pl-11
               pr-9 sm:pr-10
               text-xs sm:text-sm
               outline-none
@@ -308,29 +285,29 @@ const Tpc = () => {
             <button
               type="button"
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
+              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
         </div>
 
-        {/* Dropdowns Container: 2-column grid on mobile, flex row on desktop */}
+        {/* Dropdowns Container: 2-column grid on mobile (equal widths), flex row on desktop */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full sm:w-auto sm:flex sm:items-center min-w-0">
           {/* Status Filter Dropdown */}
           <div className="relative w-full sm:w-auto sm:min-w-[150px] min-w-0">
             <div className="relative">
               <Filter
-                size={15}
-                className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+                size={14}
+                className="sm:w-[15px] sm:h-[15px] absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
               />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as FilterStatusType)}
                 className="
-                  h-10 sm:h-11
+                  h-9 sm:h-11
                   w-full
-                  rounded-xl
+                  rounded-lg sm:rounded-xl
                   border
                   border-border
                   bg-surface
@@ -354,8 +331,8 @@ const Tpc = () => {
                 <option value="COMPLETED">Completed</option>
               </select>
               <ChevronDown
-                size={15}
-                className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+                size={14}
+                className="sm:w-[15px] sm:h-[15px] absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
               />
             </div>
           </div>
@@ -364,16 +341,16 @@ const Tpc = () => {
           <div className="relative w-full sm:w-auto sm:min-w-[150px] min-w-0">
             <div className="relative">
               <Clock
-                size={15}
-                className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+                size={14}
+                className="sm:w-[15px] sm:h-[15px] absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
               />
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as DateFilterType)}
                 className="
-                  h-10 sm:h-11
+                  h-9 sm:h-11
                   w-full
-                  rounded-xl
+                  rounded-lg sm:rounded-xl
                   border
                   border-border
                   bg-surface
@@ -400,24 +377,23 @@ const Tpc = () => {
                 <option value="CUSTOM">Custom Date</option>
               </select>
               <ChevronDown
-                size={15}
-                className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
+                size={14}
+                className="sm:w-[15px] sm:h-[15px] absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none shrink-0"
               />
             </div>
 
             {dateFilter === "CUSTOM" && (
-              <div className="absolute top-11 sm:top-12 left-auto right-0 w-[200px] sm:w-[220px] z-20 bg-surface border border-border p-2 rounded-xl shadow-lg">
+              <div className="absolute top-10 sm:top-12 left-auto right-0 w-[200px] sm:w-[220px] z-20 bg-surface border border-border p-2 rounded-xl shadow-lg">
                 <input
                   type="date"
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  className="w-full h-9 sm:h-10 border border-border rounded-lg px-2 sm:px-3 text-xs sm:text-sm text-text-primary focus:outline-none focus:border-primary-500"
+                  className="w-full h-8 sm:h-10 border border-border rounded-lg px-2 sm:px-3 text-xs sm:text-sm text-text-primary focus:outline-none focus:border-primary-500"
                 />
               </div>
             )}
           </div>
         </div>
-
       </div>
 
       {/* Main Content Area */}

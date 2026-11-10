@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, ChevronDown, CheckCircle2 } from "lucide-react";
+import { X, ChevronDown, CheckCircle2, Plus } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { fetchActiveColleges, type College } from "../../../services/collegeService";
@@ -1287,29 +1287,59 @@ const CreateLeadForm = ({
                   </span>
                 ))}
 
-                <input
-                  type="text"
-                  placeholder={selectedNegativeColleges.length === 0 ? "Search or type college..." : ""}
-                  aria-label="Add negative college"
-                  className="flex-1 bg-transparent min-w-[120px] outline-none text-xs sm:text-sm"
-                  value={negativeSearchQuery}
-                  onChange={(e) => {
-                    setNegativeSearchQuery(e.target.value);
-                    setIsNegativeDropdownOpen(true);
-                  }}
-                  onFocus={() => setIsNegativeDropdownOpen(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                <div className="flex-1 flex items-center min-w-[120px] gap-1">
+                  <input
+                    type="text"
+                    placeholder={selectedNegativeColleges.length === 0 ? "Search or type college..." : ""}
+                    aria-label="Add negative college"
+                    className="flex-1 bg-transparent min-w-[80px] outline-none text-xs sm:text-sm"
+                    value={negativeSearchQuery}
+                    onChange={(e) => {
+                      setNegativeSearchQuery(e.target.value);
+                      setIsNegativeDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsNegativeDropdownOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (negativeSearchQuery.trim()) {
+                          handleAddNegativeCollege(negativeSearchQuery);
+                        }
+                      } else if (e.key === "Escape") {
+                        setIsNegativeDropdownOpen(false);
+                      }
+                    }}
+                  />
+
+                  {/* Mobile-only '+' Add button inside the input */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       if (negativeSearchQuery.trim()) {
                         handleAddNegativeCollege(negativeSearchQuery);
                       }
-                    } else if (e.key === "Escape") {
-                      setIsNegativeDropdownOpen(false);
-                    }
-                  }}
-                />
+                    }}
+                    disabled={!negativeSearchQuery.trim()}
+                    aria-label="Add typed college"
+                    className={`
+                      sm:hidden
+                      inline-flex items-center justify-center
+                      w-7 h-7 rounded-md
+                      bg-primary-50 dark:bg-primary-950/40
+                      text-primary-700 dark:text-primary-300
+                      border border-primary-200 dark:border-primary-800
+                      hover:bg-primary-100 dark:hover:bg-primary-900/60
+                      active:scale-95
+                      disabled:opacity-40 disabled:pointer-events-none
+                      transition-all shadow-2xs shrink-0 cursor-pointer
+                    `}
+                  >
+                    <Plus size={14} className="stroke-[2.5]" />
+                  </button>
+                </div>
               </div>
 
               {/* Negative College Dropdown Menu */}

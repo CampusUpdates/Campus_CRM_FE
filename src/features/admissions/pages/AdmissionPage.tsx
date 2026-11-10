@@ -13,7 +13,6 @@ import { AdmissionsKpiCards } from "../components/AdmissionsKpiCards";
 import { AdmissionTrendAndCollegeChart } from "../components/AdmissionTrendAndCollegeChart";
 import { EmployeePerformanceTable } from "../components/EmployeePerformanceTable";
 import { TeamAndSourceSection } from "../components/TeamAndSourceSection";
-import { AdmissionFunnelChart } from "../components/AdmissionFunnelChart";
 import { GeographicAndStatusSection } from "../components/GeographicAndStatusSection";
 import { RecentAdmissionsTable } from "../components/RecentAdmissionsTable";
 import { AdmissionDetailsDrawer } from "../components/AdmissionDetailsDrawer";
@@ -230,14 +229,7 @@ const AdmissionPage = () => {
         loading={loading}
       />
 
-      {/* 7. Admission Funnel */}
-      <AdmissionFunnelChart
-        funnel={data?.admissionFunnel || []}
-        onExportFunnel={() => handleExport("FUNNEL")}
-        loading={loading}
-      />
-
-      {/* 8. Geographic Distribution + Admission Status */}
+      {/* 7. Geographic Distribution + Admission Status */}
       <GeographicAndStatusSection
         geographicDist={data?.geographicDistribution || []}
         statusDist={data?.statusDistribution || []}

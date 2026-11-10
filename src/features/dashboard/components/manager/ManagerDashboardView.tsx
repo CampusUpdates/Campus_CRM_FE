@@ -245,78 +245,66 @@ const ManagerDashboardView = ({ isTeamLeadView }: ManagerDashboardViewProps) => 
       </div>
 
       {/* Dynamic Filters Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border border-border bg-surface shadow-2xs">
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1">
-          {/* Team Filter Dropdown */}
-          <div className="flex items-center gap-2">
-            <DashboardDropdown
-              label="Team:"
-              icon={Shield}
-              value={selectedTeamId}
-              onChange={(val) => setSelectedTeamId(val)}
-              disabled={loading || isNoTeams}
-              options={[
-                {
-                  value: "all",
-                  label: `${isTL ? "All Assigned Teams" : "All Managed Teams"} (${managedTeams.length})`,
-                },
-                ...managedTeams.map((t) => ({
-                  value: t.id.toString(),
-                  label: t.name,
-                })),
-              ]}
-              minWidth="180px"
-            />
-          </div>
-
-          {/* Date Range Preset Selector */}
-          <div className="flex items-center gap-2">
-            <DashboardDropdown
-              label="Period:"
-              icon={Calendar}
-              value={dateRangePreset}
-              onChange={(val) => setDateRangePreset(val as "all" | "today" | "week" | "month" | "custom")}
-              disabled={loading}
-              options={[
-                { value: "all", label: "All Time" },
-                { value: "today", label: "Today" },
-                { value: "week", label: "7 Days" },
-                { value: "month", label: "This Month" },
-                { value: "custom", label: "Custom" },
-              ]}
-              minWidth="140px"
-            />
-          </div>
-
-          {/* Custom Date Inputs */}
-          {dateRangePreset === "custom" && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-150">
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
-              />
-              <span className="text-xs text-text-muted font-medium">to</span>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
-              />
-            </div>
-          )}
+      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-xl border border-border bg-surface shadow-2xs">
+        {/* Team Filter Dropdown */}
+        <div className="flex items-center gap-2">
+          <DashboardDropdown
+            label="Team:"
+            icon={Shield}
+            value={selectedTeamId}
+            onChange={(val) => setSelectedTeamId(val)}
+            disabled={loading || isNoTeams}
+            options={[
+              {
+                value: "all",
+                label: `${isTL ? "All Assigned Teams" : "All Managed Teams"} (${managedTeams.length})`,
+              },
+              ...managedTeams.map((t) => ({
+                value: t.id.toString(),
+                label: t.name,
+              })),
+            ]}
+            minWidth="180px"
+          />
         </div>
 
-        {/* Manual Refresh Button */}
-        <button
-          onClick={loadDashboard}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 h-9 text-xs font-semibold text-text-primary hover:bg-surface-hover hover:border-neutral-300 dark:hover:border-slate-600 transition shadow-xs disabled:opacity-50 shrink-0 cursor-pointer"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin text-primary-600" : "text-primary-600"} />
-          Refresh
-        </button>
+        {/* Date Range Preset Selector */}
+        <div className="flex items-center gap-2">
+          <DashboardDropdown
+            label="Period:"
+            icon={Calendar}
+            value={dateRangePreset}
+            onChange={(val) => setDateRangePreset(val as "all" | "today" | "week" | "month" | "custom")}
+            disabled={loading}
+            options={[
+              { value: "all", label: "All Time" },
+              { value: "today", label: "Today" },
+              { value: "week", label: "7 Days" },
+              { value: "month", label: "This Month" },
+              { value: "custom", label: "Custom" },
+            ]}
+            minWidth="140px"
+          />
+        </div>
+
+        {/* Custom Date Inputs */}
+        {dateRangePreset === "custom" && (
+          <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-150">
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
+            />
+            <span className="text-xs text-text-muted font-medium">to</span>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="h-9 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 font-medium cursor-pointer"
+            />
+          </div>
+        )}
       </div>
 
       {/* Empty State when manager has no teams */}

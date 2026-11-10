@@ -312,189 +312,194 @@ export const SuperAdminCallReportView: React.FC = () => {
       : advisorPerformance.filter((a) => a.callsCount === 0).length;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-6 pb-12">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 pb-8 sm:pb-12">
       {/* 1. Header Section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight flex items-center gap-2.5">
-            <PhoneCall size={26} className="text-primary-500" />
-            Team Member Call Performance
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Monitor calling activity, team member performance, and assigned lead tracking across teams.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Period Filter Selector */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <DashboardDropdown
-              value={datePeriod}
-              onChange={(val) => handlePeriodChange(val as DatePeriod)}
-              options={[
-                { value: "today", label: "Today" },
-                { value: "yesterday", label: "Yesterday" },
-                { value: "7days", label: "Last 7 Days" },
-                { value: "30days", label: "Last 30 Days" },
-                { value: "all", label: "All Time" },
-                { value: "custom", label: "Custom Date Range" },
-              ]}
-              minWidth="150px"
-            />
-
-            {datePeriod === "custom" && (
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-1 shadow-xs text-xs">
-                <input
-                  type="date"
-                  value={customStartDate}
-                  max={customEndDate || undefined}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="rounded-md border border-border bg-background px-2 py-1 focus:border-primary-500 focus:outline-none cursor-text"
-                />
-                <span className="text-text-muted font-medium">to</span>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  min={customStartDate || undefined}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="rounded-md border border-border bg-background px-2 py-1 focus:border-primary-500 focus:outline-none cursor-text"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (customStartDate && customEndDate && customStartDate <= customEndDate) {
-                      setLoading(true);
-                      if (customStartDate === appliedCustomStartDate && customEndDate === appliedCustomEndDate) {
-                        loadReport(1, false);
-                      } else {
-                        setAppliedCustomStartDate(customStartDate);
-                        setAppliedCustomEndDate(customEndDate);
-                      }
-                    }
-                  }}
-                  disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
-                  className="rounded-md bg-primary-600 px-3 py-1 font-semibold text-white hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Apply
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomStartDate("");
-                    setCustomEndDate("");
-                    setAppliedCustomStartDate("");
-                    setAppliedCustomEndDate("");
-                    handlePeriodChange("today");
-                  }}
-                  className="rounded-md border border-border bg-background px-3 py-1 font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary tracking-tight flex items-center gap-2 sm:gap-2.5">
+              <PhoneCall size={22} className="sm:w-[26px] sm:h-[26px] text-primary-500 shrink-0" />
+              <span className="break-words">Team Member Call Performance</span>
+            </h1>
+            <p className="hidden sm:block mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Monitor calling activity, team member performance, and assigned lead tracking across teams.
+            </p>
           </div>
 
-          <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            Real-Time Live
-          </span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            {/* Date Period Filter Selector */}
+            <div className="flex-1 sm:flex-initial min-w-0">
+              <DashboardDropdown
+                value={datePeriod}
+                onChange={(val) => handlePeriodChange(val as DatePeriod)}
+                options={[
+                  { value: "today", label: "Today" },
+                  { value: "yesterday", label: "Yesterday" },
+                  { value: "7days", label: "Last 7 Days" },
+                  { value: "30days", label: "Last 30 Days" },
+                  { value: "all", label: "All Time" },
+                  { value: "custom", label: "Custom Range" },
+                ]}
+                minWidth="130px"
+                className="w-full sm:w-auto"
+                buttonClassName="h-8 sm:h-10 text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-2"
+              />
+            </div>
 
-          <button
-            type="button"
-            onClick={() => loadReport(1, false)}
-            title="Refresh Report"
-            className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer shadow-xs"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            <span>Refresh</span>
-          </button>
+            <span className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-3 h-8 sm:h-10 text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Real-Time Live</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => loadReport(1, false)}
+              title="Refresh Report"
+              aria-label="Refresh Report"
+              className="inline-flex items-center justify-center gap-1.5 h-8 sm:h-10 px-2.5 sm:px-3.5 rounded-lg border border-border bg-surface text-xs font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer shadow-xs shrink-0"
+            >
+              <RefreshCw size={14} className={`sm:w-3.5 sm:h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
         </div>
+
+        {datePeriod === "custom" && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-1.5 sm:p-2 shadow-xs text-xs">
+            <input
+              type="date"
+              value={customStartDate}
+              max={customEndDate || undefined}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="rounded-md border border-border bg-background px-2 py-1 text-xs focus:border-primary-500 focus:outline-none cursor-text flex-1 sm:flex-initial"
+            />
+            <span className="text-text-muted font-medium text-xs">to</span>
+            <input
+              type="date"
+              value={customEndDate}
+              min={customStartDate || undefined}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="rounded-md border border-border bg-background px-2 py-1 text-xs focus:border-primary-500 focus:outline-none cursor-text flex-1 sm:flex-initial"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (customStartDate && customEndDate && customStartDate <= customEndDate) {
+                  setLoading(true);
+                  if (customStartDate === appliedCustomStartDate && customEndDate === appliedCustomEndDate) {
+                    loadReport(1, false);
+                  } else {
+                    setAppliedCustomStartDate(customStartDate);
+                    setAppliedCustomEndDate(customEndDate);
+                  }
+                }
+              }}
+              disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
+              className="rounded-md bg-primary-600 px-3 py-1 text-xs font-semibold text-white hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomStartDate("");
+                setCustomEndDate("");
+                setAppliedCustomStartDate("");
+                setAppliedCustomEndDate("");
+                handlePeriodChange("today");
+              }}
+              className="rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold text-text-primary hover:bg-surface-hover transition cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
 
       {/* 2. Overview Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total Assigned Data */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-2">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider">
               Total Assigned Data
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-              <Layers size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+              <Layers size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="text-xl sm:text-3xl font-bold sm:font-extrabold text-text-primary tracking-tight">
             {totalAssignedData.toLocaleString()}
           </div>
-          <p className="text-xs text-text-secondary">
+          <p className="text-[11px] sm:text-xs text-text-secondary">
             Active dataset allocations across advisors
           </p>
         </div>
 
         {/* Card 2: Calls Logged Today */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-2">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider">
               Calls Logged Today
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-              <PhoneCall size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+              <PhoneCall size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="text-xl sm:text-3xl font-bold sm:font-extrabold text-text-primary tracking-tight">
             {totalCallsLogged.toLocaleString()}
           </div>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          <p className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">
             Recorded advisor call interactions
           </p>
         </div>
 
         {/* Card 3: Zero-Call Advisors */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-2">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider">
               Zero-Call Advisors
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
-              <PhoneOff size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
+              <PhoneOff size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="text-xl sm:text-3xl font-bold sm:font-extrabold text-text-primary tracking-tight">
             {zeroCallCount}
           </div>
-          <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+          <p className="text-[11px] sm:text-xs text-rose-600 dark:text-rose-400 font-medium">
             Advisors with no logged calls today
           </p>
         </div>
 
         {/* Card 4: Total Advisors Monitored */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-2">
+        <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-semibold text-text-muted uppercase tracking-wider">
               Advisors Monitored
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
-              <Users size={20} />
+            <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
+              <Users size={16} className="sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-text-primary tracking-tight">
+          <div className="text-xl sm:text-3xl font-bold sm:font-extrabold text-text-primary tracking-tight">
             {advisorPerformance.length}
           </div>
-          <p className="text-xs text-text-secondary">
+          <p className="text-[11px] sm:text-xs text-text-secondary">
             Across {dailyTeamReport.length} active teams
           </p>
         </div>
       </div>
 
       {/* 3. Filter Bar */}
-      <div className="rounded-xl border border-border bg-surface p-4 shadow-xs space-y-3">
+      <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-xs space-y-2.5 sm:space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
-            <Filter size={14} className="text-primary-500" />
+          <div className="flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-muted">
+            <Filter size={13} className="sm:w-3.5 sm:h-3.5 text-primary-500" />
             <span>Calling Report Filters</span>
           </div>
         </div>

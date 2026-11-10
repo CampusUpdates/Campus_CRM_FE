@@ -236,38 +236,41 @@ const LeadReallocationPage = () => {
   return (
     <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-            <UserCheck className="text-primary-600" size={26} />
-            Lead Reallocation Workspace
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {isSuperAdmin
-              ? "Reassign any lead across the organization to an eligible Program Advisor or Manager."
-              : "Reassign leads that have expired or are unassigned to a Program Advisor."}
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary flex items-center gap-2">
+              <UserCheck className="text-primary-600 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
+              <span>Lead Reallocation Workspace</span>
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              {isSuperAdmin
+                ? "Reassign any lead across the organization to an eligible Program Advisor or Manager."
+                : "Reassign leads that have expired or are unassigned to a Program Advisor."}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={loadLeads}
-            title="Refresh lead data"
-            className="p-2.5 rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
+            <button
+              onClick={loadLeads}
+              title="Refresh lead data"
+              aria-label="Refresh lead data"
+              className="w-9 h-9 sm:w-10 sm:h-10 inline-flex items-center justify-center rounded-lg sm:rounded-xl border border-border bg-surface text-text-secondary hover:text-primary-600 hover:border-primary-500/40 hover:bg-primary-50/50 dark:hover:bg-primary-950/30 transition shadow-2xs shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin text-primary-600" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Search & Multi-Filter Control Panel */}
-      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-xs">
+      <div className="rounded-xl sm:rounded-2xl border border-border bg-surface p-3.5 sm:p-5 space-y-3 sm:space-y-4 shadow-xs">
         {/* Active Selection / Direct Search Banner */}
         {urlLeadId && (
-          <div className="flex items-center justify-between px-3.5 py-2.5 bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200/80 dark:border-primary-800/80 rounded-xl text-xs text-text-primary">
+          <div className="flex items-center justify-between px-3 sm:px-3.5 py-2 sm:py-2.5 bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200/80 dark:border-primary-800/80 rounded-lg sm:rounded-xl text-xs text-text-primary">
             <span className="flex items-center gap-2 font-medium">
-              <UserCheck size={15} className="text-primary-600 dark:text-primary-400 shrink-0" />
-              <span>
+              <UserCheck size={14} className="text-primary-600 dark:text-primary-400 shrink-0 sm:w-[15px] sm:h-[15px]" />
+              <span className="text-[11px] sm:text-xs">
                 Filtered to lead selected from Global Search{" "}
                 {leads.length === 1 && (
                   <strong className="text-text-primary">
@@ -288,7 +291,7 @@ const LeadReallocationPage = () => {
                 setSearchTerm("");
                 setDebouncedSearch("");
               }}
-              className="inline-flex items-center gap-1 font-semibold text-primary-700 dark:text-primary-300 hover:underline cursor-pointer ml-2 shrink-0"
+              className="inline-flex items-center gap-1 font-semibold text-primary-700 dark:text-primary-300 hover:underline cursor-pointer ml-2 shrink-0 text-[11px] sm:text-xs"
             >
               <X size={13} />
               Show all leads
@@ -299,45 +302,44 @@ const LeadReallocationPage = () => {
         {/* Search Bar */}
         <div className="relative">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            className="w-4 h-4 sm:w-[18px] sm:h-[18px] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           />
           <input
             type="text"
             placeholder="Search by lead name, phone, email..."
             value={searchTerm}
             onChange={(e) => handleSearchInputChange(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-surface pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            className="h-9 sm:h-11 w-full rounded-lg sm:rounded-xl border border-border bg-surface pl-9 sm:pl-11 pr-3 sm:pr-4 text-xs sm:text-sm text-text-primary outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
           />
         </div>
 
         {/* Filter Dropdowns Grid */}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-1">
           {/* Assignment Status Select */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="w-full">
             <select
               value={assignmentStatus}
               onChange={(e) => handleAssignmentStatusChange(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500 truncate"
             >
-              <option value="ALL">Assignment Status: All</option>
-              <option value="ACTIVE">Assignment Status: Active</option>
-              <option value="EXPIRED">Assignment Status: Expired</option>
-              <option value="UNASSIGNED">Assignment Status: Unassigned</option>
+              <option value="ALL">Assignment: All</option>
+              <option value="ACTIVE">Assignment: Active</option>
+              <option value="EXPIRED">Assignment: Expired</option>
+              <option value="UNASSIGNED">Assignment: Unassigned</option>
             </select>
           </div>
 
           {/* Lead Status Select */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="w-full">
             <select
               value={selectedStatus}
               onChange={(e) => handleLeadStatusChange(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500"
+              className="w-full h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl border border-border bg-surface text-xs font-semibold text-text-primary shadow-2xs outline-none transition focus:border-primary-500 truncate"
             >
-              <option value="ALL">Lead Status: All</option>
+              <option value="ALL">Status: All</option>
               {availableStatuses.map((st) => (
                 <option key={st.id || st.name} value={st.name}>
-                  Lead Status: {st.name.replace(/_/g, " ")}
+                  Status: {st.name.replace(/_/g, " ")}
                 </option>
               ))}
             </select>
@@ -345,18 +347,18 @@ const LeadReallocationPage = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface shadow-xs overflow-hidden flex flex-col">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+      <div className="rounded-xl sm:rounded-2xl border border-border bg-surface shadow-xs overflow-hidden flex flex-col">
+        <div className="overflow-x-auto w-full max-w-full min-w-0">
+          <table className="w-full min-w-[760px] text-left text-sm whitespace-nowrap">
             <thead className="bg-neutral-50/50 border-b border-border">
               <tr>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Name</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Phone</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Status</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Assignment Status</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Current Owner</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary">Expires At</th>
-                <th className="px-5 py-4 font-semibold text-text-secondary text-right">Actions</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Name</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Phone</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Status</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Assignment Status</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Current Owner</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary whitespace-nowrap">Expires At</th>
+                <th className="px-3.5 sm:px-5 py-3 sm:py-4 text-xs font-semibold uppercase text-text-secondary text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -395,14 +397,14 @@ const LeadReallocationPage = () => {
                     <tr
                       key={lead.id}
                       id={`lead-row-${lead.id}`}
-                      className={`transition-colors h-16 ${
+                      className={`transition-colors h-14 sm:h-16 ${
                         isSelected
                           ? "bg-primary-50/70 dark:bg-primary-950/50 ring-2 ring-primary-500/60"
                           : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                       }`}
                     >
-                      <td className="px-5">
-                        <div className="font-semibold text-text-primary flex items-center gap-2">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap">
+                        <div className="font-semibold text-xs sm:text-sm text-text-primary flex items-center gap-2">
                           <span>
                             {lead.firstName} {lead.lastName || ""}
                           </span>
@@ -412,30 +414,32 @@ const LeadReallocationPage = () => {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-text-muted mt-0.5">{lead.email}</div>
+                        <div className="text-[11px] sm:text-xs text-text-muted mt-0.5">{lead.email || "No email"}</div>
                         {collegeName && (
-                          <div className="flex items-center gap-1 text-[11px] text-text-secondary mt-0.5">
+                          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-text-secondary mt-0.5">
                             <Building2 size={11} className="shrink-0 text-primary-500" />
                             <span className="truncate max-w-[200px]">{collegeName}</span>
                           </div>
                         )}
                       </td>
-                      <td className="px-5 font-medium text-text-secondary">{lead.phone}</td>
-                      <td className="px-5">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 font-mono font-medium text-xs sm:text-sm text-text-secondary whitespace-nowrap">
+                        {lead.phone}
+                      </td>
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap">
                         <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border"
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wide border"
                           style={{
                             backgroundColor: lead.status?.color ? `${lead.status.color}15` : "#e2e8f0",
                             color: lead.status?.color || "#475569",
                             borderColor: lead.status?.color ? `${lead.status.color}30` : "#cbd5e1",
                           }}
                         >
-                          {lead.status?.name || "Unknown"}
+                          {lead.status?.name ? lead.status.name.replace(/_/g, " ") : "Unknown"}
                         </span>
                       </td>
-                      <td className="px-5">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold uppercase tracking-wide ${
                             lead.computedAssignmentStatus === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : lead.computedAssignmentStatus === "EXPIRED"
@@ -446,12 +450,12 @@ const LeadReallocationPage = () => {
                           {lead.computedAssignmentStatus}
                         </span>
                       </td>
-                      <td className="px-5 text-sm font-medium text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-text-secondary whitespace-nowrap">
                         {lead.computedCurrentOwner
                           ? `${lead.computedCurrentOwner.firstName} ${lead.computedCurrentOwner.lastName || ""}`
                           : "—"}
                       </td>
-                      <td className="px-5 text-sm font-medium text-text-secondary">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-text-secondary whitespace-nowrap">
                         {lead.latestAssignment?.expiresAt ? (
                           <span
                             className={
@@ -466,7 +470,7 @@ const LeadReallocationPage = () => {
                           "—"
                         )}
                       </td>
-                      <td className="px-5 text-right">
+                      <td className="px-3.5 sm:px-5 py-2.5 sm:py-3 text-right whitespace-nowrap">
                         <button
                           onClick={() => openReallocateModal(lead)}
                           disabled={
@@ -474,9 +478,9 @@ const LeadReallocationPage = () => {
                             (lead.computedAssignmentStatus === "ACTIVE" ||
                               lead.status?.name === "ADMISSION_DONE")
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-xs font-semibold transition border border-primary-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+                          className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-xs font-semibold transition border border-primary-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
                         >
-                          <UserPlus size={14} />
+                          <UserPlus size={13} className="sm:w-[14px] sm:h-[14px]" />
                           Reallocate
                         </button>
                       </td>
@@ -489,8 +493,8 @@ const LeadReallocationPage = () => {
         </div>
 
         {!loading && leads.length > 0 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-neutral-50/50">
-            <span className="text-xs font-medium text-text-secondary">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 px-3.5 sm:px-5 py-2.5 sm:py-3 border-t border-border bg-neutral-50/50">
+            <span className="text-[11px] sm:text-xs font-medium text-text-secondary">
               Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, totalLeads)} to{" "}
               {Math.min(currentPage * ITEMS_PER_PAGE, totalLeads)} of {totalLeads} leads
             </span>
@@ -498,7 +502,7 @@ const LeadReallocationPage = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg hover:bg-white border border-transparent hover:border-border hover:shadow-2xs disabled:opacity-50 text-text-secondary transition"
+                className="p-1 sm:p-1.5 rounded-lg hover:bg-white border border-transparent hover:border-border hover:shadow-2xs disabled:opacity-50 text-text-secondary transition"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -508,7 +512,7 @@ const LeadReallocationPage = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg hover:bg-white border border-transparent hover:border-border hover:shadow-2xs disabled:opacity-50 text-text-secondary transition"
+                className="p-1 sm:p-1.5 rounded-lg hover:bg-white border border-transparent hover:border-border hover:shadow-2xs disabled:opacity-50 text-text-secondary transition"
               >
                 <ChevronRight size={16} />
               </button>

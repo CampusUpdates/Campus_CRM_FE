@@ -8,6 +8,8 @@ import {
   Loader2,
   FileText,
   Building2,
+  Bookmark,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
@@ -20,7 +22,6 @@ import { createInteraction } from "../../../services/interactionService";
 import {
   recordCallOutcome,
   type MockCallQueueStudentItem,
-  type MockCallSession,
 } from "../../../services/mockCallService";
 import CreateLeadModal from "../../leads/components/CreateLeadModal";
 
@@ -36,64 +37,60 @@ export type CallOutcomeType =
 
 interface CallOutcomePanelProps {
   student: MockCallQueueStudentItem | null;
-  callSession: MockCallSession | null;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
   onOutcomeComplete: () => void;
 }
 
-const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; defaultClass: string }[] = [
+const OUTCOME_OPTIONS: { label: string; value: CallOutcomeType; desc: string }[] = [
   {
     label: "No Answer",
     value: "NO_ANSWER",
-    defaultClass:
-      "border-slate-300 bg-slate-100 text-slate-800 hover:border-slate-400 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800",
+    desc: "Phone rang with no response",
   },
   {
     label: "Wrong Number",
     value: "WRONG_NUMBER",
-    defaultClass:
-      "border-rose-300 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-400 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/60",
+    desc: "Number does not belong to student",
   },
   {
     label: "Not Interested",
     value: "NOT_INTERESTED",
-    defaultClass:
-      "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:border-amber-700 dark:hover:bg-amber-950/60",
+    desc: "Student declined program offering",
   },
   {
     label: "Follow Up Required",
     value: "FOLLOW_UP",
-    defaultClass:
-      "border-blue-300 bg-blue-50 text-blue-800 hover:border-blue-400 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/60",
+    desc: "Creates 24-hr priority bookmark",
   },
   {
     label: "Call Back Later",
     value: "CALL_BACK_LATER",
-    defaultClass:
-      "border-purple-300 bg-purple-50 text-purple-800 hover:border-purple-400 hover:bg-purple-100 focus-visible:ring-2 focus-visible:ring-purple-400 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:border-purple-700 dark:hover:bg-purple-950/60",
+    desc: "Creates 24-hr priority bookmark",
   },
   {
     label: "Interested / Create Lead",
     value: "INTERESTED",
-    defaultClass:
-      "border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/70 font-semibold",
+    desc: "Student interested in admission",
   },
   {
     label: "Disconnected",
     value: "DISCONNECTED",
-    defaultClass:
-      "border-orange-300 bg-orange-50 text-orange-900 hover:border-orange-400 hover:bg-orange-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300 dark:hover:border-orange-700 dark:hover:bg-orange-950/60",
+    desc: "Call got disconnected prematurely",
   },
   {
     label: "Other",
     value: "OTHER",
-    defaultClass:
-      "border-cyan-300 bg-cyan-50 text-cyan-900 hover:border-cyan-400 hover:bg-cyan-100 focus-visible:ring-2 focus-visible:ring-cyan-400 dark:border-cyan-900/60 dark:bg-cyan-950/30 dark:text-cyan-300 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/60",
+    desc: "Other disposition or special scenario",
   },
 ];
 
 export const CallOutcomePanel = ({
   student,
-  callSession,
+  isOpen,
+  onOpen,
+  onClose,
   onOutcomeComplete,
 }: CallOutcomePanelProps) => {
   const { accessToken } = useAuth();
@@ -101,10 +98,10 @@ export const CallOutcomePanel = ({
 
   const [selectedOutcome, setSelectedOutcome] = useState<CallOutcomeType | null>(null);
   const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [searchingLead, setSearchingLead] = useState(false);
   const [leadSearchResult, setLeadSearchResult] = useState<PhoneSearchResult | null>(null);
   const [claiming, setClaiming] = useState(false);
-
   const [isCreateLeadModalOpen, setIsCreateLeadModalOpen] = useState(false);
 
   const checkExistingLead = useCallback(async () => {
@@ -120,7 +117,7 @@ export const CallOutcomePanel = ({
     }
   }, [accessToken, student]);
 
-  // Reset outcome panel state whenever the student or call session changes
+  // Reset outcome form state whenever the student changes
   useEffect(() => {
     setSelectedOutcome(null);
     setNotes("");
@@ -128,7 +125,7 @@ export const CallOutcomePanel = ({
     setLeadSearchResult(null);
     setClaiming(false);
     setIsCreateLeadModalOpen(false);
-  }, [student?.studentDataId, callSession?.callId]);
+  }, [student?.studentDataId]);
 
   useEffect(() => {
     if (selectedOutcome === "INTERESTED") {
@@ -136,43 +133,30 @@ export const CallOutcomePanel = ({
     }
   }, [selectedOutcome, checkExistingLead]);
 
-  // Only display active Call Outcome & Disposition form after current call has been ended/disconnected
-  const isCallEnded =
-    callSession &&
-    (callSession.status === "ENDED" ||
-      callSession.status === "FAILED" ||
-      (callSession.status as string) === "DISCONNECTED");
-
-  if (!isCallEnded) {
-    return (
-      <div className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 shadow-xs flex flex-col items-center justify-center min-h-[120px] text-center space-y-1.5 w-full min-w-0">
-        <div className="w-8 h-8 rounded-full bg-background border border-border/60 flex items-center justify-center text-text-muted">
-          <FileText size={16} />
-        </div>
-        <h4 className="text-xs font-bold text-text-primary">Call Outcome & Disposition</h4>
-        <p className="text-[11px] text-text-muted max-w-xs leading-relaxed">
-          Disposition controls will appear here once the call is completed.
-        </p>
-      </div>
-    );
-  }
-
   const handleSaveNonLeadOutcome = async () => {
-    if (!selectedOutcome || !accessToken || !student?.studentDataId) return;
+    if (!selectedOutcome || !accessToken || !student?.studentDataId || submitting) return;
 
+    setSubmitting(true);
     try {
       await recordCallOutcome(accessToken, {
         studentDataId: student.studentDataId,
         outcome: selectedOutcome,
         notes: notes ? notes.trim() : undefined,
-        startedAt: callSession?.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
-        endedAt: callSession?.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
-        durationSeconds: callSession?.durationSeconds || 0,
       });
-      toast.success(`Call outcome recorded: ${selectedOutcome.replace(/_/g, " ")}.`);
+
+      const isBookmark = selectedOutcome === "FOLLOW_UP" || selectedOutcome === "CALL_BACK_LATER";
+      toast.success(
+        `Call disposition recorded: ${selectedOutcome.replace(/_/g, " ")}${
+          isBookmark ? " (24-hour bookmark created)" : ""
+        }.`
+      );
+      setSelectedOutcome(null);
+      setNotes("");
       onOutcomeComplete();
     } catch (err: any) {
       toast.error(err.message || "Failed to record call outcome.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -183,11 +167,10 @@ export const CallOutcomePanel = ({
       await claimLead(accessToken, leadSearchResult.leadId);
 
       // Create interaction for claimed lead
-      const duration = callSession.durationSeconds || 0;
       await createInteraction(accessToken, {
         leadId: leadSearchResult.leadId,
         title: "Call",
-        description: `Mock call completed. Outcome: INTERESTED. Duration: ${duration}s. ${notes ? `Notes: ${notes}` : ""}`.trim(),
+        description: `Call disposition recorded: INTERESTED. ${notes ? `Notes: ${notes}` : ""}`.trim(),
       }).catch(() => {});
 
       // Record persistent CallRecord for claimed lead
@@ -197,13 +180,12 @@ export const CallOutcomePanel = ({
           leadId: leadSearchResult.leadId,
           outcome: "INTERESTED",
           notes: notes ? notes.trim() : undefined,
-          startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
-          endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
-          durationSeconds: duration,
         }).catch((err) => console.error("Failed to record call record for claimed lead:", err));
       }
 
       toast.success("Lead claimed successfully!");
+      setSelectedOutcome(null);
+      setNotes("");
       onOutcomeComplete();
     } catch (err: any) {
       toast.error(err.message || "Failed to claim lead.");
@@ -229,29 +211,26 @@ export const CallOutcomePanel = ({
     }
 
     if (accessToken && targetLeadId) {
-      const duration = callSession.durationSeconds || 0;
       await createInteraction(accessToken, {
         leadId: targetLeadId,
         title: "Call - Interested",
-        description: `Student contacted through assigned dataset (${student?.upload?.fileName || "Data Upload"}). Call outcome: Interested. Duration: ${duration}s. ${notes ? `Advisor notes: ${notes}` : ""}`.trim(),
+        description: `Student contacted through assigned dataset (${student?.upload?.fileName || "Data Upload"}). Call outcome: Interested. ${notes ? `Advisor notes: ${notes}` : ""}`.trim(),
       }).catch(() => {});
     }
 
     // Record persistent CallRecord for created lead
     if (accessToken && student?.studentDataId) {
-      const duration = callSession.durationSeconds || 0;
       await recordCallOutcome(accessToken, {
         studentDataId: student.studentDataId,
         leadId: targetLeadId || undefined,
         outcome: "INTERESTED",
         notes: notes ? notes.trim() : undefined,
-        startedAt: callSession.startedAt ? new Date(callSession.startedAt).toISOString() : undefined,
-        endedAt: callSession.endedAt ? new Date(callSession.endedAt).toISOString() : undefined,
-        durationSeconds: duration,
       }).catch((err) => console.error("Failed to record call record for created lead:", err));
     }
 
-    toast.success(`Lead created successfully for ${student?.firstName || "contact"}! Loading next student...`);
+    toast.success(`Lead created successfully for ${student?.firstName || "contact"}!`);
+    setSelectedOutcome(null);
+    setNotes("");
     onOutcomeComplete();
   };
 
@@ -269,26 +248,85 @@ export const CallOutcomePanel = ({
 
   const isAdmissionDone = leadSearchResult?.status?.name === "ADMISSION_DONE";
   const isProtectedAssignment = Boolean(leadSearchResult?.activeAssignment);
+  const isBookmarkOutcome = selectedOutcome === "FOLLOW_UP" || selectedOutcome === "CALL_BACK_LATER";
 
+  // When form is NOT open, display the Add Dispositions button card
+  if (!isOpen) {
+    return (
+      <div
+        id="call-disposition-section"
+        className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 shadow-2xs space-y-3 w-full min-w-0"
+      >
+        <div className="flex items-center justify-between border-b border-border/60 pb-3 min-w-0">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+              <FileText size={16} className="text-primary-600 shrink-0" />
+              <span className="truncate">Call Disposition</span>
+            </h3>
+            <p className="text-[11px] text-text-muted mt-0.5 truncate">
+              Record interaction outcome, remarks, and follow-ups
+            </p>
+          </div>
+        </div>
+
+        <div className="py-2 space-y-3">
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Ready to log an outcome for{" "}
+            <strong className="text-text-primary">
+              {student ? [student.firstName, student.lastName].filter(Boolean).join(" ") : "this student"}
+            </strong>
+            ? Click the button below to display the disposition form.
+          </p>
+
+          <button
+            type="button"
+            onClick={onOpen}
+            disabled={!student}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold px-4 py-2.5 text-xs transition shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={15} />
+            <span>Add Dispositions</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // When form IS open, display the active disposition form
   return (
-    <div className="rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4.5 shadow-xs space-y-3 animate-in fade-in duration-200 w-full min-w-0">
+    <div
+      id="call-disposition-section"
+      className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 shadow-2xs space-y-4 animate-in fade-in duration-200 w-full min-w-0"
+    >
       {/* Header */}
-      <div className="border-b border-border/60 pb-2 min-w-0">
-        <h3 className="text-xs sm:text-sm font-bold text-text-primary flex items-center gap-1.5">
-          <FileText size={15} className="text-emerald-500 shrink-0" />
-          <span className="truncate">Call Outcome & Disposition</span>
-        </h3>
-        <p className="text-[11px] text-text-muted mt-0.5 truncate">
-          Record outcome details for assigned contact
-        </p>
+      <div className="flex items-center justify-between border-b border-border/60 pb-3 min-w-0">
+        <div className="min-w-0">
+          <h3 className="text-sm sm:text-base font-bold text-text-primary flex items-center gap-2">
+            <FileText size={16} className="text-primary-600 shrink-0" />
+            <span className="truncate">Add Call Disposition</span>
+          </h3>
+          <p className="text-[11px] text-text-muted mt-0.5 truncate">
+            Record outcome details for {student?.firstName || "contact"}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-text-muted hover:bg-neutral-100 hover:text-text-primary transition cursor-pointer shrink-0"
+          title="Close disposition form"
+        >
+          <X size={16} />
+        </button>
       </div>
 
-      {/* Outcome Buttons: 3-Column Equal-Width Responsive Grid */}
-      <div className="space-y-1 w-full min-w-0">
-        <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
-          Select Outcome
+      {/* Outcome Selection Buttons */}
+      <div className="space-y-1.5 w-full min-w-0">
+        <label className="text-xs font-semibold text-text-secondary dark:text-slate-300 uppercase tracking-wider block">
+          Select Outcome *
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full min-w-0">
+        {/* Mobile: stacked vertically (grid-cols-1), Tablet/Desktop: 2 columns */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
           {OUTCOME_OPTIONS.map((opt) => {
             const isSelected = selectedOutcome === opt.value;
             return (
@@ -296,17 +334,34 @@ export const CallOutcomePanel = ({
                 key={opt.value}
                 type="button"
                 onClick={() => setSelectedOutcome(opt.value)}
-                className={`min-h-[38px] px-2 sm:px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium transition text-left flex items-center justify-between gap-1 cursor-pointer w-full min-w-0 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`min-h-[44px] sm:min-h-[40px] px-3 py-2 rounded-xl border text-xs text-left flex items-center justify-between gap-2 cursor-pointer w-full min-w-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
                   isSelected
-                    ? "border-emerald-600 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-600 font-bold shadow-xs dark:border-emerald-500 dark:bg-emerald-950/80 dark:text-emerald-200 dark:ring-1 dark:ring-emerald-500/70"
-                    : opt.defaultClass
+                    ? "border-emerald-500 bg-emerald-50/90 dark:border-emerald-600/70 dark:bg-emerald-950/40 shadow-2xs"
+                    : "border-border bg-surface hover:bg-neutral-50 hover:border-neutral-300 dark:border-slate-700/80 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 dark:hover:border-slate-600"
                 }`}
               >
-                <span className="leading-tight break-words flex-1 min-w-0 text-left">
-                  {opt.label}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className={`leading-tight truncate ${
+                      isSelected
+                        ? "font-bold text-emerald-950 dark:text-emerald-200"
+                        : "font-medium text-text-primary dark:text-slate-100"
+                    }`}
+                  >
+                    {opt.label}
+                  </div>
+                  <div
+                    className={`text-[10px] truncate mt-0.5 ${
+                      isSelected
+                        ? "font-medium text-emerald-800/90 dark:text-emerald-300/80"
+                        : "text-text-muted dark:text-slate-400"
+                    }`}
+                  >
+                    {opt.desc}
+                  </div>
+                </div>
                 {isSelected && (
-                  <CheckCircle2 size={12} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                  <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 )}
               </button>
             );
@@ -314,36 +369,33 @@ export const CallOutcomePanel = ({
         </div>
       </div>
 
-      {/* Notes Textarea (Compact, Deep Dark Background) */}
-      <div className="space-y-1 w-full min-w-0">
-        <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">
-          Call Notes
-        </label>
-        <textarea
-          rows={2}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Enter call discussion notes or student responses..."
-          className="w-full rounded-lg border border-border/80 bg-background p-2 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition resize-y min-h-[46px]"
-        />
-      </div>
-
-      {/* Non-Interested / Follow-up Outcomes Action */}
-      {selectedOutcome && selectedOutcome !== "INTERESTED" && (
-        <div className="pt-1 border-t border-border/60 flex justify-end">
-          <button
-            type="button"
-            onClick={handleSaveNonLeadOutcome}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-xs cursor-pointer"
-          >
-            <span>Save Outcome & Next Contact</span>
-          </button>
+      {/* 24-hr Bookmark Notice for Follow-up Outcomes */}
+      {isBookmarkOutcome && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/80 dark:border-blue-800/60 dark:bg-blue-950/40 p-3 text-xs text-blue-900 dark:text-blue-200 flex items-center gap-2">
+          <Bookmark size={15} className="text-blue-600 shrink-0" />
+          <span className="leading-relaxed">
+            Saving <strong>{selectedOutcome?.replace(/_/g, " ")}</strong> will activate or refresh a 24-hour priority bookmark on this contact.
+          </span>
         </div>
       )}
 
+      {/* Notes Textarea */}
+      <div className="space-y-1.5 w-full min-w-0">
+        <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
+          Call Notes / Remarks
+        </label>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Enter call discussion notes, student responses, or follow-up details..."
+          className="w-full rounded-xl border border-border bg-background p-3 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition resize-y min-h-[64px]"
+        />
+      </div>
+
       {/* INTERESTED Lead Handling Section */}
       {selectedOutcome === "INTERESTED" && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30 p-3 space-y-3 pt-3 border-t w-full min-w-0">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30 p-3.5 space-y-3 border-t w-full min-w-0">
           <div className="flex items-center justify-between min-w-0">
             <span className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 truncate">
               <Building2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -400,7 +452,7 @@ export const CallOutcomePanel = ({
                     type="button"
                     onClick={handleClaimExistingLead}
                     disabled={claiming}
-                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-2xs"
                   >
                     {claiming ? <Loader2 size={12} className="animate-spin" /> : <UserCheck size={12} />}
                     <span>Claim Existing Lead</span>
@@ -417,7 +469,7 @@ export const CallOutcomePanel = ({
               <button
                 type="button"
                 onClick={() => setIsCreateLeadModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-bold transition shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-bold transition shadow-2xs cursor-pointer"
               >
                 <Plus size={14} />
                 <span>Create Lead</span>
@@ -426,6 +478,44 @@ export const CallOutcomePanel = ({
           )}
         </div>
       )}
+
+      {/* Action Footer: Cancel and Save buttons (Stacked on mobile, row on tablet/desktop) */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-border/60">
+        <span className="text-[11px] text-text-muted text-center sm:text-left">
+          {!selectedOutcome ? "Select an outcome to save" : "Ready to submit disposition"}
+        </span>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 sm:flex-initial rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-text-secondary hover:bg-neutral-100 transition cursor-pointer text-center"
+          >
+            Cancel
+          </button>
+
+          {selectedOutcome !== "INTERESTED" && (
+            <button
+              type="button"
+              onClick={handleSaveNonLeadOutcome}
+              disabled={!selectedOutcome || submitting}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 text-xs font-bold transition shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>Save Disposition</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* In-workspace modal for creating lead prefilled with StudentData */}
       {isCreateLeadModalOpen && (

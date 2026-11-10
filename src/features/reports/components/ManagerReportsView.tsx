@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   FileSpreadsheet,
-  Filter,
   Search,
-  Users,
-  Building2,
-  Calendar,
-  Layers,
   RefreshCw,
   AlertCircle,
   Download,
@@ -769,57 +764,62 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Banner */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">{headerTitle}</h1>
-          <p className="mt-1 text-xs text-text-secondary">{subtitle}</p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 pr-2">
+            <h1 className="text-xl sm:text-2xl font-bold sm:font-semibold text-text-primary tracking-tight truncate sm:whitespace-normal">
+              {headerTitle}
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              {subtitle}
+            </p>
+          </div>
 
-        <button
-          onClick={handleExportPipelineExcel}
-          disabled={isExportingPipeline}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-10"
-        >
-          {isExportingPipeline ? (
-            <>
-              <RefreshCw size={14} className="animate-spin" />
-              Exporting Pipeline...
-            </>
-          ) : (
-            <>
-              <FileSpreadsheet size={16} />
-              Export Pipeline Excel
-            </>
-          )}
-        </button>
+          <div className="shrink-0 self-start sm:self-auto">
+            <button
+              onClick={handleExportPipelineExcel}
+              disabled={isExportingPipeline}
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-emerald-600 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-8 sm:h-10 cursor-pointer"
+            >
+              {isExportingPipeline ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet size={15} className="sm:w-4 sm:h-4" />
+                  <span>Export Pipeline Excel</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* REPORT FILTERS SECTION */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-        <div className="flex items-center gap-2 border-b border-border pb-3">
-          <Filter size={18} className="text-primary-600" />
-          <h2 className="text-sm font-bold text-text-primary">Report Filters</h2>
-        </div>
-
+      {/* REPORT FILTERS SECTION (Directly on page background) */}
+      <div className="space-y-3 sm:space-y-4">
         {validationError && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-800">
-            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+          <div className="flex items-center gap-2 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2.5 text-xs font-medium text-rose-800 dark:text-rose-300">
+            <AlertCircle size={15} className="text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{validationError}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Filters Grid:
+            - Desktop (>=1024px): Horizontal 5-column grid in a single row
+            - Tablet (768px-1023px): 3-column grid
+            - Mobile (<768px): Exactly 2 filters per row (Row 1: Period | Scope, Row 2: College | Member, Row 3: Stage | Empty)
+        */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           {/* A. PERIOD FILTER */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1">
-              <Calendar size={14} className="text-text-muted" /> Period
-            </label>
+          <div className="col-span-1 min-w-0">
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value as PeriodFilterOption)}
-              className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500 transition"
+              className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
             >
               <option value="THIS_MONTH">This Month</option>
               <option value="TODAY">Today</option>
@@ -831,27 +831,21 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
           </div>
 
           {/* B. LEAD SCOPE */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1">
-              <Layers size={14} className="text-text-muted" /> Lead Scope
-            </label>
+          <div className="col-span-1 min-w-0">
             <select
               disabled
-              className="w-full h-10 rounded-lg border border-border bg-neutral-100 px-3 text-xs font-medium text-text-primary cursor-not-allowed opacity-90"
+              className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-neutral-100 dark:bg-neutral-800/60 px-2.5 sm:px-3 text-xs font-medium text-text-primary cursor-not-allowed opacity-90 truncate"
             >
               <option value="ALL_TEAM">{leadScopeLabel}</option>
             </select>
           </div>
 
           {/* C. COLLEGE FILTER */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1">
-              <Building2 size={14} className="text-text-muted" /> College
-            </label>
+          <div className="col-span-1 min-w-0">
             <select
               value={selectedCollegeId}
               onChange={(e) => setSelectedCollegeId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500 transition"
+              className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
             >
               <option value="ALL">All Colleges</option>
               {colleges.map((c) => (
@@ -863,14 +857,11 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
           </div>
 
           {/* D. TEAM MEMBER FILTER */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1">
-              <Users size={14} className="text-text-muted" /> Member
-            </label>
+          <div className="col-span-1 min-w-0">
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500 transition"
+              className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
             >
               <option value="ALL">All Members</option>
               {members.map((m) => (
@@ -880,36 +871,9 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
               ))}
             </select>
           </div>
-        </div>
 
-        {/* CUSTOM DATE RANGE INPUTS */}
-        {period === "CUSTOM" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border-light">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary">From Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary">To Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* E. LEAD STAGE FILTER & GENERATE BUTTON */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-4 pt-2 border-t border-border">
-          <div className="space-y-1.5 flex-1 max-w-xs">
-            <label className="text-xs font-semibold text-text-secondary">Lead Stage</label>
+          {/* E. LEAD STAGE FILTER */}
+          <div className="col-span-1 min-w-0">
             <select
               value={
                 statuses.find(
@@ -919,7 +883,7 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
                 )?.id.toString() || selectedStatusId
               }
               onChange={(e) => setSelectedStatusId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-primary-500 transition"
+              className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
             >
               <option value="ALL">All Stages</option>
               {statuses.map((s) => (
@@ -929,21 +893,48 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
               ))}
             </select>
           </div>
+        </div>
 
+        {/* CUSTOM DATE RANGE INPUTS */}
+        {period === "CUSTOM" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-2 border-t border-border">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-text-muted">From Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-text-muted">To Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary-500"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* GENERATE REPORT BUTTON (Aligned Left on desktop & mobile) */}
+        <div className="flex items-center justify-start pt-1">
           <button
             onClick={handleGenerateReport}
             disabled={isGenerating}
-            className="h-10 px-6 rounded-lg bg-primary-500 text-white font-medium text-xs hover:bg-primary-600 transition flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
+            className="h-8 sm:h-10 px-4 sm:px-5 rounded-lg sm:rounded-xl bg-primary-500 text-white font-medium text-xs sm:text-sm hover:bg-primary-600 transition flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 shrink-0 shadow-2xs cursor-pointer"
           >
             {isGenerating ? (
               <>
                 <RefreshCw size={14} className="animate-spin" />
-                Generating report...
+                <span>Generating report...</span>
               </>
             ) : (
               <>
-                <FileSpreadsheet size={16} />
-                Generate Report
+                <FileSpreadsheet size={15} className="sm:w-4 sm:h-4" />
+                <span>Generate Report</span>
               </>
             )}
           </button>
@@ -952,70 +943,69 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
 
       {/* GENERATED REPORT CONTENT */}
       {hasGenerated && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* REPORT SUMMARY */}
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+          <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-border pb-2.5 sm:pb-3">
               <div>
                 <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">
                   Report Summary
                 </h3>
-                <p className="text-xs text-text-secondary mt-0.5">
+                <p className="text-[11px] sm:text-xs text-text-secondary mt-0.5">
                   Applied Filters: Period ({appliedFilterSummary.periodText}) • College ({appliedFilterSummary.collegeText}) • Member ({appliedFilterSummary.memberText}) • Stage ({appliedFilterSummary.statusText})
                 </p>
               </div>
             </div>
 
             {/* Summary Metrics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl border border-border bg-neutral-50/60">
-                <p className="text-[11px] font-semibold text-text-muted uppercase">Total Leads</p>
-                <p className="text-2xl font-bold text-text-primary mt-1">{summaryMetrics.total}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-neutral-50/60 dark:bg-neutral-800/40">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-text-muted uppercase">Total Leads</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary mt-1">{summaryMetrics.total}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-blue-50/60">
-                <p className="text-[11px] font-semibold text-blue-800 uppercase">Applications</p>
-                <p className="text-2xl font-bold text-blue-700 mt-1">{summaryMetrics.applications}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-blue-50/60 dark:bg-blue-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-blue-800 dark:text-blue-300 uppercase">Applications</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">{summaryMetrics.applications}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-purple-50/60">
-                <p className="text-[11px] font-semibold text-purple-800 uppercase">Interviews Sched.</p>
-                <p className="text-2xl font-bold text-purple-700 mt-1">{summaryMetrics.interviewScheduled}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-purple-50/60 dark:bg-purple-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-purple-800 dark:text-purple-300 uppercase">Interviews Sched.</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">{summaryMetrics.interviewScheduled}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-pink-50/60">
-                <p className="text-[11px] font-semibold text-pink-800 uppercase">Interviews Done</p>
-                <p className="text-2xl font-bold text-pink-700 mt-1">{summaryMetrics.interviewDone}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-pink-50/60 dark:bg-pink-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-pink-800 dark:text-pink-300 uppercase">Interviews Done</p>
+                <p className="text-xl sm:text-2xl font-bold text-pink-700 dark:text-pink-400 mt-1">{summaryMetrics.interviewDone}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-amber-50/60">
-                <p className="text-[11px] font-semibold text-amber-800 uppercase">Selected</p>
-                <p className="text-2xl font-bold text-amber-700 mt-1">{summaryMetrics.selected}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-amber-50/60 dark:bg-amber-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase">Selected</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{summaryMetrics.selected}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-indigo-50/60">
-                <p className="text-[11px] font-semibold text-indigo-800 uppercase">Letter Out</p>
-                <p className="text-2xl font-bold text-indigo-700 mt-1">{summaryMetrics.letterOut}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-indigo-50/60 dark:bg-indigo-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-indigo-800 dark:text-indigo-300 uppercase">Letter Out</p>
+                <p className="text-xl sm:text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">{summaryMetrics.letterOut}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-emerald-50/60">
-                <p className="text-[11px] font-semibold text-emerald-800 uppercase">Admissions Done</p>
-                <p className="text-2xl font-bold text-emerald-700 mt-1">{summaryMetrics.admissionsDone}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-emerald-50/60 dark:bg-emerald-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">Admissions Done</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">{summaryMetrics.admissionsDone}</p>
               </div>
-              <div className="p-4 rounded-xl border border-border bg-rose-50/60">
-                <p className="text-[11px] font-semibold text-rose-800 uppercase">Cancelled</p>
-                <p className="text-2xl font-bold text-rose-700 mt-1">{summaryMetrics.cancelled}</p>
+              <div className="p-3 sm:p-4 rounded-xl border border-border bg-rose-50/60 dark:bg-rose-950/30">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-rose-800 dark:text-rose-300 uppercase">Cancelled</p>
+                <p className="text-xl sm:text-2xl font-bold text-rose-700 dark:text-rose-400 mt-1">{summaryMetrics.cancelled}</p>
               </div>
             </div>
           </div>
 
           {/* COLLEGE-WISE & MEMBER-WISE REPORTS GRID */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* COLLEGE-WISE REPORT */}
-            <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+            <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-2.5 sm:pb-3">
                 <h3 className="text-sm font-bold text-text-primary">College Performance</h3>
-                <Building2 size={16} className="text-primary-600" />
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[340px]">
                   <thead>
-                    <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
+                    <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
                       <th className="px-3 py-2.5">College</th>
                       <th className="px-3 py-2.5 text-center">Leads</th>
                       <th className="px-3 py-2.5 text-center">Apps</th>
@@ -1031,11 +1021,11 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
                       </tr>
                     ) : (
                       collegeWiseData.map((c, i) => (
-                        <tr key={c.id || i} className="hover:bg-neutral-50/50">
+                        <tr key={c.id || i} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
                           <td className="px-3 py-2.5 font-semibold text-text-primary">{c.name}</td>
                           <td className="px-3 py-2.5 text-center text-text-secondary">{c.leads}</td>
-                          <td className="px-3 py-2.5 text-center text-indigo-600 font-medium">{c.apps}</td>
-                          <td className="px-3 py-2.5 text-right text-emerald-600 font-bold">{c.admissions}</td>
+                          <td className="px-3 py-2.5 text-center text-indigo-600 dark:text-indigo-400 font-medium">{c.apps}</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-bold">{c.admissions}</td>
                         </tr>
                       ))
                     )}
@@ -1045,16 +1035,15 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
             </div>
 
             {/* MEMBER-WISE REPORT */}
-            <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+            <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-2.5 sm:pb-3">
                 <h3 className="text-sm font-bold text-text-primary">Member Performance</h3>
-                <Users size={16} className="text-primary-600" />
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[340px]">
                   <thead>
-                    <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
+                    <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
                       <th className="px-3 py-2.5">Member</th>
                       <th className="px-3 py-2.5 text-center">Leads</th>
                       <th className="px-3 py-2.5 text-center">Apps</th>
@@ -1070,11 +1059,11 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
                       </tr>
                     ) : (
                       memberWiseData.map((m, i) => (
-                        <tr key={m.id || i} className="hover:bg-neutral-50/50">
+                        <tr key={m.id || i} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
                           <td className="px-3 py-2.5 font-semibold text-text-primary">{m.name}</td>
                           <td className="px-3 py-2.5 text-center text-text-secondary">{m.leads}</td>
-                          <td className="px-3 py-2.5 text-center text-indigo-600 font-medium">{m.apps}</td>
-                          <td className="px-3 py-2.5 text-right text-emerald-600 font-bold">{m.admissions}</td>
+                          <td className="px-3 py-2.5 text-center text-indigo-600 dark:text-indigo-400 font-medium">{m.apps}</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-bold">{m.admissions}</td>
                         </tr>
                       ))
                     )}
@@ -1085,73 +1074,75 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
           </div>
 
           {/* DETAILED LEAD TABLE */}
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+          <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border pb-3 sm:pb-4">
               <div>
                 <h3 className="text-sm font-bold text-text-primary">
                   Filtered Lead Dataset ({totalFilteredCount})
                 </h3>
-                <p className="text-xs text-text-secondary mt-0.5">
+                <p className="text-[11px] sm:text-xs text-text-secondary mt-0.5">
                   Detailed table representing exact exported dataset.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <div className="relative w-full sm:w-64">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search lead name, phone, email..."
                     value={tableSearch}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full h-9 rounded-lg border border-border bg-surface pl-9 pr-3 text-xs outline-none focus:border-primary-500"
+                    className="w-full h-8 sm:h-9 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs outline-none focus:border-primary-500"
                   />
                 </div>
 
-                <button
-                  onClick={handleExportPipelineExcel}
-                  disabled={isExportingPipeline}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-9"
-                  title="Export all 8 pipeline stages as separate worksheets into one Excel workbook"
-                >
-                  {isExportingPipeline ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin" />
-                      Exporting Pipeline...
-                    </>
-                  ) : (
-                    <>
-                      <FileSpreadsheet size={15} />
-                      Export Pipeline Excel
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={handleExportPipelineExcel}
+                    disabled={isExportingPipeline}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-2xs shrink-0 disabled:opacity-50 h-8 sm:h-9 cursor-pointer flex-1 sm:flex-none"
+                    title="Export all 8 pipeline stages as separate worksheets into one Excel workbook"
+                  >
+                    {isExportingPipeline ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Exporting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileSpreadsheet size={14} />
+                        <span>Export Pipeline</span>
+                      </>
+                    )}
+                  </button>
 
-                <button
-                  onClick={handleExportExcel}
-                  disabled={isExporting || totalFilteredCount === 0}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-text-secondary hover:bg-neutral-50 transition shadow-2xs shrink-0 disabled:opacity-50 h-9"
-                  title="Export filtered table dataset"
-                >
-                  {isExporting ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin" />
-                      Exporting...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={15} />
-                      Export Table
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={isExporting || totalFilteredCount === 0}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-800 transition shadow-2xs shrink-0 disabled:opacity-50 h-8 sm:h-9 cursor-pointer flex-1 sm:flex-none"
+                    title="Export filtered table dataset"
+                  >
+                    {isExporting ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Exporting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} />
+                        <span>Export Table</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[700px]">
                 <thead>
-                  <tr className="border-b border-border bg-neutral-50/80 text-text-secondary font-semibold uppercase tracking-wider">
+                  <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
                     <th className="px-4 py-3">Lead Name</th>
                     <th className="px-4 py-3">Contact</th>
                     <th className="px-4 py-3">Colleges Applied To</th>
@@ -1181,7 +1172,7 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
                         lead.assignments?.find((a) => a.status === "ACTIVE")?.user || lead.createdBy;
 
                       return (
-                        <tr key={lead.id} className="hover:bg-neutral-50/50 transition">
+                        <tr key={lead.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition">
                           <td className="px-4 py-3.5 font-semibold text-text-primary">
                             {lead.firstName} {lead.lastName || ""}
                           </td>
@@ -1227,14 +1218,14 @@ export const ManagerReportsView: React.FC<ManagerReportsViewProps> = ({
                   <button
                     onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-800 transition disabled:opacity-40 font-medium cursor-pointer"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 transition disabled:opacity-40 font-medium cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-800 transition disabled:opacity-40 font-medium cursor-pointer"
                   >
                     Next
                   </button>

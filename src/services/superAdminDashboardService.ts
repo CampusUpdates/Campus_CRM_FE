@@ -168,14 +168,30 @@ export interface SuperAdminDashboardData {
   }>;
 }
 
+export interface FetchSuperAdminDashboardOptions {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  callTime?: string;
+  callTiming?: string;
+  pipelinePeriod?: string;
+  pipelineStartDate?: string;
+  pipelineEndDate?: string;
+  signal?: AbortSignal;
+}
+
 export async function fetchSuperAdminDashboardStats(
   token?: string,
-  startDate?: string,
+  startDateOrOptions?: string | FetchSuperAdminDashboardOptions,
   endDate?: string,
   page?: number,
   limit?: number,
   callTime?: string,
   callTiming?: string,
+  pipelinePeriodOrSignal?: string | AbortSignal,
+  pipelineStartDate?: string,
+  pipelineEndDate?: string,
   signal?: AbortSignal
 ): Promise<SuperAdminDashboardData> {
   const headers: HeadersInit = {
@@ -186,19 +202,45 @@ export async function fetchSuperAdminDashboardStats(
   }
 
   const queryParams = new URLSearchParams();
-  if (startDate) queryParams.set("startDate", startDate);
-  if (endDate) queryParams.set("endDate", endDate);
-  if (page) queryParams.set("page", page.toString());
-  if (limit) queryParams.set("limit", limit.toString());
-  if (callTime && callTime !== "ALL") queryParams.set("callTime", callTime);
-  if (callTiming && callTiming !== "ALL") queryParams.set("callTiming", callTiming);
+  let effectiveSignal = signal;
+  let effectivePipelinePeriod: string | undefined = undefined;
+
+  if (pipelinePeriodOrSignal instanceof AbortSignal) {
+    effectiveSignal = pipelinePeriodOrSignal;
+  } else if (typeof pipelinePeriodOrSignal === "string") {
+    effectivePipelinePeriod = pipelinePeriodOrSignal;
+  }
+
+  if (typeof startDateOrOptions === "object" && startDateOrOptions !== null) {
+    const opts = startDateOrOptions;
+    if (opts.startDate) queryParams.set("startDate", opts.startDate);
+    if (opts.endDate) queryParams.set("endDate", opts.endDate);
+    if (opts.page) queryParams.set("page", opts.page.toString());
+    if (opts.limit) queryParams.set("limit", opts.limit.toString());
+    if (opts.callTime && opts.callTime !== "ALL") queryParams.set("callTime", opts.callTime);
+    if (opts.callTiming && opts.callTiming !== "ALL") queryParams.set("callTiming", opts.callTiming);
+    if (opts.pipelinePeriod) queryParams.set("pipelinePeriod", opts.pipelinePeriod);
+    if (opts.pipelineStartDate) queryParams.set("pipelineStartDate", opts.pipelineStartDate);
+    if (opts.pipelineEndDate) queryParams.set("pipelineEndDate", opts.pipelineEndDate);
+    if (opts.signal) effectiveSignal = opts.signal;
+  } else {
+    if (startDateOrOptions) queryParams.set("startDate", startDateOrOptions);
+    if (endDate) queryParams.set("endDate", endDate);
+    if (page) queryParams.set("page", page.toString());
+    if (limit) queryParams.set("limit", limit.toString());
+    if (callTime && callTime !== "ALL") queryParams.set("callTime", callTime);
+    if (callTiming && callTiming !== "ALL") queryParams.set("callTiming", callTiming);
+    if (effectivePipelinePeriod) queryParams.set("pipelinePeriod", effectivePipelinePeriod);
+    if (pipelineStartDate) queryParams.set("pipelineStartDate", pipelineStartDate);
+    if (pipelineEndDate) queryParams.set("pipelineEndDate", pipelineEndDate);
+  }
 
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
 
   const response = await fetch(`${API_URL}/dashboard/super-admin${queryString}`, {
     method: "GET",
     headers,
-    signal,
+    signal: effectiveSignal,
   });
 
   if (!response.ok) {

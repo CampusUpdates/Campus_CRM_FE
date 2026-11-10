@@ -154,9 +154,11 @@ const LoginPage = () => {
         <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12">
           <div className="w-full max-w-md">
             {/* Logo */}
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary-500 flex items-center justify-center mb-6 sm:mb-8 shadow-md">
-              <span className="text-white text-lg sm:text-xl font-bold">C</span>
-            </div>
+            <img
+              src="/favicon.png"
+              alt="Campus Updates logo"
+              className="h-10 w-10 sm:h-12 sm:w-12 object-contain mb-6 sm:mb-8"
+            />
 
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">
               Welcome back!
@@ -271,9 +273,11 @@ const LoginPage = () => {
           <div className="absolute w-56 h-56 rounded-full bg-primary-700/30 -bottom-20 -left-20 pointer-events-none" />
 
           <div className="relative z-10 text-white max-w-sm">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-6 shadow-sm">
-              <span className="text-xl sm:text-2xl font-bold">CU</span>
-            </div>
+            <img
+              src="/favicon.png"
+              alt="Campus Updates logo"
+              className="h-14 w-14 sm:h-16 sm:w-16 object-contain mb-6"
+            />
 
             <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
               Campus Updates

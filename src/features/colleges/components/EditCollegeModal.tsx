@@ -162,8 +162,8 @@ const EditCollegeModal = ({
         className={`
           fixed right-0 top-0
           h-[100dvh]
-          w-[40vw]
-          min-w-[420px]
+          w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[40vw]
+          max-w-full
           bg-surface
           shadow-2xl
           flex flex-col
@@ -171,12 +171,12 @@ const EditCollegeModal = ({
         `}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
-          <div>
-            <h2 className="text-xl font-semibold text-text-primary">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 sm:px-6 py-4 sm:py-5 gap-2">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary truncate">
               Edit College
             </h2>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-secondary truncate">
               Update details for {college.name}
             </p>
           </div>
@@ -184,13 +184,17 @@ const EditCollegeModal = ({
           <button
             type="button"
             onClick={handleClose}
+            aria-label="Close modal"
             className="
+              shrink-0
               rounded-lg
-              p-2
+              p-1.5 sm:p-2
               text-text-secondary
               transition
               hover:bg-neutral-100
+              dark:hover:bg-neutral-800
               hover:text-text-primary
+              cursor-pointer
             "
           >
             <X size={20} />
@@ -198,26 +202,26 @@ const EditCollegeModal = ({
         </div>
 
         {/* Scrollable Form */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 custom-scrollbar">
+          <form id="edit-college-form" onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {errorMsg && (
-              <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 p-3 sm:p-4 text-xs sm:text-sm text-rose-700 dark:text-rose-300">
                 {errorMsg}
               </div>
             )}
 
             {/* Basic Information */}
-            <section>
-              <div className="mb-5">
-                <h3 className="text-base font-semibold text-text-primary">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                   Basic Information
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
                   Primary details of the institution.
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <Input
                   label="College Name"
                   name="name"
@@ -228,7 +232,7 @@ const EditCollegeModal = ({
                 />
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-text-primary">
+                  <label className="mb-1.5 block text-xs sm:text-sm font-medium text-text-primary">
                     Description <span className="text-danger-500">*</span>
                   </label>
                   <textarea
@@ -240,17 +244,18 @@ const EditCollegeModal = ({
                     required
                     className="
                       w-full
+                      box-border
                       rounded-lg
                       border border-border
                       bg-surface
-                      p-4
-                      text-sm text-text-primary
+                      p-3 sm:p-3.5
+                      text-xs sm:text-sm text-text-primary
                       outline-none
                       transition
                       placeholder:text-text-muted
                       focus:border-primary-500
                       focus:ring-2
-                      focus:ring-primary-100
+                      focus:ring-primary-100 dark:focus:ring-primary-950/40
                     "
                   />
                 </div>
@@ -266,17 +271,17 @@ const EditCollegeModal = ({
             </section>
 
             {/* Contact Person & Communication */}
-            <section>
-              <div className="mb-5">
-                <h3 className="text-base font-semibold text-text-primary">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                   Contact Details
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
                   Point of contact and communication info.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Contact Person"
                   name="contactPerson"
@@ -293,29 +298,31 @@ const EditCollegeModal = ({
                   placeholder="e.g. +91 9876543210"
                 />
 
-                <Input
-                  type="email"
-                  label="Email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="e.g. admissions@apex.edu.in"
-                />
+                <div className="sm:col-span-2">
+                  <Input
+                    type="email"
+                    label="Email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="e.g. admissions@apex.edu.in"
+                  />
+                </div>
               </div>
             </section>
 
             {/* Location */}
-            <section>
-              <div className="mb-5">
-                <h3 className="text-base font-semibold text-text-primary">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                   Location
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
                   Physical address and location details.
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <Input
                   label="Address"
                   name="address"
@@ -324,7 +331,7 @@ const EditCollegeModal = ({
                   placeholder="Campus address..."
                 />
 
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input
                     label="City"
                     name="city"
@@ -345,19 +352,19 @@ const EditCollegeModal = ({
             </section>
 
             {/* Admission Process & Status Flags */}
-            <section>
-              <div className="mb-5">
-                <h3 className="text-base font-semibold text-text-primary">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                   Admission & Institutional Status
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
                   Process guidelines and active partnership flags.
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-text-primary">
+                  <label className="mb-1.5 block text-xs sm:text-sm font-medium text-text-primary">
                     Admission Process Details
                   </label>
                   <textarea
@@ -368,97 +375,114 @@ const EditCollegeModal = ({
                     rows={3}
                     className="
                       w-full
+                      box-border
                       rounded-lg
                       border border-border
                       bg-surface
-                      p-4
-                      text-sm text-text-primary
+                      p-3 sm:p-3.5
+                      text-xs sm:text-sm text-text-primary
                       outline-none
                       transition
                       placeholder:text-text-muted
                       focus:border-primary-500
                       focus:ring-2
-                      focus:ring-primary-100
+                      focus:ring-primary-100 dark:focus:ring-primary-950/40
                     "
                   />
                 </div>
 
-                <div className="flex flex-col gap-3 pt-2">
-                  <label className="flex items-center gap-3 cursor-pointer">
+                <div className="flex flex-col gap-2.5 pt-1">
+                  <label className="flex items-start sm:items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       name="hasTieUp"
                       checked={formData.hasTieUp}
                       onChange={handleChange}
-                      className="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
+                      className="mt-0.5 sm:mt-0 h-4 w-4 shrink-0 rounded border-border text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-sm font-medium text-text-primary">
+                    <span className="text-xs sm:text-sm font-medium text-text-primary">
                       Official Partnership / Tie-Up Established
                     </span>
                   </label>
 
-                  <label className="flex items-center gap-3 cursor-pointer">
+                  <label className="flex items-start sm:items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       name="isActive"
                       checked={formData.isActive}
                       onChange={handleChange}
-                      className="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
+                      className="mt-0.5 sm:mt-0 h-4 w-4 shrink-0 rounded border-border text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-sm font-medium text-text-primary">
+                    <span className="text-xs sm:text-sm font-medium text-text-primary">
                       Mark as Active College
                     </span>
                   </label>
 
-                  <label className="flex items-center gap-3 cursor-pointer">
+                  <label className="flex items-start sm:items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       name="requiresApproval"
                       checked={formData.requiresApproval}
                       onChange={handleChange}
-                      className="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
+                      className="mt-0.5 sm:mt-0 h-4 w-4 shrink-0 rounded border-border text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-sm font-medium text-text-primary">
+                    <span className="text-xs sm:text-sm font-medium text-text-primary">
                       Requires Manager Approval for Lead Pitches
                     </span>
                   </label>
                 </div>
               </div>
             </section>
-
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 border-t border-border pt-6">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="
-                  rounded-lg
-                  border border-border
-                  px-5 py-2.5
-                  text-sm font-medium text-text-secondary
-                  transition
-                  hover:bg-neutral-100
-                "
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="
-                  rounded-lg
-                  bg-primary-500
-                  px-5 py-2.5
-                  text-sm font-medium text-white
-                  transition
-                  hover:bg-primary-600
-                  disabled:opacity-50
-                "
-              >
-                {loading ? "Updating College..." : "Save Changes"}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 flex items-center justify-end gap-2.5 border-t border-border bg-surface px-4 sm:px-6 py-3 sm:py-3.5">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="
+              inline-flex items-center justify-center
+              h-[38px]
+              px-4
+              rounded-lg
+              border border-border
+              bg-surface
+              text-xs sm:text-sm font-semibold
+              text-text-secondary
+              hover:text-text-primary
+              hover:bg-neutral-100 dark:hover:bg-neutral-800
+              hover:border-neutral-300 dark:hover:border-neutral-700
+              transition
+              shadow-2xs
+              whitespace-nowrap
+              cursor-pointer
+            "
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="edit-college-form"
+            disabled={loading}
+            className="
+              inline-flex items-center justify-center
+              h-[38px]
+              px-4
+              rounded-lg
+              bg-emerald-600 hover:bg-emerald-700
+              text-white
+              text-xs sm:text-sm font-semibold
+              transition
+              shadow-2xs
+              whitespace-nowrap
+              cursor-pointer
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+            "
+          >
+            {loading ? "Updating College..." : "Save Changes"}
+          </button>
         </div>
       </div>
     </div>
@@ -486,7 +510,7 @@ const Input = ({
 }: InputProps) => {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-text-primary">
+      <label className="mb-1.5 block text-xs sm:text-sm font-medium text-text-primary">
         {label}
         {required && <span className="ml-1 text-danger-500">*</span>}
       </label>
@@ -499,19 +523,20 @@ const Input = ({
         placeholder={placeholder}
         required={required}
         className="
-          h-11
+          h-10 sm:h-11
           w-full
+          box-border
           rounded-lg
           border border-border
           bg-surface
-          px-4
-          text-sm text-text-primary
+          px-3.5 sm:px-4
+          text-xs sm:text-sm text-text-primary
           outline-none
           transition
           placeholder:text-text-muted
           focus:border-primary-500
           focus:ring-2
-          focus:ring-primary-100
+          focus:ring-primary-100 dark:focus:ring-primary-950/40
         "
       />
     </div>

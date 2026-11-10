@@ -80,13 +80,15 @@ const MultiSelectDropdown = ({
   label,
   options,
   selected,
-  onChange
+  onChange,
+  className = "",
 }: {
   icon: any,
   label: string,
   options: { id: string, label: string }[],
   selected: string[],
-  onChange: (val: string[]) => void
+  onChange: (val: string[]) => void,
+  className?: string,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -107,38 +109,38 @@ const MultiSelectDropdown = ({
   };
 
   return (
-    <div className="relative w-full sm:w-auto shrink-0" ref={popoverRef}>
+    <div className={`relative ${className || "w-full sm:w-auto shrink-0"}`} ref={popoverRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="
-          flex items-center justify-between w-full sm:w-auto min-w-[140px] h-11 px-3.5
-          rounded-xl border border-border bg-surface text-sm font-medium text-text-primary
+          flex items-center justify-between w-full sm:w-auto min-w-0 sm:min-w-[140px] h-9 sm:h-11 px-2.5 sm:px-3.5
+          rounded-lg sm:rounded-xl border border-border bg-surface text-xs sm:text-sm font-medium text-text-primary
           hover:bg-neutral-50 transition focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500
           cursor-pointer shrink-0
         "
       >
-        <div className="flex items-center gap-2">
-          <Icon size={16} className="text-text-muted" />
-          <span className="truncate max-w-[100px]">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <Icon size={14} className="sm:w-4 sm:h-4 text-text-muted shrink-0" />
+          <span className="truncate max-w-[85px] sm:max-w-[100px]">
             {selected.length === 0 ? label : `${selected.length} Selected`}
           </span>
         </div>
-        <ChevronDown size={16} className="text-text-muted ml-2 shrink-0" />
+        <ChevronDown size={14} className="sm:w-4 sm:h-4 text-text-muted ml-1 sm:ml-2 shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[220px] bg-surface rounded-xl shadow-lg border border-border z-50 max-h-[300px] overflow-y-auto py-1 crm-dropdown-menu" role="listbox">
+        <div className="absolute top-full left-0 mt-1 sm:mt-2 w-[220px] max-w-[calc(100vw-2rem)] bg-surface rounded-xl shadow-lg border border-border z-50 max-h-[260px] sm:max-h-[300px] overflow-y-auto py-1 crm-dropdown-menu" role="listbox">
           {options.length === 0 && <div className="p-3 text-xs text-text-muted text-center">No options available</div>}
           {options.map((opt) => (
-            <label key={opt.id} className="flex items-center gap-3 px-3 py-2 hover:bg-surface-hover crm-dropdown-item cursor-pointer text-text-primary transition" role="option">
+            <label key={opt.id} className="flex items-center gap-2.5 sm:gap-3 px-3 py-1.5 sm:py-2 hover:bg-surface-hover crm-dropdown-item cursor-pointer text-text-primary transition" role="option">
               <input
                 type="checkbox"
                 checked={selected.includes(opt.id)}
                 onChange={() => toggleSelection(opt.id)}
                 className="rounded text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm text-text-primary truncate">{opt.label}</span>
+              <span className="text-xs sm:text-sm text-text-primary truncate">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -627,47 +629,51 @@ const LeadPage = () => {
   const paginatedLeads = leads;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
-            Lead Management
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-text-secondary">
-            Track student leads, manage pipeline status stages, pitch college courses, and log TPC calls.
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+              Lead Management
+            </h1>
+            <p className="hidden sm:block mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Track student leads, manage pipeline status stages, pitch college courses, and log TPC calls.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-start sm:self-auto">
-          <button
-            onClick={loadLeads}
-            title="Refresh leads"
-            className="p-2 sm:p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shrink-0 cursor-pointer"
-          >
-            <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
+            <button
+              onClick={loadLeads}
+              title="Refresh leads"
+              aria-label="Refresh leads"
+              className="inline-flex items-center justify-center h-8 sm:h-10 px-2.5 sm:p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
+            </button>
 
-          <button
-            onClick={() => setIsCreateLeadOpen(true)}
-            className="
-              flex items-center gap-1.5 sm:gap-2
-              rounded-lg
-              bg-primary-500
-              px-3 py-2 sm:px-4 sm:py-2.5
-              text-xs sm:text-sm font-medium
-              text-white
-              whitespace-nowrap
-              shrink-0
-              transition
-              hover:bg-primary-600
-              shadow-sm
-              cursor-pointer
-            "
-          >
-            <Plus size={16} className="sm:w-[18px] sm:h-[18px] shrink-0" />
-            <span>Create Lead</span>
-          </button>
+            <button
+              onClick={() => setIsCreateLeadOpen(true)}
+              className="
+                inline-flex items-center gap-1.5 sm:gap-2
+                rounded-lg
+                bg-primary-500
+                h-8 sm:h-10
+                px-3 sm:px-4
+                text-xs sm:text-sm font-medium
+                text-white
+                whitespace-nowrap
+                shrink-0
+                transition
+                hover:bg-primary-600
+                shadow-2xs
+                cursor-pointer
+              "
+            >
+              <Plus size={15} className="sm:w-[18px] sm:h-[18px] shrink-0" />
+              <span>Create Lead</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -714,12 +720,12 @@ const LeadPage = () => {
       )}
 
       {/* Search & Status Filter Controls */}
-      <div className="flex flex-wrap items-center gap-3 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 w-full min-w-0">
         {/* Search Input */}
         <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            size={16}
+            className="sm:w-[18px] sm:h-[18px] absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           />
           <input
             type="text"
@@ -727,15 +733,15 @@ const LeadPage = () => {
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="
-              h-11
+              h-9 sm:h-11
               w-full
-              rounded-xl
+              rounded-lg sm:rounded-xl
               border
               border-border
               bg-surface
-              pl-11
-              pr-10
-              text-sm
+              pl-9 sm:pl-11
+              pr-9 sm:pr-10
+              text-xs sm:text-sm
               outline-none
               transition
               focus:border-primary-500
@@ -748,166 +754,173 @@ const LeadPage = () => {
               type="button"
               onClick={handleClearSearch}
               title="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md transition cursor-pointer"
+              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md transition cursor-pointer"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
         </div>
 
-        {/* Status Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[150px] shrink-0">
-          <div className="relative">
-            <Filter
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-            <select
-              value={selectedStatus}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="
-                h-11
-                w-full
-                rounded-xl
-                border
-                border-border
-                bg-surface
-                pl-10
-                pr-9
-                text-sm
-                font-medium
-                text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-                appearance-none
-                cursor-pointer
-              "
-            >
-              <option value="ALL">All</option>
-              {dbStatuses.length > 0 ? (
-                dbStatuses.map((st) => (
-                  <option key={st.id} value={st.name}>
-                    {st.name === "LEAD" ? "Active Leads" : st.name}
-                  </option>
-                ))
-              ) : (
-                <option value="LEAD">Active Leads</option>
-              )}
-            </select>
-            <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
+        {/* 2x2 Filter Grid on Mobile, Inline Flex on Desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Status Filter Dropdown */}
+          <div className="relative w-full sm:w-auto sm:min-w-[150px] shrink-0">
+            <div className="relative">
+              <Filter
+                size={14}
+                className="sm:w-4 sm:h-4 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              />
+              <select
+                value={selectedStatus}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="
+                  h-9 sm:h-11
+                  w-full
+                  rounded-lg sm:rounded-xl
+                  border
+                  border-border
+                  bg-surface
+                  pl-8 sm:pl-10
+                  pr-7 sm:pr-9
+                  text-xs sm:text-sm
+                  font-medium
+                  text-text-primary
+                  outline-none
+                  transition
+                  focus:border-primary-500
+                  focus:ring-2
+                  focus:ring-primary-100
+                  appearance-none
+                  cursor-pointer
+                  truncate
+                "
+              >
+                <option value="ALL">All</option>
+                {dbStatuses.length > 0 ? (
+                  dbStatuses.map((st) => (
+                    <option key={st.id} value={st.name}>
+                      {st.name === "LEAD" ? "Active Leads" : st.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="LEAD">Active Leads</option>
+                )}
+              </select>
+              <ChevronDown
+                size={14}
+                className="sm:w-4 sm:h-4 absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Time Filter Dropdown */}
-        <div className="relative w-full sm:w-auto sm:min-w-[140px] shrink-0">
-          <div className="relative">
-            <Clock
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
-            <select
-              value={selectedTime}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "custom") {
-                  setPickerFromDate(fromDate);
-                  setPickerToDate(toDate);
-                  setIsCustomRangeOpen(true);
-                } else {
-                  handleTimeChange(val);
-                }
-              }}
-              className="
-                h-11
-                w-full
-                rounded-xl
-                border
-                border-border
-                bg-surface
-                pl-10
-                pr-9
-                text-sm
-                font-medium
-                text-text-primary
-                outline-none
-                transition
-                focus:border-primary-500
-                focus:ring-2
-                focus:ring-primary-100
-                appearance-none
-                cursor-pointer
-              "
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="custom">
-                {selectedTime === "custom" && (fromDate || toDate)
-                  ? `${fromDate || "Start"} to ${toDate || "End"}`
-                  : "Custom Range"}
-              </option>
-            </select>
-            <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            />
+          {/* Time Filter Dropdown */}
+          <div className="relative w-full sm:w-auto sm:min-w-[140px] shrink-0">
+            <div className="relative">
+              <Clock
+                size={14}
+                className="sm:w-4 sm:h-4 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              />
+              <select
+                value={selectedTime}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "custom") {
+                    setPickerFromDate(fromDate);
+                    setPickerToDate(toDate);
+                    setIsCustomRangeOpen(true);
+                  } else {
+                    handleTimeChange(val);
+                  }
+                }}
+                className="
+                  h-9 sm:h-11
+                  w-full
+                  rounded-lg sm:rounded-xl
+                  border
+                  border-border
+                  bg-surface
+                  pl-8 sm:pl-10
+                  pr-7 sm:pr-9
+                  text-xs sm:text-sm
+                  font-medium
+                  text-text-primary
+                  outline-none
+                  transition
+                  focus:border-primary-500
+                  focus:ring-2
+                  focus:ring-primary-100
+                  appearance-none
+                  cursor-pointer
+                  truncate
+                "
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="custom">
+                  {selectedTime === "custom" && (fromDate || toDate)
+                    ? `${fromDate || "Start"} to ${toDate || "End"}`
+                    : "Custom Range"}
+                </option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="sm:w-4 sm:h-4 absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              />
+            </div>
           </div>
-        </div>
 
-        <MultiSelectDropdown
-          icon={Building2}
-          label="College"
-          options={collegesList.map(c => ({ id: c.id, label: c.name }))}
-          selected={selectedColleges}
-          onChange={(val) => {
-            setSelectedColleges(val);
-            setCurrentPage(1);
-          }}
-        />
-
-        {canFilterByOwner && (
           <MultiSelectDropdown
-            icon={UserCircle}
-            label="Owner"
-            options={[
-              { id: "UNASSIGNED", label: "Unassigned" },
-              ...usersList.map(u => ({ id: u.id, label: u.firstName + (u.lastName ? ` ${u.lastName}` : "") }))
-            ]}
-            selected={selectedOwners}
+            icon={Building2}
+            label="College"
+            options={collegesList.map(c => ({ id: c.id, label: c.name }))}
+            selected={selectedColleges}
             onChange={(val) => {
-              setSelectedOwners(val);
+              setSelectedColleges(val);
               setCurrentPage(1);
             }}
+            className="w-full sm:w-auto"
           />
-        )}
+
+          {canFilterByOwner && (
+            <MultiSelectDropdown
+              icon={UserCircle}
+              label="Owner"
+              options={[
+                { id: "UNASSIGNED", label: "Unassigned" },
+                ...usersList.map(u => ({ id: u.id, label: u.firstName + (u.lastName ? ` ${u.lastName}` : "") }))
+              ]}
+              selected={selectedOwners}
+              onChange={(val) => {
+                setSelectedOwners(val);
+                setCurrentPage(1);
+              }}
+              className="w-full sm:w-auto"
+            />
+          )}
+        </div>
 
         <button
           onClick={handleExportExcel}
           disabled={isExporting}
           className="
-            flex items-center justify-center gap-2
-            w-full sm:w-auto h-11
-            rounded-xl
+            flex items-center justify-center gap-1.5 sm:gap-2
+            w-full sm:w-auto h-9 sm:h-11
+            rounded-lg sm:rounded-xl
             border border-primary-500
             bg-primary-50 text-primary-700
-            px-4
-            text-sm font-bold
+            px-3 sm:px-4
+            text-xs sm:text-sm font-semibold sm:font-bold
             transition
             hover:bg-primary-100
-            shadow-sm
+            shadow-2xs sm:shadow-sm
             disabled:opacity-50
             shrink-0
             cursor-pointer
           "
         >
-          <Download size={16} className={isExporting ? "animate-bounce" : ""} />
+          <Download size={15} className={`sm:w-4 sm:h-4 ${isExporting ? "animate-bounce" : ""}`} />
           <span className="whitespace-nowrap">{isExporting ? "Exporting..." : "Export Excel"}</span>
         </button>
       </div>

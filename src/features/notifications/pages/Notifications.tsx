@@ -263,17 +263,17 @@ const Notifications = () => {
   const getCategoryIcon = (category: NotificationCategory) => {
     switch (category) {
       case "RECRUITMENT":
-        return <UserPlus size={18} className="text-blue-500" />;
+        return <UserPlus size={15} className="sm:w-[18px] sm:h-[18px] text-blue-500 shrink-0" />;
       case "INTERVIEW":
-        return <CalendarCheck size={18} className="text-amber-500" />;
+        return <CalendarCheck size={15} className="sm:w-[18px] sm:h-[18px] text-amber-500 shrink-0" />;
       case "LEADS":
-        return <Users size={18} className="text-primary-500" />;
+        return <Users size={15} className="sm:w-[18px] sm:h-[18px] text-primary-500 shrink-0" />;
       case "APPROVAL":
-        return <CheckCircle2 size={18} className="text-emerald-500" />;
+        return <CheckCircle2 size={15} className="sm:w-[18px] sm:h-[18px] text-emerald-500 shrink-0" />;
       case "SYSTEM":
-        return <ShieldCheck size={18} className="text-purple-500" />;
+        return <ShieldCheck size={15} className="sm:w-[18px] sm:h-[18px] text-purple-500 shrink-0" />;
       default:
-        return <Info size={18} className="text-text-muted" />;
+        return <Info size={15} className="sm:w-[18px] sm:h-[18px] text-text-muted shrink-0" />;
     }
   };
 
@@ -345,45 +345,46 @@ const Notifications = () => {
   }, [activeTab, pendingBroadcastsList, acknowledgedBroadcastsList, broadcasts, searchTerm]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 sm:space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+      <div className="flex flex-col gap-2.5 sm:gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3 sm:pb-5">
         <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2.5">
-              <Bell className="text-primary-600 h-7 w-7 shrink-0" />
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h1 className="text-lg sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5">
+              <Bell className="text-primary-600 h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
               <span>Notifications & Alerts</span>
             </h1>
             {unreadCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-primary-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-2xs">
+              <span className="inline-flex items-center rounded-full bg-primary-500 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold text-white shadow-2xs shrink-0">
                 {unreadCount} Unread
               </span>
             )}
             {pendingBroadcastCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                {pendingBroadcastCount} Awaiting Acknowledgement
+              <span className="inline-flex items-center rounded-full bg-amber-500/15 border border-amber-500/30 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0">
+                <span className="sm:hidden">{pendingBroadcastCount} Ack Required</span>
+                <span className="hidden sm:inline">{pendingBroadcastCount} Awaiting Acknowledgement</span>
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-secondary leading-normal sm:leading-relaxed">
             Stay updated on broadcast announcements, lead assignments, TPC tasks, approvals, and notices.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             type="button"
             onClick={markAllAsRead}
             disabled={unreadCount === 0}
             className="
-              flex items-center gap-1.5 rounded-lg border border-border
-              bg-surface px-3.5 py-2 text-xs font-medium text-text-primary
-              transition-all duration-200 hover:border-primary-500/40 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 cursor-pointer shadow-2xs
+              flex-[1.35] sm:flex-initial flex items-center justify-center gap-1.5 rounded-lg border border-border
+              bg-surface h-9 sm:h-auto px-2 sm:px-3.5 py-1.5 sm:py-2 text-[12px] sm:text-xs font-medium text-text-primary
+              whitespace-nowrap transition-all duration-200 hover:border-primary-500/40 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 cursor-pointer shadow-2xs
             "
           >
-            <CheckSquare size={15} />
-            <span>Mark All as Read</span>
+            <CheckSquare size={14} className="sm:w-[15px] sm:h-[15px] shrink-0" />
+            <span className="whitespace-nowrap">Mark All as Read</span>
           </button>
 
           <button
@@ -391,20 +392,20 @@ const Notifications = () => {
             onClick={clearAll}
             disabled={notifications.length === 0}
             className="
-              flex items-center gap-1.5 rounded-lg border border-rose-500/30
-              bg-rose-500/10 px-3.5 py-2 text-xs font-medium text-rose-600 dark:text-rose-300
-              transition-all duration-200 hover:bg-rose-500/20 disabled:opacity-40 cursor-pointer shadow-2xs
+              flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30
+              bg-rose-500/10 h-9 sm:h-auto px-2 sm:px-3.5 py-1.5 sm:py-2 text-[12px] sm:text-xs font-medium text-rose-600 dark:text-rose-300
+              whitespace-nowrap transition-all duration-200 hover:bg-rose-500/20 disabled:opacity-40 cursor-pointer shadow-2xs
             "
           >
-            <Trash2 size={15} />
-            <span>Clear All</span>
+            <Trash2 size={14} className="sm:w-[15px] sm:h-[15px] shrink-0" />
+            <span className="whitespace-nowrap">Clear All</span>
           </button>
         </div>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-600 dark:text-rose-300">
+        <div className="flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 sm:p-4 text-xs text-rose-600 dark:text-rose-300">
           <div className="flex items-center gap-2">
             <AlertTriangle size={16} className="text-rose-500 shrink-0" />
             <span>{error}</span>
@@ -423,40 +424,41 @@ const Notifications = () => {
       )}
 
       {/* Search & Category Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
         {/* Search Field */}
-        <div className="relative flex-1 min-w-0">
+        <div className="relative flex-1 min-w-0 w-full">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            size={15}
+            className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none sm:w-[18px] sm:h-[18px]"
           />
           <input
             type="text"
-            placeholder="Search notifications and announcements..."
+            placeholder="Search notifications..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="
-              h-11
+              h-9 sm:h-11
               w-full
-              rounded-xl
+              rounded-lg sm:rounded-xl
               border border-border
               bg-surface
-              pl-11 pr-10
-              text-sm text-text-primary
+              pl-9 sm:pl-11 pr-8 sm:pr-10
+              text-xs sm:text-sm text-text-primary
               placeholder:text-text-muted
               outline-none
               focus:border-primary-500
               focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950
               transition
+              shadow-2xs
             "
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md cursor-pointer"
+              className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded-md cursor-pointer"
             >
-              <X size={16} />
+              <X size={14} className="sm:w-4 sm:h-4" />
             </button>
           )}
         </div>
@@ -465,23 +467,23 @@ const Notifications = () => {
         <div className="relative w-full sm:w-auto sm:min-w-[220px] shrink-0">
           <div className="relative">
             <Filter
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              size={14}
+              className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none sm:w-4 sm:h-4"
             />
             <select
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value as NotificationTab)}
               aria-label="Filter notifications by category"
               className="
-                h-11
+                h-9 sm:h-11
                 w-full
-                rounded-xl
+                rounded-lg sm:rounded-xl
                 border
                 border-border
                 bg-surface
-                pl-10
-                pr-9
-                text-sm
+                pl-8.5 sm:pl-10
+                pr-8 sm:pr-9
+                text-xs sm:text-sm
                 font-medium
                 text-text-primary
                 outline-none
@@ -491,6 +493,7 @@ const Notifications = () => {
                 focus:ring-primary-100 dark:focus:ring-primary-950
                 appearance-none
                 cursor-pointer
+                shadow-2xs
               "
             >
               <option value="ALL">All Notifications ({notifications.length})</option>
@@ -508,8 +511,8 @@ const Notifications = () => {
               <option value="SYSTEM">System</option>
             </select>
             <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              size={14}
+              className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none sm:w-4 sm:h-4"
             />
           </div>
         </div>
@@ -517,7 +520,7 @@ const Notifications = () => {
 
       {/* Broadcasts View */}
       {showBroadcastTab ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5 sm:space-y-3">
           {loadingBroadcasts && broadcasts.length === 0 ? (
             <PageLoadingState message="Loading broadcast announcements..." />
           ) : displayedBroadcasts.length === 0 ? (
@@ -537,55 +540,55 @@ const Notifications = () => {
                   key={item.id}
                   onClick={() => handleOpenBroadcastReader(item)}
                   className={`
-                    group relative flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border p-4.5 gap-4 transition-all duration-200 cursor-pointer shadow-xs bg-surface
+                    group relative flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border p-3 sm:p-4.5 gap-3 sm:gap-4 transition-all duration-200 cursor-pointer shadow-2xs bg-surface
                     ${
                       !item.isRead
-                        ? "border-primary-500/40 hover:border-primary-500 hover:shadow-md"
+                        ? "border-primary-500/40 hover:border-primary-500 hover:shadow-xs"
                         : "border-border hover:border-neutral-300 dark:hover:border-neutral-700"
                     }
                   `}
                 >
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                  <div className="flex items-start gap-3 sm:gap-3.5 flex-1 min-w-0">
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border mt-0.5 ${
+                      className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border mt-0.5 ${
                         !item.isRead
                           ? "border-primary-300 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400"
                           : "border-border bg-neutral-100 dark:bg-neutral-800 text-text-muted"
                       }`}
                     >
-                      <Megaphone size={18} />
+                      <Megaphone size={16} className="sm:w-[18px] sm:h-[18px]" />
                     </div>
 
                     <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         {!item.isRead && (
-                          <span className="px-2 py-0.5 rounded-full bg-primary-500 text-white font-semibold text-[10px] uppercase tracking-wider">
+                          <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-primary-500 text-white font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0">
                             New
                           </span>
                         )}
-                        <h4 className="text-sm font-semibold text-text-primary truncate">
+                        <h4 className="text-xs sm:text-sm font-semibold text-text-primary break-words leading-snug sm:leading-normal min-w-0">
                           {item.title}
                         </h4>
 
                         {/* Status Badge */}
                         {item.isAcknowledged ? (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
                             <CheckCircle2 size={11} />
                             Acknowledged
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">
                             <AlertTriangle size={11} />
                             Acknowledgement Required
                           </span>
                         )}
                       </div>
 
-                      <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-text-secondary line-clamp-3 sm:line-clamp-2 leading-relaxed break-words">
                         {item.body}
                       </p>
 
-                      <div className="flex items-center gap-4 text-[11px] font-medium text-text-muted pt-1 flex-wrap">
+                      <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] font-medium text-text-muted pt-0.5 sm:pt-1 flex-wrap">
                         <span>From: <strong className="text-text-primary font-medium">{sender}</strong></span>
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
@@ -601,14 +604,14 @@ const Notifications = () => {
                   </div>
 
                   {/* Actions Area */}
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-border/50 sm:border-t-0">
                     {!item.isAcknowledged && (
                       <button
                         type="button"
                         onClick={(e) => handleAcknowledgeBroadcast(item.id, e)}
                         disabled={acknowledgingBroadcastId === item.id}
                         className="
-                          flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                          flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg
                           bg-primary-500 hover:bg-primary-600 text-white
                           text-xs font-semibold transition transform active:scale-95
                           disabled:opacity-50 cursor-pointer shadow-2xs
@@ -627,7 +630,7 @@ const Notifications = () => {
                       type="button"
                       onClick={() => handleOpenBroadcastReader(item)}
                       className="
-                        flex items-center gap-1 px-3 py-1.5 rounded-lg
+                        flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg
                         border border-border text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer
                       "
                     >
@@ -642,7 +645,7 @@ const Notifications = () => {
         </div>
       ) : (
         /* Regular Notifications List */
-        <div className="space-y-3">
+        <div className="space-y-2.5 sm:space-y-3">
           {isLoading && notifications.length === 0 ? (
             <PageLoadingState message="Loading notifications..." />
           ) : filteredNotifications.length === 0 ? (
@@ -661,39 +664,39 @@ const Notifications = () => {
                     handleToggleRead(item.id, item.type, item.isRead, item.title, item.message)
                   }
                   className={`
-                    group relative flex items-start justify-between rounded-xl border p-4.5 transition-all duration-200 cursor-pointer shadow-xs bg-surface
+                    group relative flex items-start justify-between rounded-xl border p-3 sm:p-4.5 transition-all duration-200 cursor-pointer shadow-2xs bg-surface gap-3 sm:gap-4
                     ${
                       !item.isRead
-                        ? "border-primary-500/40 hover:border-primary-500 hover:shadow-md"
+                        ? "border-primary-500/40 hover:border-primary-500 hover:shadow-xs"
                         : "border-border hover:border-neutral-300 dark:hover:border-neutral-700"
                     }
                   `}
                 >
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                  <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
                     {/* Category Icon */}
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-neutral-50 dark:bg-neutral-800/80 shadow-2xs mt-0.5">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-border bg-neutral-50 dark:bg-neutral-800/80 shadow-2xs mt-0.5">
                       {getCategoryIcon(category)}
                     </div>
 
                     <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         {/* Unread indicator */}
                         {!item.isRead && (
-                          <span className="px-2 py-0.5 rounded-full bg-primary-500 text-white font-semibold text-[10px] uppercase tracking-wider">
+                          <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-primary-500 text-white font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0">
                             New
                           </span>
                         )}
 
                         <h4
-                          className={`text-sm ${
+                          className={`text-xs sm:text-sm ${
                             !item.isRead ? "text-text-primary font-bold" : "text-text-primary font-semibold"
-                          } truncate`}
+                          } break-words leading-snug sm:leading-normal min-w-0`}
                         >
                           {item.title}
                         </h4>
 
                         <span
-                          className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${getCategoryBadgeClass(
+                          className={`inline-flex rounded-md border px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shrink-0 ${getCategoryBadgeClass(
                             category
                           )}`}
                         >
@@ -701,11 +704,11 @@ const Notifications = () => {
                         </span>
                       </div>
 
-                      <p className="text-xs text-text-secondary leading-relaxed w-full whitespace-pre-line">
+                      <p className="text-xs text-text-secondary leading-relaxed w-full break-words whitespace-pre-line">
                         {item.message}
                       </p>
 
-                      <p className="text-[11px] font-medium text-text-muted pt-1 flex items-center gap-1">
+                      <p className="text-[10px] sm:text-[11px] font-medium text-text-muted pt-0.5 sm:pt-1 flex items-center gap-1">
                         <Clock size={12} />
                         {formatTimestamp(item.createdAt)}
                       </p>
@@ -713,17 +716,17 @@ const Notifications = () => {
                   </div>
 
                   {/* Dismiss Button */}
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-1.5 sm:ml-3">
                     <button
                       type="button"
                       onClick={(e) => handleDelete(item.id, e)}
                       title="Remove notification"
                       className="
-                        opacity-0 group-hover:opacity-100 transition rounded-lg p-1.5
+                        opacity-70 sm:opacity-0 sm:group-hover:opacity-100 hover:opacity-100 transition rounded-md sm:rounded-lg p-1 sm:p-1.5
                         text-text-muted hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 cursor-pointer
                       "
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={14} className="sm:w-[15px] sm:h-[15px]" />
                     </button>
                   </div>
                 </div>

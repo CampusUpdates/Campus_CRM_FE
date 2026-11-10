@@ -52,10 +52,18 @@ const Navbar = () => {
   const { accessToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { unreadCount, pendingBroadcastCount, toggleDrawer } = useNotification();
-  const { toggleSidebar } = useSidebar();
+  const { isSidebarOpen, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close mobile search when sidebar is opened
+  useEffect(() => {
+    if (isSidebarOpen) {
+      setIsMobileSearchOpen(false);
+      setShowResults(false);
+    }
+  }, [isSidebarOpen]);
 
   const isLeadReallocation = location.pathname.startsWith("/lead-reallocation");
 
@@ -239,7 +247,7 @@ const Navbar = () => {
           className={`
             relative
             ${isMobileSearchOpen
-              ? 'absolute inset-x-0 top-0 h-full flex items-center bg-navbar px-2 z-50 gap-2 w-full shadow-md sm:static sm:h-auto sm:block sm:bg-transparent sm:px-0 sm:z-auto sm:w-auto sm:shadow-none'
+              ? 'absolute inset-x-0 top-0 h-full flex items-center bg-navbar px-2 z-30 gap-2 w-full shadow-md sm:static sm:h-auto sm:block sm:bg-transparent sm:px-0 sm:z-auto sm:w-auto sm:shadow-none'
               : 'hidden sm:block'}
           `}
           ref={searchContainerRef}
@@ -312,7 +320,7 @@ const Navbar = () => {
 
 {/* Live Search Results Dropdown */}
           {showResults && searchQuery.trim() && (
-            <div className="absolute left-0 right-0 sm:right-auto top-full sm:top-13 mt-1 sm:mt-0 z-50 max-h-96 sm:w-[450px] overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl backdrop-blur-md">
+            <div className="absolute left-0 right-0 sm:right-auto top-full sm:top-13 mt-1 sm:mt-0 z-30 max-h-96 sm:w-[450px] overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl backdrop-blur-md">
               {isSearching ? (
                 <div className="flex items-center justify-center py-8 text-sm text-text-muted gap-2">
                   <Loader2 size={18} className="animate-spin text-primary-500" />

@@ -245,15 +245,15 @@ const Todo = () => {
   const highPriorityCount = todos.filter((t) => t.priority === "HIGH" && !t.isCompleted).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2.5">
-            <ListTodo size={26} className="text-primary-600" />
+          <h1 className="text-lg sm:text-2xl font-bold text-text-primary flex items-center gap-2">
+            <ListTodo size={20} className="sm:w-[26px] sm:h-[26px] text-primary-600 shrink-0" />
             My Todo List
           </h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="hidden sm:block mt-1 text-xs sm:text-sm text-text-secondary">
             Manage your daily tasks, set priorities, and track execution by date.
           </p>
         </div>
@@ -262,171 +262,164 @@ const Todo = () => {
         <button
           onClick={handleOpenCreateModal}
           className="
-            inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold
-            text-white shadow-sm hover:bg-primary-700 transition self-start sm:self-auto
+            inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 sm:px-4 py-2 sm:py-2.5
+            text-xs sm:text-sm font-semibold text-white hover:bg-primary-700 transition
+            self-start sm:self-auto cursor-pointer shrink-0
           "
         >
-          <Plus size={16} /> Create Todo Task
+          <Plus size={15} /> Create Todo Task
         </button>
       </div>
 
       {/* KPI Stats summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-2xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between text-text-muted">
             <span className="text-xs font-medium">Total Tasks</span>
-            <ListTodo size={16} className="text-primary-600" />
+            <ListTodo size={15} className="text-primary-600 shrink-0" />
           </div>
-          <p className="text-2xl font-bold text-text-primary mt-1">{totalCount}</p>
-          <p className="text-[11px] text-text-secondary mt-0.5">Scheduled for selected date</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-primary mt-1">{totalCount}</p>
+          <p className="text-[11px] text-text-secondary mt-0.5 leading-tight">Scheduled for selected date</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-2xs">
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between text-text-muted">
             <span className="text-xs font-medium">Pending</span>
-            <Clock size={16} className="text-blue-600" />
+            <Clock size={15} className="text-blue-600 shrink-0" />
           </div>
-          <p className="text-2xl font-bold text-blue-700 mt-1">{pendingCount}</p>
-          <p className="text-[11px] text-text-secondary mt-0.5">Awaiting completion</p>
+          <p className="text-xl sm:text-2xl font-bold text-blue-700 mt-1">{pendingCount}</p>
+          <p className="text-[11px] text-text-secondary mt-0.5 leading-tight">Awaiting completion</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-2xs">
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between text-text-muted">
             <span className="text-xs font-medium">Completed</span>
-            <CheckCircle2 size={16} className="text-emerald-600" />
+            <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
           </div>
-          <p className="text-2xl font-bold text-emerald-700 mt-1">{completedCount}</p>
-          <p className="text-[11px] text-text-secondary mt-0.5">Tasks finished</p>
+          <p className="text-xl sm:text-2xl font-bold text-emerald-700 mt-1">{completedCount}</p>
+          <p className="text-[11px] text-text-secondary mt-0.5 leading-tight">Tasks finished</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-4 shadow-2xs">
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between text-text-muted">
             <span className="text-xs font-medium">High Priority</span>
-            <AlertCircle size={16} className="text-red-600" />
+            <AlertCircle size={15} className="text-red-600 shrink-0" />
           </div>
-          <p className="text-2xl font-bold text-red-700 mt-1">{highPriorityCount}</p>
-          <p className="text-[11px] text-text-secondary mt-0.5">High priority pending</p>
+          <p className="text-xl sm:text-2xl font-bold text-red-700 mt-1">{highPriorityCount}</p>
+          <p className="text-[11px] text-text-secondary mt-0.5 leading-tight">High priority pending</p>
         </div>
       </div>
 
-      {/* Date Navigator Bar & Controls */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        {/* Date Navigator */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1 border border-border/60">
+      {/* Date Navigator Bar & Controls (Sitting directly on page without outer card) */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* Date Navigator (Reduced size, compact) */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1 bg-surface rounded-lg p-1 border border-border shadow-2xs h-9">
             <button
+              type="button"
               onClick={handlePrevDay}
               title="Previous Day"
-              className="p-1.5 rounded text-text-secondary hover:bg-surface hover:text-text-primary transition shadow-2xs"
+              className="p-1 rounded text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 hover:text-text-primary transition shrink-0 cursor-pointer"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={15} />
             </button>
 
-            <div className="flex items-center gap-2 px-2">
-              <Calendar size={15} className="text-primary-600" />
+            <div className="flex items-center gap-1 px-1 min-w-0">
+              <Calendar size={13} className="text-primary-600 shrink-0" />
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer w-[110px] sm:w-[115px]"
               />
             </div>
 
             <button
+              type="button"
               onClick={handleNextDay}
               title="Next Day"
-              className="p-1.5 rounded text-text-secondary hover:bg-surface hover:text-text-primary transition shadow-2xs"
+              className="p-1 rounded text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 hover:text-text-primary transition shrink-0 cursor-pointer"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
             </button>
           </div>
 
           {!isTodaySelected && (
             <button
+              type="button"
               onClick={handleToday}
-              className="px-3 py-2 rounded-lg border border-primary-200 bg-primary-50 text-xs font-semibold text-primary-700 hover:bg-primary-100 transition"
+              className="h-9 px-2.5 rounded-lg border border-primary-200 bg-primary-50 dark:border-primary-800/80 dark:bg-primary-950/40 text-xs font-semibold text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition shrink-0 cursor-pointer shadow-2xs"
             >
               Today
             </button>
           )}
         </div>
 
-        {/* Filters & Search Bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg">
-            <button
-              onClick={() => setStatusFilter("ALL")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "ALL"
-                ? "bg-surface text-text-primary font-semibold shadow-2xs"
-                : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setStatusFilter("PENDING")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "PENDING"
-                ? "bg-surface text-blue-700 font-semibold shadow-2xs"
-                : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setStatusFilter("COMPLETED")}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${statusFilter === "COMPLETED"
-                ? "bg-surface text-emerald-700 font-semibold shadow-2xs"
-                : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              Completed
-            </button>
+        {/* Toolbar Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto min-w-0">
+          {/* Status & Priority Dropdowns (Equal width side-by-side on mobile, inline on tablet/desktop) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Status Dropdown */}
+            <div className="flex-1 sm:flex-initial flex items-center gap-1.5 h-9 rounded-lg border border-border bg-surface px-2.5 shadow-2xs min-w-0 sm:w-36">
+              <CheckSquare size={13} className="text-text-muted shrink-0" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)}
+                className="w-full bg-transparent text-xs font-medium text-text-primary focus:outline-none cursor-pointer truncate"
+              >
+                <option value="ALL" className="bg-surface text-text-primary">All Status</option>
+                <option value="PENDING" className="bg-surface text-text-primary">Pending</option>
+                <option value="COMPLETED" className="bg-surface text-text-primary">Completed</option>
+              </select>
+            </div>
+
+            {/* Priority Dropdown */}
+            <div className="flex-1 sm:flex-initial flex items-center gap-1.5 h-9 rounded-lg border border-border bg-surface px-2.5 shadow-2xs min-w-0 sm:w-36">
+              <Filter size={13} className="text-text-muted shrink-0" />
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as PriorityFilterType)}
+                className="w-full bg-transparent text-xs font-medium text-text-primary focus:outline-none cursor-pointer truncate"
+              >
+                <option value="ALL" className="bg-surface text-text-primary">All Priorities</option>
+                <option value="HIGH" className="bg-surface text-text-primary">High Priority</option>
+                <option value="MEDIUM" className="bg-surface text-text-primary">Medium Priority</option>
+                <option value="LOW" className="bg-surface text-text-primary">Low Priority</option>
+              </select>
+            </div>
           </div>
 
-          {/* Priority Filter */}
-          <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-lg border border-border/60">
-            <Filter size={13} className="text-text-muted ml-1" />
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as PriorityFilterType)}
-              className="bg-transparent text-xs font-medium text-text-primary focus:outline-none pr-1 py-1 cursor-pointer"
+          {/* Search Box & Refresh Button */}
+          <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+            <div className="relative flex-1 min-w-0 sm:w-56 sm:flex-none">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search todo title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="
+                  h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3
+                  text-xs text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none transition shadow-2xs
+                "
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={loadTodos}
+              disabled={loading}
+              title="Refresh List"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-slate-800 hover:text-text-primary transition shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
             >
-              <option value="ALL">All Priorities</option>
-              <option value="HIGH">High Priority</option>
-              <option value="MEDIUM">Medium Priority</option>
-              <option value="LOW">Low Priority</option>
-            </select>
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
-
-          {/* Search Box */}
-          <div className="relative flex-1 sm:w-56">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              placeholder="Search todo title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="
-                w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5
-                text-xs text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-              "
-            />
-          </div>
-
-          <button
-            onClick={loadTodos}
-            disabled={loading}
-            title="Refresh List"
-            className="rounded-lg border border-border p-1.5 text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition disabled:opacity-50"
-          >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-          </button>
         </div>
       </div>
 
       {/* Main Todo Container */}
-      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm min-h-[350px]">
+      <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 shadow-sm min-h-[200px] sm:min-h-[350px]">
         {loading ? (
           <PageLoadingState message={`Loading your todos for ${selectedDate}...`} />
         ) : error ? (
@@ -459,7 +452,7 @@ const Todo = () => {
                 <div
                   key={todo.id}
                   className={`
-                    group relative flex flex-col justify-between p-4 rounded-xl border transition-all duration-200
+                    group relative flex flex-col justify-between p-3 sm:p-4 rounded-xl border transition-all duration-200
                     ${todo.isCompleted
                       ? "bg-neutral-50/70 border-border opacity-70"
                       : isHigh
@@ -474,7 +467,7 @@ const Todo = () => {
                       <div className="flex items-start gap-3 min-w-0 flex-1">
                         <button
                           onClick={() => handleToggleComplete(todo)}
-                          className="mt-0.5 shrink-0 text-primary-600 hover:scale-110 transition"
+                          className="mt-0.5 shrink-0 text-primary-600 hover:scale-110 transition cursor-pointer"
                         >
                           {todo.isCompleted ? (
                             <CheckSquare size={20} className="text-emerald-600" />
@@ -510,7 +503,7 @@ const Todo = () => {
                       {/* Priority Tag */}
                       <span
                         className={`
-                          shrink-0 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider
+                          shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider
                           ${isHigh
                             ? "bg-red-100 text-red-800 border border-red-300"
                             : isLow
@@ -536,15 +529,15 @@ const Todo = () => {
 
                   {/* Footer Actions */}
                   <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/40">
-                    <span className="text-[11px] text-text-muted font-medium">
+                    <span className="text-[11px] text-text-muted font-medium truncate mr-2">
                       Status: {todo.isCompleted ? "Completed" : "Pending"}
                     </span>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleOpenEditModal(todo)}
                         title="Edit Task"
-                        className="px-2 py-1 rounded text-xs font-medium text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition inline-flex items-center gap-1"
+                        className="px-2 py-1 rounded text-xs font-medium text-text-secondary hover:bg-neutral-100 hover:text-text-primary transition inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Edit2 size={13} /> Edit
                       </button>
@@ -552,7 +545,7 @@ const Todo = () => {
                       <button
                         onClick={() => handleDeleteTodo(todo.id, todo.title)}
                         title="Delete Task"
-                        className="px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition inline-flex items-center gap-1"
+                        className="px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 size={13} /> Delete
                       </button>
@@ -587,30 +580,30 @@ const Todo = () => {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border p-4 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-primary-50 p-2 text-primary-600">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="rounded-lg bg-primary-50 p-2 text-primary-600 shrink-0">
                   <ListTodo size={18} />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-text-primary">
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-text-primary truncate">
                     {editingTodo ? "Edit Todo Task" : "Create Todo Task"}
                   </h3>
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-xs text-text-secondary truncate">
                     {editingTodo ? "Update task details" : "Schedule a personal task by date"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleCloseModal}
-                className="rounded-lg p-1 text-text-muted hover:bg-neutral-100 hover:text-text-primary transition"
+                className="rounded-lg p-1 text-text-muted hover:bg-neutral-100 hover:text-text-primary transition cursor-pointer shrink-0 ml-2"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveTodo} className="p-4 space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-4">
+            <form onSubmit={handleSaveTodo} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Title */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
@@ -656,7 +649,7 @@ const Todo = () => {
                       type="button"
                       onClick={() => setFormPriority("LOW")}
                       className={`
-                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
+                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center cursor-pointer
                         ${formPriority === "LOW"
                           ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs"
                           : "border-border text-text-secondary hover:bg-neutral-50"
@@ -669,7 +662,7 @@ const Todo = () => {
                       type="button"
                       onClick={() => setFormPriority("MEDIUM")}
                       className={`
-                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
+                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center cursor-pointer
                         ${formPriority === "MEDIUM"
                           ? "bg-amber-50 border-amber-500 text-amber-800 shadow-2xs"
                           : "border-border text-text-secondary hover:bg-neutral-50"
@@ -682,7 +675,7 @@ const Todo = () => {
                       type="button"
                       onClick={() => setFormPriority("HIGH")}
                       className={`
-                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center
+                        px-3 py-2 rounded-lg text-xs font-semibold border transition text-center cursor-pointer
                         ${formPriority === "HIGH"
                           ? "bg-red-50 border-red-500 text-red-700 shadow-2xs"
                           : "border-border text-text-secondary hover:bg-neutral-50"
@@ -713,12 +706,12 @@ const Todo = () => {
               </div>
 
               {/* Actions Footer */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border mt-auto">
+              <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={handleCloseModal}
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-text-secondary hover:bg-neutral-100 transition disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -727,7 +720,7 @@ const Todo = () => {
                   disabled={submitting || !formTitle.trim()}
                   className="
                     inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 text-xs font-medium text-white
-                    shadow-sm hover:bg-primary-700 transition disabled:opacity-50
+                    hover:bg-primary-700 transition disabled:opacity-50 cursor-pointer
                   "
                 >
                   {submitting && <Loader2 size={14} className="animate-spin" />}

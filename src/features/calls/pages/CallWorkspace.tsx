@@ -20,10 +20,7 @@ import {
   fetchMockCallQueue,
   fetchAssignedStudentDataOne,
   fetchCallLogs,
-  initiateMockCall,
-  endMockCall,
   type MockCallQueueStudentItem,
-  type MockCallSession,
   type CallLogItem,
 } from "../../../services/mockCallService";
 import {
@@ -156,9 +153,9 @@ const CallWorkspace = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
 
-  // Active call session
-  const [callSession, setCallSession] = useState<MockCallSession | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  // Disposition Form state
+  const [isDispositionFormOpen, setIsDispositionFormOpen] = useState(false);
+  const [dispositionedInSession, setDispositionedInSession] = useState<Set<string>>(new Set());
 
   // Modal & Drawer State
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<any>(null);
@@ -197,10 +194,12 @@ const CallWorkspace = () => {
   const activeBatchQueue = useMemo(() => {
     if (!activeBatch) return [];
     if (filterMode === "uncompleted") {
-      return activeBatch.items.filter((item) => !item.isCompleted);
+      return activeBatch.items.filter(
+        (item) => !item.isCompleted || dispositionedInSession.has(item.studentDataId)
+      );
     }
     return activeBatch.items;
-  }, [activeBatch, filterMode]);
+  }, [activeBatch, filterMode, dispositionedInSession]);
 
   // 6. Record Position Index within Active Assignment Queue
   const [batchRecordIndex, setBatchRecordIndex] = useState<number>(0);
@@ -228,9 +227,9 @@ const CallWorkspace = () => {
     return activeBatchQueue[clampedIndex] || null;
   }, [activeBatchQueue, batchRecordIndex]);
 
-  // Reset call session whenever current student changes
+  // Reset disposition form whenever current student changes
   useEffect(() => {
-    setCallSession(null);
+    setIsDispositionFormOpen(false);
   }, [currentStudent?.studentDataId]);
 
   const batchTotalRecords = activeBatch?.totalRecords || 0;
@@ -272,7 +271,7 @@ const CallWorkspace = () => {
     } else {
       setBatchRecordIndex(0);
     }
-    setCallSession(null);
+    setIsDispositionFormOpen(false);
   };
 
   const handlePhonePositionChange = (newPos: number) => {
@@ -296,7 +295,7 @@ const CallWorkspace = () => {
 
     // 3. Set batch record index
     setBatchRecordIndex(targetIndex);
-    setCallSession(null);
+    setIsDispositionFormOpen(false);
 
     // 4. Save last active assignment ID
     saveLastActiveAssignmentId(user?.sub, targetAssignmentId);
@@ -348,7 +347,7 @@ const CallWorkspace = () => {
 
       setQueue(items);
       setCompletedCount(res.completedCount || 0);
-      setCallSession(null);
+      setIsDispositionFormOpen(false);
     } catch (err: any) {
       const msg = err.message || "Failed to load assigned call queue.";
       setQueueError(msg);
@@ -405,52 +404,12 @@ const CallWorkspace = () => {
     setActiveTab("dialer");
   };
 
-  const handleInitiateCall = async () => {
-    if (!accessToken || !currentStudent || actionLoading) return;
-    if (
-      !currentStudent.phone ||
-      currentStudent.phone.trim() === "" ||
-      currentStudent.phone === "undefined" ||
-      currentStudent.phone === "null"
-    ) {
-      toast.error("Selected contact has no valid phone number.");
-      return;
-    }
-    setActionLoading(true);
-    try {
-      const res = await initiateMockCall(accessToken, currentStudent.studentDataId);
-      if (!res?.session || !res.session.phoneNumber) {
-        throw new Error("Invalid call session returned by telephony provider.");
-      }
-      setCallSession(res.session);
-      toast.success(`Calling ${currentStudent.firstName} (${res.session.phoneNumber})...`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to initiate call.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleEndCall = async () => {
-    if (!accessToken || !callSession || actionLoading) return;
-    setActionLoading(true);
-    try {
-      const endedSession = await endMockCall(accessToken, callSession.callId);
-      setCallSession(endedSession);
-      toast.info("Mock call disconnected.");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to end call.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleNextContact = () => {
     if (!activeBatchQueue || activeBatchQueue.length === 0) return;
     if (batchRecordIndex < activeBatchQueue.length - 1) {
       const nextIdx = batchRecordIndex + 1;
       setBatchRecordIndex(nextIdx);
-      setCallSession(null);
+      setIsDispositionFormOpen(false);
       if (activeBatch && user?.sub) {
         setAssignmentRecordIndex(user.sub, activeBatch.assignmentId, nextIdx);
       }
@@ -464,7 +423,7 @@ const CallWorkspace = () => {
     if (batchRecordIndex > 0) {
       const prevIdx = batchRecordIndex - 1;
       setBatchRecordIndex(prevIdx);
-      setCallSession(null);
+      setIsDispositionFormOpen(false);
       if (activeBatch && user?.sub) {
         setAssignmentRecordIndex(user.sub, activeBatch.assignmentId, prevIdx);
       }
@@ -472,96 +431,85 @@ const CallWorkspace = () => {
   };
 
   const handleOutcomeComplete = () => {
-    setCallSession(null);
-    setCompletedCount((prev) => prev + 1);
+    setIsDispositionFormOpen(false);
     setHistoryRefreshKey((prev) => prev + 1);
 
     if (currentStudent) {
+      setDispositionedInSession((prev) => new Set(prev).add(currentStudent.studentDataId));
       setQueue((prevQueue) =>
         prevQueue.map((item) =>
           item.studentDataId === currentStudent.studentDataId ? { ...item, isCompleted: true } : item
         )
       );
-    }
-
-    if (filterMode === "uncompleted") {
-      const currentUncompletedCount = activeBatchQueue.length;
-      if (batchRecordIndex >= currentUncompletedCount - 1) {
-        setBatchRecordIndex(Math.max(0, currentUncompletedCount - 2));
-      }
-    } else {
-      if (batchRecordIndex < activeBatchQueue.length - 1) {
-        const nextIdx = batchRecordIndex + 1;
-        setBatchRecordIndex(nextIdx);
-        if (activeBatch && user?.sub) {
-          setAssignmentRecordIndex(user.sub, activeBatch.assignmentId, nextIdx);
-        }
-      } else {
-        toast.success(`Dataset ${activeBatch?.datasetName || ""} Completed! You have processed all records.`);
+      if (!currentStudent.isCompleted) {
+        setCompletedCount((prev) => prev + 1);
       }
     }
   };
 
   return (
-    <div className="space-y-6 pb-8 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-8 w-full min-w-0">
       {/* Workspace Top Header & Mode Toggle */}
-      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 sm:pb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <PhoneCall className="text-primary-600 shrink-0 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
-            <span className="break-words">Call Workspace & Call Logs</span>
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-text-secondary break-words">
-            Actionable call log history, dispositioning, and live dialer calling queue.
-          </p>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="flex items-center rounded-xl border border-border bg-surface p-1 shadow-2xs flex-1 sm:flex-initial min-w-0">
-            <button
-              onClick={() => setActiveTab("dialer")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-3.5 py-2 sm:py-1.5 text-xs font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "dialer"
-                ? "bg-primary-600 text-white shadow-xs"
-                : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              <PhoneCall size={14} className="shrink-0" />
-              <span>Live Dialer Queue</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("logs")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-3.5 py-2 sm:py-1.5 text-xs font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "logs"
-                ? "bg-primary-600 text-white shadow-xs"
-                : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              <History size={14} className="shrink-0" />
-              <span>Call Logs ({logsTotal})</span>
-            </button>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <PhoneCall className="text-primary-600 shrink-0 w-5 h-5 sm:w-[26px] sm:h-[26px]" />
+              <span className="break-words">Call Workspace & Call Logs</span>
+            </h1>
+            <p className="hidden sm:block mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal break-words">
+              Actionable call log history, dispositioning, and live dialer calling queue.
+            </p>
           </div>
 
-          {activeTab === "dialer" ? (
-            <button
-              type="button"
-              onClick={loadQueue}
-              title="Refresh queue"
-              aria-label="Refresh queue"
-              className="p-2 sm:p-2.5 h-9 w-9 sm:h-auto sm:w-auto shrink-0 flex items-center justify-center rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
-            >
-              <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={loadLogs}
-              title="Refresh call logs"
-              aria-label="Refresh call logs"
-              className="p-2 sm:p-2.5 h-9 w-9 sm:h-auto sm:w-auto shrink-0 flex items-center justify-center rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
-            >
-              <RefreshCw size={16} className={`sm:w-[18px] sm:h-[18px] ${logsLoading ? "animate-spin" : ""}`} />
-            </button>
-          )}
+          {/* Action Row: Segmented Toggle & Refresh Button */}
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            {/* Tab Switcher Segmented Control */}
+            <div className="flex items-center rounded-lg sm:rounded-xl border border-border bg-surface p-0.5 sm:p-1 shadow-2xs flex-1 sm:flex-initial min-w-0">
+              <button
+                onClick={() => setActiveTab("dialer")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-2 rounded-md sm:rounded-lg px-2 sm:px-3.5 py-1.5 sm:py-1.5 text-[11px] sm:text-xs font-semibold sm:font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "dialer"
+                  ? "bg-primary-600 text-white shadow-xs"
+                  : "text-text-secondary hover:text-text-primary"
+                  }`}
+              >
+                <PhoneCall size={13} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">Live Dialer Queue</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("logs")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-2 rounded-md sm:rounded-lg px-2 sm:px-3.5 py-1.5 sm:py-1.5 text-[11px] sm:text-xs font-semibold sm:font-bold transition cursor-pointer min-w-0 whitespace-nowrap ${activeTab === "logs"
+                  ? "bg-primary-600 text-white shadow-xs"
+                  : "text-text-secondary hover:text-text-primary"
+                  }`}
+              >
+                <History size={13} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">Call Logs ({logsTotal})</span>
+              </button>
+            </div>
+
+            {activeTab === "dialer" ? (
+              <button
+                type="button"
+                onClick={loadQueue}
+                title="Refresh queue"
+                aria-label="Refresh queue"
+                className="h-8 sm:h-10 w-8 sm:w-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
+              >
+                <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={loadLogs}
+                title="Refresh call logs"
+                aria-label="Refresh call logs"
+                className="h-8 sm:h-10 w-8 sm:w-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
+              >
+                <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${logsLoading ? "animate-spin" : ""}`} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1039,24 +987,28 @@ const CallWorkspace = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full min-w-0">
-                  {/* Block 1 — Telephony Console (Large Left Block) */}
+                  {/* Block 1 — Contact Details (Large Left Block) */}
                   <div className="lg:col-span-7 w-full min-w-0">
                     <MockCallPanel
                       student={currentStudent}
-                      callSession={callSession}
-                      onInitiateCall={handleInitiateCall}
-                      onEndCall={handleEndCall}
-                      loading={actionLoading}
+                      onOpenDisposition={() => {
+                        setIsDispositionFormOpen(true);
+                        const el = document.getElementById("call-disposition-section");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        }
+                      }}
                       phonePosition={phonePosition}
                       onPhonePositionChange={handlePhonePositionChange}
                       totalAssigned={activeBatchQueue.length}
                       currentIndex={batchRecordIndex}
+                      refreshKey={historyRefreshKey}
                     />
                   </div>
 
-                  {/* Right Column: Upper-Right Block (History) & Lower-Right Block (Post-Call Details) */}
+                  {/* Right Column: Upper-Right Block (Call Dispositions) & Lower-Right Block (Call Disposition Form) */}
                   <div className="lg:col-span-5 space-y-4 w-full min-w-0">
-                    {/* Block 2 — Call History (Upper-Right Block) */}
+                    {/* Block 2 — Call Dispositions (Upper-Right Block) */}
                     <CallHistoryCard
                       student={currentStudent}
                       refreshKey={historyRefreshKey}
@@ -1066,10 +1018,12 @@ const CallWorkspace = () => {
                       }}
                     />
 
-                    {/* Block 3 — Post-Call Details (Lower-Right Block) */}
+                    {/* Block 3 — Call Disposition Form (Lower-Right Block) */}
                     <CallOutcomePanel
                       student={currentStudent}
-                      callSession={callSession}
+                      isOpen={isDispositionFormOpen}
+                      onOpen={() => setIsDispositionFormOpen(true)}
+                      onClose={() => setIsDispositionFormOpen(false)}
                       onOutcomeComplete={handleOutcomeComplete}
                     />
                   </div>

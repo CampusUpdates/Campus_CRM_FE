@@ -38,8 +38,8 @@ const CreateCollegeModal = ({ onClose }: CreateCollegeModalProps) => {
         className={`
           fixed right-0 top-0
           h-[100dvh]
-          w-[40vw]
-          min-w-[420px]
+          w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[40vw]
+          max-w-full
           bg-surface
           shadow-2xl
           flex flex-col
@@ -47,12 +47,12 @@ const CreateCollegeModal = ({ onClose }: CreateCollegeModalProps) => {
         `}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
-          <div>
-            <h2 className="text-xl font-semibold text-text-primary">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 sm:px-6 py-4 sm:py-5 gap-2">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary truncate">
               Add Partner College
             </h2>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-secondary truncate">
               Register a new college or university program.
             </p>
           </div>
@@ -60,13 +60,16 @@ const CreateCollegeModal = ({ onClose }: CreateCollegeModalProps) => {
           <button
             type="button"
             onClick={handleClose}
+            aria-label="Close modal"
             className="
+              shrink-0
               rounded-lg
-              p-2
+              p-1.5 sm:p-2
               text-text-secondary
               transition
               hover:bg-neutral-100
               hover:text-text-primary
+              cursor-pointer
             "
           >
             <X size={20} />
@@ -74,7 +77,7 @@ const CreateCollegeModal = ({ onClose }: CreateCollegeModalProps) => {
         </div>
 
         {/* Scrollable Form */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 custom-scrollbar">
           <CreateCollegeForm onSuccess={handleClose} />
         </div>
       </div>

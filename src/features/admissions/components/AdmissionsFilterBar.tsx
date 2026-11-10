@@ -1,5 +1,5 @@
 import React from "react";
-import { Filter, RotateCcw, Calendar, Building, GraduationCap, Users, User, Share2, Tag } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { AdmissionsFilterParams } from "../../../services/admissionsDashboardService";
 
 interface AdmissionsFilterBarProps {
@@ -68,34 +68,28 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
   );
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-xs space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
-          <Filter size={14} className="text-primary-500" />
-          <span>Global Admissions Filters</span>
-        </div>
-        {hasActiveFilters && (
+    <div className="space-y-2.5 sm:space-y-3">
+      {hasActiveFilters && (
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={onReset}
-            className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 transition cursor-pointer"
+            className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-rose-600 hover:text-rose-700 transition cursor-pointer"
           >
             <RotateCcw size={12} />
             <span>Reset Filters</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-        {/* Date Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <Calendar size={12} /> Date Range
-          </label>
+      {/* Responsive Filter Grid: 2 columns on mobile, adapts naturally on larger viewports */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
+        {/* Row 1: Date Range | College */}
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.datePreset || "ALL"}
             onChange={(e) => handleDatePresetChange(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="ALL">All Time</option>
             <option value="TODAY">Today</option>
@@ -108,15 +102,11 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* College Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <Building size={12} /> College
-          </label>
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.collegeId || ""}
             onChange={(e) => onChange({ collegeId: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none truncate"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Colleges</option>
             {meta?.colleges.map((col) => (
@@ -127,15 +117,12 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* Course Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <GraduationCap size={12} /> Course
-          </label>
+        {/* Row 2: Course | Team */}
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.course || ""}
             onChange={(e) => onChange({ course: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Courses</option>
             {meta?.courses.map((crs) => (
@@ -146,15 +133,11 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* Team Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <Users size={12} /> Team
-          </label>
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.teamId || ""}
             onChange={(e) => onChange({ teamId: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Teams</option>
             {meta?.teams.map((tm) => (
@@ -165,15 +148,12 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* Employee Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <User size={12} /> Counselor
-          </label>
+        {/* Row 3: Counselor | Lead Source */}
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.employeeId || ""}
             onChange={(e) => onChange({ employeeId: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none truncate"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Counselors</option>
             {meta?.employees.map((emp) => (
@@ -184,15 +164,11 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* Source Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <Share2 size={12} /> Lead Source
-          </label>
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.source || ""}
             onChange={(e) => onChange({ source: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Sources</option>
             {meta?.sources.map((src) => (
@@ -203,15 +179,12 @@ export const AdmissionsFilterBar: React.FC<AdmissionsFilterBarProps> = ({
           </select>
         </div>
 
-        {/* Status Filter */}
-        <div>
-          <label className="block text-[11px] font-medium text-text-muted mb-1 flex items-center gap-1">
-            <Tag size={12} /> Status
-          </label>
+        {/* Next: Status */}
+        <div className="col-span-1 min-w-0">
           <select
             value={filters.statusId || ""}
             onChange={(e) => onChange({ statusId: e.target.value || undefined })}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text-primary focus:border-primary-500 focus:outline-none"
+            className="w-full h-9 sm:h-10 rounded-lg sm:rounded-xl border border-border bg-surface px-2.5 sm:px-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary-500 truncate"
           >
             <option value="">All Statuses</option>
             {meta?.statuses.map((st) => (

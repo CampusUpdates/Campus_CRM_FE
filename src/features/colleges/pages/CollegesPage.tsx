@@ -184,31 +184,29 @@ const CollegesPage = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="border-b border-border pb-4 sm:pb-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="border-b border-border pb-3 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
           {/* Title & Description */}
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-2xl font-semibold text-text-primary">
+            <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">
               Colleges
             </h1>
-            <p className="hidden sm:block mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
-              {!canManageCollege
-                ? "Browse partner colleges, university details, and admission pitch guidelines in read-only mode."
-                : "View partner colleges, university details, activation status, and affiliation programs."}
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-secondary leading-normal sm:leading-relaxed">
+              Manage partner colleges, university details and admission information.
             </p>
           </div>
 
           {/* Action Controls */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
             {/* View Toggle */}
-            <div className="flex items-center rounded-lg border border-border bg-surface p-1">
+            <div className="flex items-center rounded-lg border border-border bg-surface p-1 shadow-2xs">
               <button
                 onClick={() => setViewMode("card")}
                 title="Card View"
-                className={`p-1.5 rounded-md text-sm font-medium transition ${
+                className={`p-1.5 rounded-md text-sm font-medium transition cursor-pointer ${
                   viewMode === "card"
-                    ? "bg-primary-50 text-primary-600 shadow-xs"
-                    : "text-text-secondary hover:text-text-primary"
+                    ? "bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 shadow-2xs"
+                    : "text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
               >
                 <LayoutGrid size={16} />
@@ -216,10 +214,10 @@ const CollegesPage = () => {
               <button
                 onClick={() => setViewMode("table")}
                 title="Table View"
-                className={`p-1.5 rounded-md text-sm font-medium transition ${
+                className={`p-1.5 rounded-md text-sm font-medium transition cursor-pointer ${
                   viewMode === "table"
-                    ? "bg-primary-50 text-primary-600 shadow-xs"
-                    : "text-text-secondary hover:text-text-primary"
+                    ? "bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 shadow-2xs"
+                    : "text-text-secondary hover:text-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
               >
                 <List size={16} />
@@ -229,7 +227,7 @@ const CollegesPage = () => {
             <button
               onClick={loadColleges}
               title="Refresh colleges"
-              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shrink-0"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shrink-0 cursor-pointer shadow-2xs"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -240,13 +238,12 @@ const CollegesPage = () => {
                 className="
                   inline-flex items-center gap-1.5
                   rounded-lg
-                  bg-primary-500
-                  px-3 sm:px-4 py-2 sm:py-2.5
+                  bg-primary-500 hover:bg-primary-600
+                  h-9 px-3 sm:px-4
                   text-xs sm:text-sm font-medium
                   text-white
-                  transition
-                  hover:bg-primary-600
-                  shrink-0
+                  transition shadow-2xs
+                  shrink-0 cursor-pointer
                 "
               >
                 <Plus size={16} />

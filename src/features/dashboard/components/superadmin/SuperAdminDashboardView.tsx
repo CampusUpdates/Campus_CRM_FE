@@ -15,6 +15,9 @@ import {
   ChevronRight,
   Activity,
   FileCheck,
+  Calendar,
+  BarChart2,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -35,7 +38,7 @@ import {
 } from "../../../../services/superAdminDashboardService";
 import StudentMetricDrawer from "../StudentMetricDrawer";
 import TeamMemberCallPerformanceTable from "../TeamMemberCallPerformanceTable";
-import { PageLoadingState, PageErrorState } from "../../../../components/common";
+import { PageLoadingState, PageErrorState, DashboardDropdown, type DropdownOption } from "../../../../components/common";
 
 function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return "Not Available";
@@ -81,20 +84,52 @@ const SuperAdminDashboardView = () => {
   } | null>(null);
   const ACTIVITY_PAGE_SIZE = 5;
 
+  // Timeline Filter State for Lead Pipeline Stages
+  type PipelinePeriod = "all" | "today" | "yesterday" | "this_week" | "this_month" | "custom";
+  const [pipelinePeriod, setPipelinePeriod] = useState<PipelinePeriod>("today");
+  const [pipelineStartDate, setPipelineStartDate] = useState<string>("");
+  const [pipelineEndDate, setPipelineEndDate] = useState<string>("");
+  const [customRangeApplied, setCustomRangeApplied] = useState<{ start: string; end: string } | null>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [customDateError, setCustomDateError] = useState<string>("");
+
+  const PIPELINE_PERIOD_OPTIONS: DropdownOption<PipelinePeriod>[] = [
+    { value: "all", label: "All Time" },
+    { value: "today", label: "Today" },
+    { value: "yesterday", label: "Yesterday" },
+    { value: "this_week", label: "This Week" },
+    { value: "this_month", label: "This Month" },
+    { value: "custom", label: "Custom" },
+  ];
+
   const loadDashboard = useCallback(async (isSilent = false) => {
     if (!accessToken) return;
     if (!isSilent) setLoading(true);
     setError(null);
     try {
-      const res = await fetchSuperAdminDashboardStats(accessToken);
+      const pStart = pipelinePeriod === "custom" && customRangeApplied ? customRangeApplied.start : undefined;
+      const pEnd = pipelinePeriod === "custom" && customRangeApplied ? customRangeApplied.end : undefined;
+      const res = await fetchSuperAdminDashboardStats(
+        accessToken,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        pipelinePeriod,
+        pStart,
+        pEnd
+      );
       setData(res);
     } catch (err: any) {
       console.error("Failed to load Super Admin dashboard:", err);
       if (!isSilent) setError(err.message || "Failed to load dashboard metrics");
     } finally {
       if (!isSilent) setLoading(false);
+      setPipelineLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, pipelinePeriod, customRangeApplied]);
 
   useEffect(() => {
     loadDashboard(false);
@@ -823,69 +858,172 @@ const SuperAdminDashboardView = () => {
 
       {/* 5. LEAD PIPELINE STAGE BREAKDOWN */}
       <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 gap-2 sm:gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border pb-4 gap-3">
           <div>
             <h2 className="text-base font-bold text-text-primary">Lead Pipeline Stages</h2>
             <p className="text-xs text-text-secondary mt-0.5">
               Click any pipeline stage segment to inspect filtered leads in the Lead Management module.
             </p>
           </div>
-          <span className="text-xs font-semibold text-primary-700 bg-primary-50 dark:bg-primary-950/50 dark:text-primary-300 px-3 py-1 rounded-lg shrink-0 self-start sm:self-auto">
-            Dynamic LeadStatus Config
-          </span>
+
+          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+            {/* Timeline Filter Dropdown */}
+            <DashboardDropdown
+              value={pipelinePeriod}
+              onChange={(val) => {
+                const nextPeriod = val as PipelinePeriod;
+                setPipelinePeriod(nextPeriod);
+                setCustomDateError("");
+                if (nextPeriod !== "custom") {
+                  setCustomRangeApplied(null);
+                  setPipelineLoading(true);
+                }
+              }}
+              disabled={pipelineLoading}
+              options={PIPELINE_PERIOD_OPTIONS}
+              icon={Calendar}
+              minWidth="140px"
+              aria-label="Filter Lead Pipeline Stages timeline"
+            />
+
+            {/* Total leads indicator */}
+            <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium bg-neutral-50 dark:bg-neutral-800/60 px-2.5 py-1.5 rounded-lg border border-border shrink-0">
+              <BarChart2 size={14} className="text-primary-600 shrink-0" />
+              <span>{leadPipeline.reduce((sum, stage) => sum + (stage.count || 0), 0)} Total Leads</span>
+            </div>
+          </div>
         </div>
 
-        {chartPipeline.length > 0 && (
-          <div className="h-56 sm:h-64 w-full pt-2 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartPipeline} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip
-                  formatter={(val: any) => [`${val} Leads`, "Count"]}
-                  contentStyle={{ borderRadius: "8px", fontSize: "12px", border: "1px solid #E5E7EB" }}
-                />
-                <Bar
-                  dataKey="count"
-                  radius={[4, 4, 0, 0]}
-                  onClick={(entry) => {
-                    if (entry?.name && entry.name !== "Retained") {
-                      navigate(`${ROUTES.LEADS}?status=${entry.name}`);
-                    }
+        {/* Custom Date Range Picker when 'custom' is selected */}
+        {pipelinePeriod === "custom" && (
+          <div className="p-3.5 rounded-xl border border-border bg-neutral-50/60 dark:bg-neutral-800/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="flex flex-wrap items-center gap-2.5 text-xs">
+              <div className="flex items-center gap-1.5">
+                <label htmlFor="pipeline-start-date" className="font-semibold text-text-secondary whitespace-nowrap">
+                  Start:
+                </label>
+                <input
+                  id="pipeline-start-date"
+                  type="date"
+                  value={pipelineStartDate}
+                  onChange={(e) => {
+                    setPipelineStartDate(e.target.value);
+                    setCustomDateError("");
                   }}
-                  className="cursor-pointer"
-                >
-                  {chartPipeline.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color || "#6366F1"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                  className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text-primary text-xs focus:ring-1 focus:ring-primary-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <label htmlFor="pipeline-end-date" className="font-semibold text-text-secondary whitespace-nowrap">
+                  End:
+                </label>
+                <input
+                  id="pipeline-end-date"
+                  type="date"
+                  value={pipelineEndDate}
+                  onChange={(e) => {
+                    setPipelineEndDate(e.target.value);
+                    setCustomDateError("");
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text-primary text-xs focus:ring-1 focus:ring-primary-500 focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!pipelineStartDate || !pipelineEndDate) {
+                    setCustomDateError("Please select both start and end dates");
+                    return;
+                  }
+                  if (pipelineStartDate > pipelineEndDate) {
+                    setCustomDateError("Start date cannot be after end date");
+                    return;
+                  }
+                  setCustomDateError("");
+                  setPipelineLoading(true);
+                  setCustomRangeApplied({ start: pipelineStartDate, end: pipelineEndDate });
+                }}
+                disabled={pipelineLoading}
+                className="px-3 py-1.5 rounded-lg font-medium text-xs bg-primary-600 hover:bg-primary-700 text-white transition disabled:opacity-50"
+              >
+                Apply Range
+              </button>
+            </div>
+
+            {customDateError && (
+              <div className="flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{customDateError}</span>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3 pt-2">
-          {leadPipeline.map((stage) => (
-            <div
-              key={stage.id}
-              onClick={() => navigate(`${ROUTES.LEADS}?status=${stage.name}`)}
-              className="cursor-pointer p-3 sm:p-3.5 rounded-xl border border-border bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 transition space-y-2 group min-w-0"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: stage.color || "#6366F1" }}
-                ></span>
-                <span className="text-xs font-semibold text-text-secondary truncate group-hover:text-primary-600 transition">
-                  {stage.name}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-1">
-                <span className="text-lg sm:text-xl font-bold text-text-primary">{stage.count}</span>
-                <span className="text-[11px] font-semibold text-text-muted">{stage.percentage}%</span>
+        <div className="relative">
+          {/* Subtle Refresh/Loading Overlay */}
+          {pipelineLoading && (
+            <div className="absolute inset-0 bg-surface/75 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl min-h-[160px]">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary-600 bg-surface px-3 py-1.5 rounded-lg border border-border shadow-xs">
+                <RefreshCw size={14} className="animate-spin text-primary-600" />
+                <span>Updating pipeline stages...</span>
               </div>
             </div>
-          ))}
+          )}
+
+          {chartPipeline.length > 0 && (
+            <div className="h-56 sm:h-64 w-full pt-2 min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartPipeline} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    formatter={(val: any) => [`${val} Leads`, "Count"]}
+                    contentStyle={{ borderRadius: "8px", fontSize: "12px", border: "1px solid #E5E7EB" }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    radius={[4, 4, 0, 0]}
+                    onClick={(entry) => {
+                      if (entry?.name && entry.name !== "Retained") {
+                        navigate(`${ROUTES.LEADS}?status=${entry.name}`);
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {chartPipeline.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || "#6366F1"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3 pt-2">
+            {leadPipeline.map((stage) => (
+              <div
+                key={stage.id}
+                onClick={() => navigate(`${ROUTES.LEADS}?status=${stage.name}`)}
+                className="cursor-pointer p-3 sm:p-3.5 rounded-xl border border-border bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 transition space-y-2 group min-w-0"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: stage.color || "#6366F1" }}
+                  ></span>
+                  <span className="text-xs font-semibold text-text-secondary truncate group-hover:text-primary-600 transition">
+                    {stage.name}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-1">
+                  <span className="text-lg sm:text-xl font-bold text-text-primary">{stage.count}</span>
+                  <span className="text-[11px] font-semibold text-text-muted">{stage.percentage}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

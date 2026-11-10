@@ -120,56 +120,66 @@ const ProfilePage = () => {
   const initials = `${profile.firstName.charAt(0)}${profile.lastName ? profile.lastName.charAt(0) : ""}`.toUpperCase();
 
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-4 sm:space-y-6 w-full">
       {/* Header */}
-      <div className="border-b border-border pb-5">
-        <h1 className="text-2xl font-bold text-text-primary">
+      <div className="flex flex-col gap-1 sm:gap-1.5 border-b border-border pb-3 sm:pb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">
           User Account Profile
         </h1>
-        <p className="mt-1 text-sm text-text-secondary">
+        <p className="text-xs sm:text-sm text-text-secondary leading-normal sm:leading-relaxed">
           View your personal account details, credentials, and organizational role.
         </p>
       </div>
 
       {/* Hero User Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-sm">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3.5 sm:gap-5 min-w-0">
             {/* Avatar Initials Badge */}
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-2xl font-bold text-white shadow-md">
+            <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/60 text-xl sm:text-2xl font-bold shadow-2xs">
               {initials}
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-2xl font-bold text-text-primary">
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h2 className="text-lg sm:text-2xl font-bold text-text-primary tracking-tight break-words">
                   {profile.firstName} {profile.lastName || ""}
                 </h2>
-                <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                  {profile.status}
+
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>{profile.status}</span>
                 </span>
 
                 {!canEditProfile && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                    <Lock size={12} />
-                    Read-Only Mode
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    <Lock size={11} className="sm:w-3 sm:h-3" />
+                    <span>Read-Only</span>
                   </span>
                 )}
               </div>
 
-              <p className="text-sm font-medium text-text-secondary flex items-center gap-2">
-                <ShieldCheck size={16} className="text-primary-500" />
-                {profile.role?.name || "System User"}
-              </p>
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-primary-600 dark:text-primary-400">
+                <ShieldCheck size={14} className="sm:w-4 sm:h-4 shrink-0 text-primary-600 dark:text-primary-400" />
+                <span>{profile.role?.name || "System User"}</span>
+                {profile.team?.name && (
+                  <span className="text-text-muted font-normal text-xs">• {profile.team.name}</span>
+                )}
+              </div>
 
-              <div className="flex items-center gap-4 text-xs text-text-muted pt-1 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <UserIcon size={14} />
-                  Username: <strong className="text-text-primary">@{profile.username}</strong>
+              <div className="flex items-center gap-3 sm:gap-4 text-xs text-text-secondary pt-0.5 flex-wrap">
+                <span className="inline-flex items-center gap-1">
+                  <UserIcon size={12} className="text-text-muted shrink-0" />
+                  <span>Username:</span>
+                  <strong className="text-text-primary font-medium break-all">@{profile.username}</strong>
                 </span>
-                <span className="flex items-center gap-1">
-                  <Calendar size={14} />
-                  Member Since: {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                <span className="hidden sm:inline text-text-muted">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <Calendar size={12} className="text-text-muted shrink-0" />
+                  <span>Member Since:</span>
+                  <strong className="text-text-primary font-medium">
+                    {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </strong>
                 </span>
               </div>
             </div>
@@ -179,13 +189,13 @@ const ProfilePage = () => {
 
       {/* Non-HR Read-Only Mode Banner */}
       {!canEditProfile && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-800 flex items-start gap-2.5 shadow-2xs">
-          <Lock size={16} className="shrink-0 text-amber-600 mt-0.5" />
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40 p-3 sm:p-4 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5 shadow-2xs">
+          <Lock size={15} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5 sm:w-4 sm:h-4" />
           <div>
-            <p className="font-semibold text-amber-900">
+            <p className="font-semibold text-amber-900 dark:text-amber-200">
               Read-Only Profile Mode
             </p>
-            <p className="mt-0.5 text-amber-700">
+            <p className="mt-0.5 text-amber-700 dark:text-amber-300/90 leading-relaxed">
               Only HR personnel are authorized to update profile information. If any of your details need modification, please contact your HR department.
             </p>
           </div>
@@ -194,79 +204,101 @@ const ProfilePage = () => {
 
       {/* Activity Summary Stats */}
       {profile._count && (
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface p-4.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+        <section className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-2xs min-w-0 flex flex-col justify-between">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-secondary">
                 Created Leads
               </span>
-              <Building2 size={18} className="text-blue-500" />
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                <Building2 size={15} className="sm:w-4 sm:h-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-text-primary">
-              {profile._count.createdLeads ?? 0}
-            </p>
+            <div className="mt-2.5 sm:mt-3">
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
+                {profile._count.createdLeads ?? 0}
+              </p>
+              <p className="text-[11px] text-text-muted mt-0.5 leading-tight">
+                Leads generated on record
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-4.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                Conducted Interviews
+          <div className="rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-2xs min-w-0 flex flex-col justify-between">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                Interviews
               </span>
-              <UserCheck size={18} className="text-indigo-500" />
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                <UserCheck size={15} className="sm:w-4 sm:h-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-text-primary">
-              {profile._count.conductedInterviews ?? 0}
-            </p>
+            <div className="mt-2.5 sm:mt-3">
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
+                {profile._count.conductedInterviews ?? 0}
+              </p>
+              <p className="text-[11px] text-text-muted mt-0.5 leading-tight">
+                Candidate sessions held
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-4.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+          <div className="col-span-2 sm:col-span-1 rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-2xs min-w-0 flex flex-col justify-between">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-secondary">
                 Attendance Logs
               </span>
-              <CheckCircle2 size={18} className="text-emerald-500" />
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <CheckCircle2 size={15} className="sm:w-4 sm:h-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-text-primary">
-              {profile._count.attendance ?? 0}
-            </p>
+            <div className="mt-2.5 sm:mt-3">
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
+                {profile._count.attendance ?? 0}
+              </p>
+              <p className="text-[11px] text-text-muted mt-0.5 leading-tight">
+                Verified check-in records
+              </p>
+            </div>
           </div>
         </section>
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Personal Details Form (Takes 2 cols) */}
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-surface p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2 rounded-xl sm:rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xs">
+          <div className="flex items-center justify-between gap-2 mb-4 border-b border-border pb-3">
             <div>
-              <h3 className="text-lg font-semibold text-text-primary">
+              <h3 className="text-base sm:text-lg font-semibold text-text-primary tracking-tight">
                 Personal Information
               </h3>
-              <p className="text-xs text-text-secondary">
+              <p className="text-xs text-text-secondary mt-0.5">
                 {canEditProfile
-                  ? "Update personal profile details and contact numbers."
-                  : "Your personal information on record with HR."}
+                  ? "Update your personal profile details and contact information."
+                  : "Your official employee details registered in Campus CRM."}
               </p>
             </div>
 
             {!canEditProfile && (
-              <span className="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium text-text-muted flex items-center gap-1">
-                <Lock size={12} /> Read-Only
+              <span className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-text-muted flex items-center gap-1 shrink-0">
+                <Lock size={11} className="sm:w-3 sm:h-3" /> Read-Only
               </span>
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {errorMsg && (
-              <div className="rounded-lg bg-rose-50 p-3 text-xs font-medium text-rose-600 border border-rose-200">
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950/40 p-2.5 sm:p-3 text-xs font-medium text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60">
                 {errorMsg}
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Name Fields Group */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
-                  First Name {canEditProfile && <span className="text-red-500">*</span>}
+                <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5">
+                  First Name {canEditProfile && <span className="text-rose-500 font-bold">*</span>}
                 </label>
                 <input
                   type="text"
@@ -276,17 +308,17 @@ const ProfilePage = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   className={`
-                    w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
+                    w-full h-10 rounded-lg border px-3 sm:px-3.5 text-xs sm:text-sm transition outline-none shadow-2xs
                     ${canEditProfile
-                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                      ? "border-border bg-surface text-text-primary focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950"
+                      : "border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5">
                   Last Name
                 </label>
                 <input
@@ -296,44 +328,44 @@ const ProfilePage = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   className={`
-                    w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
+                    w-full h-10 rounded-lg border px-3 sm:px-3.5 text-xs sm:text-sm transition outline-none shadow-2xs
                     ${canEditProfile
-                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                      ? "border-border bg-surface text-text-primary focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950"
+                      : "border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
               </div>
             </div>
 
-            {/* Email (Read only for all) */}
+            {/* Email Address */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1 flex items-center gap-1">
-                Email Address <Lock size={13} className="text-text-muted" />
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  disabled
-                  value={profile.email}
-                  className="
-                    w-full rounded-lg border border-border bg-neutral-100 px-3.5 py-2.5 text-sm text-text-muted cursor-not-allowed
-                  "
-                />
-                <span className="absolute right-3 top-2.5 text-[11px] font-medium text-text-muted">
+              <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  Email Address
+                  <Lock size={12} className="text-text-muted" />
+                </span>
+                <span className="text-[11px] font-normal text-text-muted">
                   Managed by HR
                 </span>
-              </div>
+              </label>
+              <input
+                type="email"
+                disabled
+                value={profile.email}
+                className="w-full h-10 rounded-lg border border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-xs sm:text-sm text-text-secondary px-3 sm:px-3.5 cursor-not-allowed truncate"
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Contact Numbers Group */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
-                  Phone Number {canEditProfile && <span className="text-red-500">*</span>}
+                <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5">
+                  Phone Number {canEditProfile && <span className="text-rose-500 font-bold">*</span>}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-text-muted">
-                    <Phone size={16} />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
+                    <Phone size={14} className="sm:w-4 sm:h-4" />
                   </span>
                   <input
                     type="tel"
@@ -343,10 +375,10 @@ const ProfilePage = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     className={`
-                      w-full rounded-lg border border-border pl-10 pr-3.5 py-2.5 text-sm transition
+                      w-full h-10 rounded-lg border pl-9 sm:pl-9.5 pr-3 text-xs sm:text-sm transition outline-none shadow-2xs
                       ${canEditProfile
-                        ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                        ? "border-border bg-surface text-text-primary focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950"
+                        : "border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-text-secondary cursor-not-allowed"
                       }
                     `}
                   />
@@ -354,7 +386,7 @@ const ProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5">
                   Alternate Phone
                 </label>
                 <input
@@ -365,49 +397,53 @@ const ProfilePage = () => {
                   onChange={handleChange}
                   placeholder="Optional backup phone"
                   className={`
-                    w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
+                    w-full h-10 rounded-lg border px-3 sm:px-3.5 text-xs sm:text-sm transition outline-none shadow-2xs placeholder:text-text-muted
                     ${canEditProfile
-                      ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      : "bg-neutral-100 text-text-secondary cursor-not-allowed"
+                      ? "border-border bg-surface text-text-primary focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950"
+                      : "border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-text-secondary cursor-not-allowed"
                     }
                   `}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Date of Birth
-              </label>
-              <input
-                type="date"
-                name="dob"
-                disabled={!canEditProfile}
-                value={formData.dob}
-                onChange={handleChange}
-                className={`
-                  w-full rounded-lg border border-border px-3.5 py-2.5 text-sm transition
-                  ${canEditProfile
-                    ? "bg-background text-text-primary focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    : "bg-neutral-100 text-text-secondary cursor-not-allowed"
-                  }
-                `}
-              />
+            {/* Date of Birth */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold text-text-primary mb-1.5">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  name="dob"
+                  disabled={!canEditProfile}
+                  value={formData.dob}
+                  onChange={handleChange}
+                  className={`
+                    w-full h-10 rounded-lg border px-3 sm:px-3.5 text-xs sm:text-sm transition outline-none shadow-2xs cursor-pointer
+                    ${canEditProfile
+                      ? "border-border bg-surface text-text-primary focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-950"
+                      : "border-border/80 bg-neutral-100/80 dark:bg-slate-900/50 text-text-secondary cursor-not-allowed"
+                    }
+                  `}
+                />
+              </div>
             </div>
 
             {canEditProfile && (
-              <div className="pt-3 border-t border-border flex justify-end">
+              <div className="pt-4 border-t border-border flex justify-end">
                 <button
                   type="submit"
                   disabled={saving}
                   className="
-                    flex items-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5
-                    text-sm font-medium text-white hover:bg-primary-600
-                    transition shadow-sm disabled:opacity-50
+                    w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg
+                    bg-primary-600 hover:bg-primary-700 active:bg-primary-800
+                    h-10 px-5 text-xs sm:text-sm font-semibold text-white
+                    shadow-2xs transition-all duration-150 disabled:opacity-50 cursor-pointer
                   "
                 >
-                  <Save size={16} />
-                  {saving ? "Saving Changes..." : "Save Profile Details"}
+                  <Save size={15} className="sm:w-4 sm:h-4" />
+                  <span>{saving ? "Saving Changes..." : "Save Profile Details"}</span>
                 </button>
               </div>
             )}
@@ -415,52 +451,59 @@ const ProfilePage = () => {
         </div>
 
         {/* Organizational Details Sidebar (Takes 1 col) */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Organization & Manager Info */}
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-4">
-            <h3 className="text-base font-semibold text-text-primary border-b border-border pb-3">
-              Organizational Details
-            </h3>
+          <div className="rounded-xl sm:rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-4">
+            <div className="border-b border-border pb-3">
+              <h3 className="text-sm sm:text-base font-semibold text-text-primary">
+                Organizational Details
+              </h3>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Role assignments and managerial hierarchy
+              </p>
+            </div>
 
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <span className="text-text-muted font-medium block">Assigned Role</span>
-                <span className="text-sm font-bold text-text-primary">
+            <div className="space-y-3 text-xs">
+              <div className="flex flex-col gap-1 p-2.5 rounded-lg bg-neutral-50/70 dark:bg-slate-900/40 border border-border/60">
+                <span className="text-text-muted font-medium text-[11px]">Assigned Role</span>
+                <span className="text-xs sm:text-sm font-bold text-text-primary">
                   {profile.role?.name || "System Role"}
                 </span>
                 {profile.role?.description && (
-                  <p className="text-[11px] text-text-muted mt-0.5">{profile.role.description}</p>
+                  <p className="text-[11px] text-text-secondary leading-snug">{profile.role.description}</p>
                 )}
               </div>
 
-              <div>
-                <span className="text-text-muted font-medium block">Department / Team</span>
-                <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5 mt-0.5">
-                  <Briefcase size={15} className="text-primary-500" />
-                  {profile.team?.name || "General Workspace"}
+              <div className="flex flex-col gap-1 p-2.5 rounded-lg bg-neutral-50/70 dark:bg-slate-900/40 border border-border/60">
+                <span className="text-text-muted font-medium text-[11px]">Department / Team</span>
+                <span className="text-xs sm:text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                  <Briefcase size={14} className="text-primary-500 shrink-0" />
+                  <span>{profile.team?.name || "General Workspace"}</span>
                 </span>
               </div>
 
-              <div>
-                <span className="text-text-muted font-medium block">Reporting Manager</span>
+              <div className="flex flex-col gap-1 p-2.5 rounded-lg bg-neutral-50/70 dark:bg-slate-900/40 border border-border/60">
+                <span className="text-text-muted font-medium text-[11px]">Reporting Manager</span>
                 {profile.manager ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <UserCheck size={16} className="text-emerald-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-text-primary">
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <UserCheck size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">
                         {profile.manager.firstName} {profile.manager.lastName || ""}
                       </p>
-                      <p className="text-[11px] text-text-muted">{profile.manager.email}</p>
+                      <p className="text-[11px] text-text-muted truncate">{profile.manager.email}</p>
                     </div>
                   </div>
                 ) : (
-                  <span className="text-sm text-text-secondary italic">Direct Executive</span>
+                  <span className="text-xs text-text-secondary italic">Direct Executive</span>
                 )}
               </div>
 
               <div className="pt-2 border-t border-border">
-                <span className="text-text-muted font-medium block">User Reference ID</span>
-                <code className="text-[11px] text-text-secondary font-mono select-all bg-neutral-100 px-2 py-1 rounded block mt-1">
+                <span className="text-text-muted font-medium text-[11px] block">User Reference ID</span>
+                <code className="text-[11px] text-text-secondary font-mono select-all bg-neutral-100 dark:bg-slate-800/80 px-2 py-1.5 rounded block mt-1 break-all border border-border/50">
                   {profile.id}
                 </code>
               </div>
@@ -468,17 +511,19 @@ const ProfilePage = () => {
           </div>
 
           {/* Account Security Box */}
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Lock size={18} className="text-amber-500" />
-              <h3 className="text-base font-semibold text-text-primary">
+          <div className="rounded-xl sm:rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                <Lock size={14} />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                 Account Security
               </h3>
             </div>
-            <p className="text-xs text-text-secondary mb-4 leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               Your login credentials and account permissions are managed securely under organizational RBAC policies.
             </p>
-            <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
+            <div className="rounded-lg bg-amber-50/80 dark:bg-amber-950/40 p-2.5 sm:p-3 text-xs text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 leading-relaxed">
               Need to update your password? Contact your system administrator or HR team.
             </div>
           </div>

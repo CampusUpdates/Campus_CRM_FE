@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Briefcase, Building2, CalendarCheck, Clock, Mail, Pencil, Phone, Plus, UserCheck, UserPlus, Users } from "lucide-react";
+import { Briefcase, Building2, CalendarCheck, Clock, Mail, Pencil, Phone, Plus, RefreshCw, UserCheck, UserPlus, Users } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
+import { Tooltip } from "../../../components/Tooltip";
 import { fetchCandidates, type Candidate } from "../../../services/candidateService";
 import { fetchInterviews, type Interview } from "../../../services/interviewService";
 import { fetchPositions, type Position } from "../../../services/positionService";
@@ -68,123 +69,180 @@ const RecruitmentPage = () => {
       case "SELECTED":
       case "COMPLETED":
       case "PASSED":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+        return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800";
       case "REJECTED":
       case "CANCELLED":
       case "FAILED":
-        return "bg-rose-100 text-rose-700 border-rose-200";
+        return "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800";
       case "INTERVIEW_SCHEDULED":
       case "INTERVIEWED":
       case "SCHEDULED":
-        return "bg-purple-100 text-purple-700 border-purple-200";
+        return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800";
       case "SCREENING":
       case "ON_HOLD":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800";
       default:
-        return "bg-blue-100 text-blue-700 border-blue-200";
+        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800";
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            Recruitment & Hiring
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Manage open job positions, candidate applications, and interview schedules.
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+              Recruitment & Hiring
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Manage open job positions, candidate applications, and interview schedules.
+            </p>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsAddPositionOpen(true)}
-            className="
-              flex items-center gap-2 rounded-lg border border-border
-              bg-surface px-4 py-2.5 text-sm font-medium text-text-primary
-              transition hover:bg-neutral-100 hover:text-primary-600
-            "
-          >
-            <Plus size={18} />
-            Post New Position
-          </button>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+            <Tooltip
+              content="Refresh recruitment data"
+              className="px-2.5 py-1 text-xs font-medium rounded-md shadow-lg bg-neutral-900 text-neutral-100 border border-neutral-700 whitespace-nowrap pointer-events-none"
+            >
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loading}
+                title="Refresh recruitment data"
+                aria-label="Refresh recruitment data"
+                className="inline-flex items-center justify-center h-8 sm:h-10 w-8 sm:w-10 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 dark:hover:bg-neutral-800 transition shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin text-primary-600" : ""}`} />
+              </button>
+            </Tooltip>
 
-          <button
-            type="button"
-            onClick={() => setIsAddCandidateOpen(true)}
-            className="
-              flex items-center gap-2 rounded-lg border border-border
-              bg-surface px-4 py-2.5 text-sm font-medium text-text-primary
-              transition hover:bg-neutral-100 hover:text-primary-600
-            "
-          >
-            <UserPlus size={18} />
-            Add Candidate
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsAddPositionOpen(true)}
+              className="
+                inline-flex items-center gap-1.5 sm:gap-2
+                rounded-lg
+                border border-border
+                bg-surface
+                h-8 sm:h-10
+                px-2.5 sm:px-3.5
+                text-xs sm:text-sm font-medium
+                text-text-primary
+                whitespace-nowrap
+                transition
+                hover:bg-neutral-100
+                dark:hover:bg-neutral-800
+                shadow-2xs
+                cursor-pointer
+              "
+            >
+              <Plus size={15} className="sm:w-4 sm:h-4 shrink-0" />
+              <span>Post Position</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsScheduleInterviewOpen(true)}
-            className="
-              flex items-center gap-2 rounded-lg bg-primary-500
-              px-4 py-2.5 text-sm font-medium text-white
-              transition hover:bg-primary-600 shadow-sm
-            "
-          >
-            <CalendarCheck size={18} />
-            Schedule Interview
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsAddCandidateOpen(true)}
+              className="
+                inline-flex items-center gap-1.5 sm:gap-2
+                rounded-lg
+                border border-border
+                bg-surface
+                h-8 sm:h-10
+                px-2.5 sm:px-3.5
+                text-xs sm:text-sm font-medium
+                text-text-primary
+                whitespace-nowrap
+                transition
+                hover:bg-neutral-100
+                dark:hover:bg-neutral-800
+                shadow-2xs
+                cursor-pointer
+              "
+            >
+              <UserPlus size={15} className="sm:w-4 sm:h-4 shrink-0" />
+              <span>Add Candidate</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsScheduleInterviewOpen(true)}
+              className="
+                inline-flex items-center gap-1.5 sm:gap-2
+                rounded-lg
+                bg-primary-500
+                h-8 sm:h-10
+                px-3 sm:px-4
+                text-xs sm:text-sm font-medium
+                text-white
+                whitespace-nowrap
+                transition
+                hover:bg-primary-600
+                shadow-2xs
+                cursor-pointer
+              "
+            >
+              <CalendarCheck size={15} className="sm:w-4 sm:h-4 shrink-0" />
+              <span>Schedule Interview</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border">
+      <div className="grid grid-cols-3 sm:flex sm:items-center border-b border-border w-full">
         <button
+          type="button"
           onClick={() => setActiveTab("positions")}
           className={`
-            flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition
+            col-span-1 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 border-b-2 px-2 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition cursor-pointer min-w-0 text-center
             ${
               activeTab === "positions"
-                ? "border-primary-500 text-primary-600"
+                ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                 : "border-transparent text-text-secondary hover:text-text-primary"
             }
           `}
         >
-          <Briefcase size={18} />
-          Job Positions ({positions.length})
+          <Briefcase size={15} className="shrink-0 hidden xs:inline sm:inline" />
+          <span className="truncate">
+            <span className="inline sm:hidden md:inline">Job </span>Positions
+          </span>
+          <span className="text-[11px] sm:text-xs opacity-75 shrink-0">({positions.length})</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab("candidates")}
           className={`
-            flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition
+            col-span-1 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 border-b-2 px-2 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition cursor-pointer min-w-0 text-center
             ${
               activeTab === "candidates"
-                ? "border-primary-500 text-primary-600"
+                ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                 : "border-transparent text-text-secondary hover:text-text-primary"
             }
           `}
         >
-          <Users size={18} />
-          Candidates ({candidates.length})
+          <Users size={15} className="shrink-0 hidden xs:inline sm:inline" />
+          <span className="truncate">Candidates</span>
+          <span className="text-[11px] sm:text-xs opacity-75 shrink-0">({candidates.length})</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab("interviews")}
           className={`
-            flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition
+            col-span-1 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 border-b-2 px-2 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition cursor-pointer min-w-0 text-center
             ${
               activeTab === "interviews"
-                ? "border-primary-500 text-primary-600"
+                ? "border-primary-500 text-primary-600 dark:text-primary-400 font-semibold"
                 : "border-transparent text-text-secondary hover:text-text-primary"
             }
           `}
         >
-          <CalendarCheck size={18} />
-          Interviews ({interviews.length})
+          <CalendarCheck size={15} className="shrink-0 hidden xs:inline sm:inline" />
+          <span className="truncate">Interviews</span>
+          <span className="text-[11px] sm:text-xs opacity-75 shrink-0">({interviews.length})</span>
         </button>
       </div>
 
@@ -199,77 +257,77 @@ const RecruitmentPage = () => {
         />
       ) : activeTab === "positions" ? (
         /* Job Positions Table */
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[680px] text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Job Position
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Department
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Vacancies
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Applicants
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {positions.length === 0 ? (
                   <PageEmptyState
                     isTableRow
                     colSpan={5}
                     icon={Briefcase}
                     title="No job positions posted yet"
-                    message="Click 'Post New Position' to create one."
-                    actionText="Post New Position"
+                    message="Click 'Post Position' to create one."
+                    actionText="Post Position"
                     onAction={() => setIsAddPositionOpen(true)}
                   />
                 ) : (
                   positions.map((pos) => (
-                    <tr key={pos.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
-                      <td className="px-5 py-4">
+                    <tr key={pos.id} className="transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                            <Briefcase size={20} />
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">
+                            <Briefcase size={18} />
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">
                               {pos.title}
                             </p>
                             {pos.description && (
-                              <p className="text-xs text-text-muted line-clamp-1 max-w-xs">
+                              <p className="text-[11px] text-text-muted line-clamp-1 max-w-xs mt-0.5">
                                 {pos.description}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-secondary font-medium">
                         {pos.department}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary font-medium">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-secondary font-medium">
                         {pos.vacancies} {pos.vacancies === 1 ? "Open Seat" : "Open Seats"}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-secondary">
                         <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
-                          <UserPlus size={16} className="text-primary-500" />
+                          <UserPlus size={15} className="text-primary-500" />
                           {pos._count?.candidates ?? 0} Applicants
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold ${
                             pos.isActive
-                              ? "border-emerald-200 bg-emerald-100 text-emerald-700"
-                              : "border-neutral-200 bg-neutral-100 text-neutral-600"
+                              ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
+                              : "border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
                           }`}
                         >
                           {pos.isActive ? "OPEN" : "CLOSED"}
@@ -284,29 +342,29 @@ const RecruitmentPage = () => {
         </div>
       ) : activeTab === "candidates" ? (
         /* Candidates Table */
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[760px] text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Candidate Name
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Applied Position
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Contact Details
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Experience / Company
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {candidates.length === 0 ? (
                   <PageEmptyState
                     isTableRow
@@ -319,63 +377,63 @@ const RecruitmentPage = () => {
                   />
                 ) : (
                   candidates.map((cand) => (
-                    <tr key={cand.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
-                      <td className="px-5 py-4">
+                    <tr key={cand.id} className="transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600 font-semibold text-sm">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-950/80 text-primary-700 dark:text-primary-300 font-bold text-xs shrink-0">
                             {cand.firstName.charAt(0)}
                             {cand.lastName ? cand.lastName.charAt(0) : ""}
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">
                               {cand.firstName} {cand.lastName || ""}
                             </p>
                             {cand.gender && (
-                              <p className="text-xs text-text-muted">
+                              <p className="text-[11px] text-text-muted mt-0.5">
                                 {cand.gender}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-primary font-medium">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-primary font-medium">
                         {cand.position ? (
-                          <div>
-                            <p className="text-sm text-text-primary">{cand.position.title}</p>
-                            <p className="text-xs text-text-muted">{cand.position.department}</p>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">{cand.position.title}</p>
+                            <p className="text-[11px] text-text-muted truncate mt-0.5">{cand.position.department}</p>
                           </div>
                         ) : (
-                          "Position #" + cand.positionId
+                          <span className="text-text-muted">Position #{cand.positionId}</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary space-y-0.5">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-secondary space-y-0.5">
                         <div className="flex items-center gap-1.5 text-xs">
-                          <Phone size={13} className="text-text-muted" />
-                          <span>{cand.phone}</span>
+                          <Phone size={13} className="text-text-muted shrink-0" />
+                          <span className="font-mono text-text-primary">{cand.phone}</span>
                         </div>
                         {cand.email && (
-                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                            <Mail size={13} />
-                            <span>{cand.email}</span>
+                          <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
+                            <Mail size={12} className="shrink-0" />
+                            <span className="truncate">{cand.email}</span>
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary">
-                        <p className="text-sm font-medium text-text-primary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-xs sm:text-sm text-text-secondary">
+                        <p className="font-medium text-text-primary">
                           {cand.experience !== undefined && cand.experience !== null
                             ? `${cand.experience} yrs exp`
                             : "Fresher"}
                         </p>
                         {cand.currentCompany && (
-                          <p className="text-xs text-text-muted flex items-center gap-1">
-                            <Building2 size={12} />
-                            {cand.currentCompany}
+                          <p className="text-[11px] text-text-muted flex items-center gap-1 mt-0.5 truncate">
+                            <Building2 size={12} className="shrink-0" />
+                            <span className="truncate">{cand.currentCompany}</span>
                           </p>
                         )}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadge(
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold whitespace-nowrap ${getStatusBadge(
                             cand.status
                           )}`}
                         >
@@ -391,32 +449,32 @@ const RecruitmentPage = () => {
         </div>
       ) : (
         /* Interviews Table */
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[760px] text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-neutral-50">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                <tr className="border-b border-border bg-neutral-50/80 dark:bg-neutral-800/50 text-text-secondary font-semibold uppercase tracking-wider">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Candidate & Position
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Interviewer
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Scheduled Date & Time
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Status / Result
                   </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4">
                     Feedback / Notes
                   </th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase text-text-secondary">
+                  <th className="px-4 sm:px-5 py-3 sm:py-4 text-right">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {(() => {
                   const filteredInterviews = interviews.filter((item) => {
                     if (paramDate === "today") {
@@ -448,9 +506,9 @@ const RecruitmentPage = () => {
                   }
 
                   return filteredInterviews.map((item) => (
-                    <tr key={item.id} className="border-b border-border last:border-0 hover:bg-neutral-50/50">
+                    <tr key={item.id} className="transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                         {item.candidate ? (
                           <div>
                             <p className="text-sm font-semibold text-text-primary">
@@ -465,7 +523,7 @@ const RecruitmentPage = () => {
                           <span className="text-sm text-text-muted">Candidate #{item.candidateId}</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-primary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-text-primary">
                         {item.interviewer ? (
                           <div className="flex items-center gap-1.5">
                             <UserCheck size={15} className="text-primary-500" />
@@ -477,7 +535,7 @@ const RecruitmentPage = () => {
                           <span className="text-text-muted">Assigned Interviewer</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-text-secondary">
                         <div className="flex items-center gap-1.5 text-xs font-medium text-text-primary">
                           <Clock size={14} className="text-text-muted" />
                           {new Date(item.scheduledAt).toLocaleString("en-US", {
@@ -486,7 +544,7 @@ const RecruitmentPage = () => {
                           })}
                         </div>
                       </td>
-                      <td className="px-5 py-4 space-y-1">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 space-y-1">
                         <div>
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadge(
@@ -506,20 +564,20 @@ const RecruitmentPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-sm text-text-secondary max-w-xs">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-sm text-text-secondary max-w-xs">
                         {item.feedback ? (
                           <p className="text-xs text-text-secondary line-clamp-2">{item.feedback}</p>
                         ) : (
                           <span className="text-xs text-text-muted italic">No feedback added</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 sm:px-5 py-3.5 sm:py-4 text-right">
                         <button
                           type="button"
                           onClick={() => setEditingInterview(item)}
                           className="
                             inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5
-                            text-xs font-medium text-text-primary transition hover:border-primary-500 hover:text-primary-600
+                            text-xs font-medium text-text-primary shadow-2xs transition hover:border-primary-500 hover:text-primary-600 cursor-pointer
                           "
                         >
                           <Pencil size={14} />

@@ -106,7 +106,7 @@ const TeamsPage = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg animate-in slide-in-from-top-2 duration-300">
@@ -116,52 +116,59 @@ const TeamsPage = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            Teams Management
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Manage company teams and their designated team managers.
-          </p>
-        </div>
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold sm:font-bold text-text-primary">
+              Teams Management
+            </h1>
+            <p className="mt-1 text-[11px] sm:text-sm text-text-secondary leading-relaxed sm:leading-normal">
+              Manage company teams and their designated team managers.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={loadTeams}
-            title="Refresh teams"
-            className="p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
-
-          {canManageTeam && (
+          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="
-                flex items-center gap-2
-                rounded-lg
-                bg-primary-500
-                px-4 py-2.5
-                text-sm font-medium
-                text-white
-                transition
-                hover:bg-primary-600
-              "
+              onClick={loadTeams}
+              title="Refresh teams"
+              aria-label="Refresh teams"
+              className="inline-flex items-center justify-center h-8 sm:h-10 px-2.5 sm:p-2.5 rounded-lg border border-border bg-surface text-text-secondary hover:bg-neutral-100 transition shadow-2xs shrink-0 cursor-pointer"
             >
-              <Plus size={18} />
-              Create Team
+              <RefreshCw size={15} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
             </button>
-          )}
+
+            {canManageTeam && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="
+                  inline-flex items-center gap-1.5 sm:gap-2
+                  rounded-lg
+                  bg-primary-500
+                  h-8 sm:h-10
+                  px-3 sm:px-4
+                  text-xs sm:text-sm font-medium
+                  text-white
+                  transition
+                  hover:bg-primary-600
+                  shadow-2xs
+                  shrink-0
+                  cursor-pointer
+                "
+              >
+                <Plus size={15} className="sm:w-[18px] sm:h-[18px]" />
+                Create Team
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-3 w-full">
+        <div className="relative flex-1 w-full">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            size={16}
+            className="sm:w-[18px] sm:h-[18px] absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           />
           <input
             type="text"
@@ -169,15 +176,15 @@ const TeamsPage = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="
-              h-11
+              h-9 sm:h-11
               w-full
               rounded-lg
               border
               border-border
               bg-surface
-              pl-11
-              pr-4
-              text-sm
+              pl-9 sm:pl-11
+              pr-3.5 sm:pr-4
+              text-xs sm:text-sm
               outline-none
               transition
               focus:border-primary-500
@@ -210,7 +217,7 @@ const TeamsPage = () => {
           onAction={!searchTerm && canManageTeam ? () => setIsCreateModalOpen(true) : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
           {filteredTeams.map((team) => {
             const managerName = team.manager
               ? `${team.manager.firstName} ${team.manager.lastName || ""}`.trim()
@@ -224,53 +231,53 @@ const TeamsPage = () => {
             return (
               <div
                 key={team.id}
-                className="flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs transition-all duration-200 hover:border-primary-200 hover:shadow-md group"
+                className="flex flex-col justify-between rounded-xl border border-border bg-surface p-3.5 sm:p-5 shadow-xs transition-all duration-200 hover:border-primary-200 hover:shadow-md group"
               >
                 <div>
                   {/* HEADER */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold shadow-2xs">
-                        <Shield size={20} />
+                  <div className="flex items-start justify-between gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700 font-semibold shadow-2xs">
+                        <Shield size={16} className="sm:w-5 sm:h-5" />
                       </div>
                       <h3
-                        className="text-base font-semibold text-text-primary truncate"
+                        className="text-sm sm:text-base font-semibold text-text-primary truncate"
                         title={team.name}
                       >
                         {team.name}
                       </h3>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                        className={`inline-flex items-center rounded-full px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-medium border ${
                           team.isActive
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
                             : "bg-neutral-100 text-neutral-600 border-neutral-200/60"
-                        }`}
+                          }`}
                       >
                         {team.isActive ? "Active" : "Inactive"}
                       </span>
 
                       {canManageTeam && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-0.5 sm:gap-1">
                           <button
                             type="button"
                             onClick={() => setEditingTeam(team)}
                             title="Edit Team"
                             aria-label="Edit team"
-                            className="p-1.5 rounded-lg text-text-muted hover:text-primary-600 hover:bg-primary-50 transition"
+                            className="p-1 sm:p-1.5 rounded-lg text-text-muted hover:text-primary-600 hover:bg-primary-50 transition"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} className="sm:w-4 sm:h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setDeletingTeam(team)}
                             title="Delete team"
                             aria-label="Delete team"
-                            className="p-1.5 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 transition"
+                            className="p-1 sm:p-1.5 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 transition"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} className="sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       )}
@@ -278,7 +285,7 @@ const TeamsPage = () => {
                   </div>
 
                   {/* DESCRIPTION */}
-                  <div className="mb-4 text-sm text-text-secondary line-clamp-2 min-h-[2.5rem]">
+                  <div className="mb-3 sm:mb-4 text-xs sm:text-sm text-text-secondary line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem]">
                     {team.description ? (
                       team.description
                     ) : (
@@ -289,30 +296,29 @@ const TeamsPage = () => {
                   </div>
 
                   {/* MANAGER SECTION */}
-                  <div className="mb-4 rounded-lg border border-border-light bg-neutral-50/70 p-3 transition group-hover:bg-neutral-50">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1.5">
+                  <div className="mb-3 sm:mb-4 rounded-lg border border-border-light bg-neutral-50/70 p-2.5 sm:p-3 transition group-hover:bg-neutral-50">
+                    <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1 sm:mb-1.5">
                       Manager
                     </p>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                    <div className="flex items-center gap-2 sm:gap-2.5">
+                      <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-[11px] sm:text-xs font-semibold">
                         {team.manager ? (
-                          `${team.manager.firstName[0]}${
-                            (team.manager.lastName || "")[0] || ""
-                          }`.toUpperCase()
+                          `${team.manager.firstName[0]}${(team.manager.lastName || "")[0] || ""
+                            }`.toUpperCase()
                         ) : (
-                          <UserCheck size={14} />
+                          <UserCheck size={13} className="sm:w-3.5 sm:h-3.5" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-text-primary truncate">
+                        <p className="text-xs sm:text-sm font-medium text-text-primary truncate">
                           {managerName}
                         </p>
                         {team.manager?.email ? (
-                          <p className="text-xs text-text-muted truncate">
+                          <p className="text-[11px] sm:text-xs text-text-muted truncate">
                             {team.manager.email}
                           </p>
                         ) : (
-                          <p className="text-xs text-text-muted italic truncate">
+                          <p className="text-[11px] sm:text-xs text-text-muted italic truncate">
                             No email available
                           </p>
                         )}
@@ -321,8 +327,8 @@ const TeamsPage = () => {
                   </div>
 
                   {/* TEAM STATS */}
-                  <div className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-4">
-                    <Users size={16} className="text-text-muted" />
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-text-secondary mb-3 sm:mb-4">
+                    <Users size={14} className="sm:w-4 sm:h-4 text-text-muted" />
                     <span>
                       {memberCount} {memberCount === 1 ? "Member" : "Members"}
                     </span>
@@ -330,11 +336,11 @@ const TeamsPage = () => {
                 </div>
 
                 {/* FOOTER */}
-                <div className="pt-3 border-t border-border-light flex items-center justify-between text-xs text-text-muted">
+                <div className="pt-2.5 sm:pt-3 border-t border-border-light flex items-center justify-between text-[11px] sm:text-xs text-text-muted">
                   <span>{createdDateStr}</span>
                   <button
                     onClick={() => navigate(`/teams/${team.id}`)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-100 transition shadow-2xs group-hover:border-primary-300"
+                    className="inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-primary-700 hover:bg-primary-100 transition shadow-2xs group-hover:border-primary-300"
                   >
                     View Team →
                   </button>
